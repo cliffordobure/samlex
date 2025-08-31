@@ -1,6 +1,5 @@
 import axios from "axios";
-
-const API_URL = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? "/api" : "https://samlex.onrender.com/api");
+import { API_URL } from "../../config/api.js";
 
 const api = axios.create({
   baseURL: API_URL,
