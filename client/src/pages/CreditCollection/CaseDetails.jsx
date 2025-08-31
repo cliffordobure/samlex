@@ -508,11 +508,11 @@ const CaseDetails = () => {
 
   // --- Notes Section ---
   const renderNotesSection = () => (
-    <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6 shadow-xl mb-8">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 bg-indigo-500/20 rounded-lg flex items-center justify-center">
+    <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4 sm:p-6 shadow-xl mb-6 sm:mb-8" data-notes-section>
+      <div className="flex items-center gap-3 mb-4 sm:mb-6">
+        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-indigo-500/20 rounded-lg flex items-center justify-center">
           <svg
-            className="w-5 h-5 text-indigo-400"
+            className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-400"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -525,37 +525,37 @@ const CaseDetails = () => {
             />
           </svg>
         </div>
-        <h3 className="text-lg font-semibold text-white">
+        <h3 className="text-base sm:text-lg font-semibold text-white">
           Case Notes & Follow-ups
         </h3>
       </div>
 
       <form
         onSubmit={handleAddNote}
-        className="bg-dark-800/50 rounded-xl p-6 mb-6 border border-dark-600"
+        className="bg-dark-800/50 rounded-xl p-4 sm:p-6 mb-4 sm:mb-6 border border-dark-600"
       >
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-4">
           <div>
-            <label className="block text-sm text-gray-400 mb-2 font-medium">
+            <label className="block text-xs sm:text-sm text-gray-400 mb-2 font-medium">
               Date of Interaction
             </label>
             <DatePicker
               selected={noteDate}
               onChange={setNoteDate}
-              className="w-full bg-dark-700/50 border border-dark-600 rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className="w-full bg-dark-700/50 border border-dark-600 rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
               dateFormat="yyyy-MM-dd"
               maxDate={new Date()}
               required
             />
           </div>
           <div>
-            <label className="block text-sm text-gray-400 mb-2 font-medium">
+            <label className="block text-xs sm:text-sm text-gray-400 mb-2 font-medium">
               Next Follow-up (optional)
             </label>
             <DatePicker
               selected={followUpDate}
               onChange={setFollowUpDate}
-              className="w-full bg-dark-700/50 border border-dark-600 rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className="w-full bg-dark-700/50 border border-dark-600 rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
               dateFormat="yyyy-MM-dd"
               minDate={new Date()}
               isClearable
@@ -565,7 +565,7 @@ const CaseDetails = () => {
           <div className="flex items-end">
             <button
               type="submit"
-              className="w-full inline-flex items-center justify-center gap-2 px-6 py-2 bg-primary-600 hover:bg-primary-500 text-white rounded-lg font-medium transition-colors disabled:opacity-60"
+              className="w-full inline-flex items-center justify-center gap-2 px-4 sm:px-6 py-2 bg-primary-600 hover:bg-primary-500 text-white rounded-lg font-medium transition-colors disabled:opacity-60 text-sm sm:text-base"
               disabled={noteLoading}
             >
               {noteLoading ? (
@@ -613,11 +613,11 @@ const CaseDetails = () => {
           </div>
         </div>
         <div>
-          <label className="block text-sm text-gray-400 mb-2 font-medium">
+          <label className="block text-xs sm:text-sm text-gray-400 mb-2 font-medium">
             Note / Response
           </label>
           <textarea
-            className="w-full bg-dark-700/50 border border-dark-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none min-h-[80px]"
+            className="w-full bg-dark-700/50 border border-dark-600 rounded-lg px-3 sm:px-4 py-2 sm:py-3 text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none min-h-[80px] text-sm"
             value={noteContent}
             onChange={(e) => setNoteContent(e.target.value)}
             placeholder="E.g. Called debtor, agreed to pay next week..."
@@ -696,67 +696,67 @@ const CaseDetails = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900/20 to-indigo-900/20">
-      <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900/20 to-indigo-900/20 relative">
+      <div className="max-w-7xl mx-auto py-4 sm:py-8 px-3 sm:px-6 space-y-4 sm:space-y-6 pb-20 sm:pb-8">
         {/* Professional Header */}
-        <div className="bg-gradient-to-r from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl p-6 border border-slate-600/50 shadow-2xl">
+        <div className="bg-gradient-to-r from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
-            <div className="flex items-center space-x-4">
+            <div className="flex flex-col sm:flex-row sm:items-center space-y-3 sm:space-y-0 sm:space-x-4">
               <Link
                 to="/credit-collection/cases"
-                className="inline-flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-500/20 to-indigo-500/20 hover:from-blue-500/30 hover:to-indigo-500/30 text-blue-400 rounded-xl transition-all duration-200 border border-blue-500/30 hover:border-blue-500/50"
+                className="inline-flex items-center justify-center space-x-2 px-3 sm:px-4 py-2 bg-gradient-to-r from-blue-500/20 to-indigo-500/20 hover:from-blue-500/30 hover:to-indigo-500/30 text-blue-400 rounded-xl transition-all duration-200 border border-blue-500/30 hover:border-blue-500/50 text-sm sm:text-base"
               >
                 <FaArrowLeft className="w-4 h-4" />
                 <span className="font-medium">Back to Cases</span>
               </Link>
-              <div className="flex items-center space-x-3">
-                <span className="text-sm text-slate-400 font-mono bg-slate-700/50 px-3 py-1 rounded-lg border border-slate-600/50">
+              <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-3">
+                <span className="text-xs sm:text-sm text-slate-400 font-mono bg-slate-700/50 px-2 sm:px-3 py-1 rounded-lg border border-slate-600/50 text-center">
                   #{caseNumber}
                 </span>
                 <span
-                  className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold ${statusColors[status] || statusColors["Pending"]} shadow-lg`}
+                  className={`inline-flex items-center justify-center px-3 sm:px-4 py-1 sm:py-2 rounded-full text-xs sm:text-sm font-semibold ${statusColors[status] || statusColors["Pending"]} shadow-lg`}
                 >
                   {status?.replace("_", " ")}
                 </span>
               </div>
             </div>
           </div>
-          <div className="mt-6">
-            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-3 leading-tight">
+          <div className="mt-4 sm:mt-6">
+            <h1 className="text-xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-2 sm:mb-3 leading-tight break-words">
               {title}
             </h1>
-            <p className="text-slate-300 text-lg leading-relaxed max-w-4xl">
+            <p className="text-slate-300 text-sm sm:text-lg leading-relaxed max-w-4xl break-words">
               {description?.substring(0, 120)}...
             </p>
           </div>
         </div>
         {/* Case Overview Cards */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {/* Case Details Card */}
-          <div className="bg-gradient-to-r from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl p-6 border border-slate-600/50 shadow-2xl">
+          <div className="bg-gradient-to-r from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl">
             <div className="flex items-center space-x-3 mb-4">
-              <div className="p-3 bg-gradient-to-r from-blue-500/20 to-indigo-500/20 rounded-xl">
-                <FaFileAlt className="w-6 h-6 text-blue-400" />
+              <div className="p-2 sm:p-3 bg-gradient-to-r from-blue-500/20 to-indigo-500/20 rounded-xl">
+                <FaFileAlt className="w-5 h-5 sm:w-6 sm:h-6 text-blue-400" />
               </div>
-              <h3 className="text-lg font-semibold text-white">Case Details</h3>
+              <h3 className="text-base sm:text-lg font-semibold text-white">Case Details</h3>
             </div>
             <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-slate-400 text-sm">Priority</span>
-                <span className="px-3 py-1 bg-yellow-500/20 text-yellow-400 rounded-full text-sm font-medium border border-yellow-500/30">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-1 sm:space-y-0">
+                <span className="text-slate-400 text-xs sm:text-sm">Priority</span>
+                <span className="px-2 sm:px-3 py-1 bg-yellow-500/20 text-yellow-400 rounded-full text-xs sm:text-sm font-medium border border-yellow-500/30 text-center">
                   {priority}
                 </span>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-slate-400 text-sm">Created</span>
-                <span className="text-white text-sm flex items-center space-x-2">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-1 sm:space-y-0">
+                <span className="text-slate-400 text-xs sm:text-sm">Created</span>
+                <span className="text-white text-xs sm:text-sm flex items-center space-x-2">
                   <FaCalendarAlt className="w-3 h-3 text-slate-400" />
                   <span>{new Date(createdAt).toLocaleDateString()}</span>
                 </span>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-slate-400 text-sm">Updated</span>
-                <span className="text-white text-sm flex items-center space-x-2">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-1 sm:space-y-0">
+                <span className="text-slate-400 text-xs sm:text-sm">Updated</span>
+                <span className="text-white text-xs sm:text-sm flex items-center space-x-2">
                   <FaClock className="w-3 h-3 text-slate-400" />
                   <span>{new Date(updatedAt).toLocaleDateString()}</span>
                 </span>
@@ -765,18 +765,18 @@ const CaseDetails = () => {
           </div>
 
           {/* Assignment Card */}
-          <div className="bg-gradient-to-r from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl p-6 border border-slate-600/50 shadow-2xl">
+          <div className="bg-gradient-to-r from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl">
             <div className="flex items-center space-x-3 mb-4">
-              <div className="p-3 bg-gradient-to-r from-green-500/20 to-emerald-500/20 rounded-xl">
-                <FaUser className="w-6 h-6 text-green-400" />
+              <div className="p-2 sm:p-3 bg-gradient-to-r from-green-500/20 to-emerald-500/20 rounded-xl">
+                <FaUser className="w-5 h-5 sm:w-6 sm:h-6 text-green-400" />
               </div>
-              <h3 className="text-lg font-semibold text-white">Assignment</h3>
+              <h3 className="text-base sm:text-lg font-semibold text-white">Assignment</h3>
             </div>
             <div className="space-y-3">
               {canAssignCases ? (
                 <>
                   <select
-                    className="w-full px-4 py-3 bg-slate-700/80 border border-slate-600/50 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-200"
+                    className="w-full px-3 sm:px-4 py-2 sm:py-3 bg-slate-700/80 border border-slate-600/50 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-200 text-sm sm:text-base"
                     value={assignedTo?._id || ""}
                     onChange={handleAssignChange}
                     disabled={assignLoading}
@@ -790,23 +790,23 @@ const CaseDetails = () => {
                       ))}
                   </select>
                   {assignLoading && (
-                    <div className="flex items-center space-x-2 text-blue-400 text-sm">
+                    <div className="flex items-center space-x-2 text-blue-400 text-xs sm:text-sm">
                       <FaSpinner className="w-4 h-4 animate-spin" />
                       <span>Assigning...</span>
                     </div>
                   )}
                   {assignError && (
-                    <div className="text-red-400 text-sm bg-red-500/10 p-2 rounded-lg border border-red-500/20">
+                    <div className="text-red-400 text-xs sm:text-sm bg-red-500/10 p-2 rounded-lg border border-red-500/20">
                       {assignError}
                     </div>
                   )}
                 </>
               ) : (
                 <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 bg-green-500/20 rounded-full flex items-center justify-center">
-                    <FaUser className="w-4 h-4 text-green-400" />
+                  <div className="w-6 h-6 sm:w-8 sm:h-8 bg-green-500/20 rounded-full flex items-center justify-center">
+                    <FaUser className="w-3 h-3 sm:w-4 sm:h-4 text-green-400" />
                   </div>
-                  <span className="text-white">
+                  <span className="text-white text-sm sm:text-base break-words">
                     {assignedTo
                       ? assignedTo.name || assignedTo.email
                       : "Unassigned"}
@@ -817,59 +817,59 @@ const CaseDetails = () => {
           </div>
 
           {/* Financial Summary Card */}
-          <div className="bg-gradient-to-r from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl p-6 border border-slate-600/50 shadow-2xl">
+          <div className="bg-gradient-to-r from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl">
             <div className="flex items-center space-x-3 mb-4">
-              <div className="p-3 bg-gradient-to-r from-emerald-500/20 to-green-500/20 rounded-xl">
-                <FaMoneyBillWave className="w-6 h-6 text-emerald-400" />
+              <div className="p-2 sm:p-3 bg-gradient-to-r from-emerald-500/20 to-green-500/20 rounded-xl">
+                <FaMoneyBillWave className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-400" />
               </div>
-              <h3 className="text-lg font-semibold text-white">Financial</h3>
+              <h3 className="text-base sm:text-lg font-semibold text-white">Financial</h3>
             </div>
             <div className="space-y-3">
               <div className="text-center">
-                <div className="text-3xl font-bold text-white">
+                <div className="text-2xl sm:text-3xl font-bold text-white">
                   {debtAmount.toLocaleString()}
                 </div>
-                <div className="text-slate-400 text-sm font-medium">{currency}</div>
+                <div className="text-slate-400 text-xs sm:text-sm font-medium">{currency}</div>
               </div>
             </div>
           </div>
         </div>
         {/* Parties Information */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           {/* Debtor Card */}
-          <div className="bg-gradient-to-r from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl p-6 border border-slate-600/50 shadow-2xl">
+          <div className="bg-gradient-to-r from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl">
             <div className="flex items-center space-x-3 mb-4">
-              <div className="p-3 bg-gradient-to-r from-red-500/20 to-pink-500/20 rounded-xl">
-                <FaUser className="w-6 h-6 text-red-400" />
+              <div className="p-2 sm:p-3 bg-gradient-to-r from-red-500/20 to-pink-500/20 rounded-xl">
+                <FaUser className="w-5 h-5 sm:w-6 sm:h-6 text-red-400" />
               </div>
-              <h3 className="text-lg font-semibold text-white">Debtor</h3>
+              <h3 className="text-base sm:text-lg font-semibold text-white">Debtor</h3>
             </div>
             <div className="space-y-3">
               <div>
-                <div className="text-sm text-slate-400 mb-1">Name</div>
-                <div className="text-white font-medium">{debtorName}</div>
+                <div className="text-xs sm:text-sm text-slate-400 mb-1">Name</div>
+                <div className="text-white font-medium text-sm sm:text-base break-words">{debtorName}</div>
               </div>
               {debtorEmail && (
                 <div>
-                  <div className="text-sm text-slate-400 mb-1">Email</div>
+                  <div className="text-xs sm:text-sm text-slate-400 mb-1">Email</div>
                   <a
                     href={`mailto:${debtorEmail}`}
-                    className="inline-flex items-center space-x-2 text-blue-400 hover:text-blue-300 transition-colors"
+                    className="inline-flex items-center space-x-2 text-blue-400 hover:text-blue-300 transition-colors text-sm sm:text-base break-all"
                   >
-                    <FaEnvelope className="w-4 h-4" />
-                    <span>{debtorEmail}</span>
+                    <FaEnvelope className="w-4 h-4 flex-shrink-0" />
+                    <span className="break-all">{debtorEmail}</span>
                   </a>
                 </div>
               )}
               {debtorContact && (
                 <div>
-                  <div className="text-sm text-slate-400 mb-1">Phone</div>
+                  <div className="text-xs sm:text-sm text-slate-400 mb-1">Phone</div>
                   <a
                     href={`tel:${debtorContact}`}
-                    className="inline-flex items-center space-x-2 text-green-400 hover:text-green-300 transition-colors"
+                    className="inline-flex items-center space-x-2 text-green-400 hover:text-green-300 transition-colors text-sm sm:text-base break-all"
                   >
-                    <FaPhone className="w-4 h-4" />
-                    <span>{debtorContact}</span>
+                    <FaPhone className="w-4 h-4 flex-shrink-0" />
+                    <span className="break-all">{debtorContact}</span>
                   </a>
                 </div>
               )}
@@ -877,39 +877,39 @@ const CaseDetails = () => {
           </div>
 
           {/* Creditor Card */}
-          <div className="bg-gradient-to-r from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl p-6 border border-slate-600/50 shadow-2xl">
+          <div className="bg-gradient-to-r from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl">
             <div className="flex items-center space-x-3 mb-4">
-              <div className="p-3 bg-gradient-to-r from-green-500/20 to-emerald-500/20 rounded-xl">
-                <FaUsers className="w-6 h-6 text-green-400" />
+              <div className="p-2 sm:p-3 bg-gradient-to-r from-green-500/20 to-emerald-500/20 rounded-xl">
+                <FaUsers className="w-5 h-5 sm:w-6 sm:h-6 text-green-400" />
               </div>
-              <h3 className="text-lg font-semibold text-white">Creditor</h3>
+              <h3 className="text-base sm:text-lg font-semibold text-white">Creditor</h3>
             </div>
             <div className="space-y-3">
               <div>
-                <div className="text-sm text-slate-400 mb-1">Name</div>
-                <div className="text-white font-medium">{creditorName}</div>
+                <div className="text-xs sm:text-sm text-slate-400 mb-1">Name</div>
+                <div className="text-white font-medium text-sm sm:text-base break-words">{creditorName}</div>
               </div>
               {creditorEmail && (
                 <div>
-                  <div className="text-sm text-slate-400 mb-1">Email</div>
+                  <div className="text-xs sm:text-sm text-slate-400 mb-1">Email</div>
                   <a
                     href={`mailto:${creditorEmail}`}
-                    className="inline-flex items-center space-x-2 text-blue-400 hover:text-blue-300 transition-colors"
+                    className="inline-flex items-center space-x-2 text-blue-400 hover:text-blue-300 transition-colors text-sm sm:text-base break-all"
                   >
-                    <FaEnvelope className="w-4 h-4" />
-                    <span>{creditorEmail}</span>
+                    <FaEnvelope className="w-4 h-4 flex-shrink-0" />
+                    <span className="break-all">{creditorEmail}</span>
                   </a>
                 </div>
               )}
               {creditorContact && (
                 <div>
-                  <div className="text-sm text-slate-400 mb-1">Phone</div>
+                  <div className="text-xs sm:text-sm text-slate-400 mb-1">Phone</div>
                   <a
                     href={`tel:${creditorContact}`}
-                    className="inline-flex items-center space-x-2 text-green-400 hover:text-green-300 transition-colors"
+                    className="inline-flex items-center space-x-2 text-green-400 hover:text-green-300 transition-colors text-sm sm:text-base break-all"
                   >
-                    <FaPhone className="w-4 h-4" />
-                    <span>{creditorContact}</span>
+                    <FaPhone className="w-4 h-4 flex-shrink-0" />
+                    <span className="break-all">{creditorContact}</span>
                   </a>
                 </div>
               )}
@@ -918,26 +918,26 @@ const CaseDetails = () => {
         </div>
 
         {/* Description */}
-        <div className="bg-gradient-to-r from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl p-6 border border-slate-600/50 shadow-2xl">
+        <div className="bg-gradient-to-r from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl">
           <div className="flex items-center space-x-3 mb-4">
-            <div className="p-3 bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-xl">
-              <FaStickyNote className="w-6 h-6 text-purple-400" />
+            <div className="p-2 sm:p-3 bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-xl">
+              <FaStickyNote className="w-5 h-5 sm:w-6 sm:h-6 text-purple-400" />
             </div>
-            <h3 className="text-lg font-semibold text-white">
+            <h3 className="text-base sm:text-lg font-semibold text-white">
               Case Description
             </h3>
           </div>
-          <div className="text-slate-200 leading-relaxed">{description}</div>
+          <div className="text-slate-200 leading-relaxed text-sm sm:text-base break-words">{description}</div>
         </div>
         
         {/* Documents */}
-        <div className="bg-gradient-to-r from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl p-6 border border-slate-600/50 shadow-2xl">
-          <div className="flex items-center justify-between mb-4">
+        <div className="bg-gradient-to-r from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 space-y-3 sm:space-y-0">
             <div className="flex items-center space-x-3">
-              <div className="p-3 bg-gradient-to-r from-blue-500/20 to-indigo-500/20 rounded-xl">
-                <FaFileAlt className="w-6 h-6 text-blue-400" />
+              <div className="p-2 sm:p-3 bg-gradient-to-r from-blue-500/20 to-indigo-500/20 rounded-xl">
+                <FaFileAlt className="w-5 h-5 sm:w-6 sm:h-6 text-blue-400" />
               </div>
-              <h3 className="text-lg font-semibold text-white">Documents</h3>
+              <h3 className="text-base sm:text-lg font-semibold text-white">Documents</h3>
             </div>
             {/* Add Document Button */}
             <div className="flex items-center space-x-2">
@@ -952,7 +952,7 @@ const CaseDetails = () => {
               />
               <label
                 htmlFor="document-upload"
-                className={`inline-flex items-center space-x-2 px-4 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 cursor-pointer ${
+                className={`inline-flex items-center justify-center space-x-2 px-3 sm:px-4 py-2 sm:py-3 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 cursor-pointer text-sm sm:text-base ${
                   uploadingDocuments
                     ? "opacity-50 cursor-not-allowed"
                     : ""
@@ -975,7 +975,7 @@ const CaseDetails = () => {
           {Array.isArray(documents) &&
           documents.filter((doc) => typeof doc === "string" && doc).length >
             0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
               {documents
                 .filter((doc) => typeof doc === "string" && doc)
                 .map((doc, idx) => {
@@ -993,15 +993,15 @@ const CaseDetails = () => {
                   return (
                     <div
                       key={idx}
-                      className="bg-slate-700/50 rounded-xl p-4 hover:bg-slate-600/50 transition-all duration-200 cursor-pointer border border-slate-600/50 hover:border-slate-500/50 hover:shadow-lg"
+                      className="bg-slate-700/50 rounded-xl p-3 sm:p-4 hover:bg-slate-600/50 transition-all duration-200 cursor-pointer border border-slate-600/50 hover:border-slate-500/50 hover:shadow-lg"
                     >
-                      <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 bg-blue-500/20 rounded-lg flex items-center justify-center">
-                          <FaFileAlt className="w-4 h-4 text-blue-400" />
+                      <div className="flex items-center space-x-2 sm:space-x-3">
+                        <div className="w-6 h-6 sm:w-8 sm:h-8 bg-blue-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <FaFileAlt className="w-3 h-3 sm:w-4 sm:h-4 text-blue-400" />
                         </div>
                         <button
                           onClick={() => handleDocumentClick(doc, filename)}
-                          className="text-blue-400 hover:text-blue-300 transition-colors text-left flex-1 text-sm font-medium"
+                          className="text-blue-400 hover:text-blue-300 transition-colors text-left flex-1 text-xs sm:text-sm font-medium break-words"
                         >
                           {filename}
                         </button>
@@ -1092,12 +1092,12 @@ const CaseDetails = () => {
           </div>
         )}
         {/* Professional Comments Section */}
-        <div className="bg-gradient-to-r from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl p-6 border border-slate-600/50 shadow-2xl">
-          <div className="flex items-center space-x-3 mb-6">
-            <div className="p-3 bg-gradient-to-r from-orange-500/20 to-yellow-500/20 rounded-xl">
-              <FaPaperPlane className="w-6 h-6 text-orange-400" />
+        <div className="bg-gradient-to-r from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl">
+          <div className="flex items-center space-x-3 mb-4 sm:mb-6">
+            <div className="p-2 sm:p-3 bg-gradient-to-r from-orange-500/20 to-yellow-500/20 rounded-xl">
+              <FaPaperPlane className="w-5 h-5 sm:w-6 sm:h-6 text-orange-400" />
             </div>
-            <h3 className="text-lg font-semibold text-white">
+            <h3 className="text-base sm:text-lg font-semibold text-white">
               Case Communications
             </h3>
           </div>
@@ -1438,6 +1438,23 @@ const CaseDetails = () => {
             </div>
           </div>
         )}
+
+        {/* Floating Action Button for Mobile */}
+        <div className="fixed bottom-4 right-4 sm:hidden z-40">
+          <button
+            onClick={() => {
+              // Scroll to the notes section
+              const notesSection = document.querySelector('[data-notes-section]');
+              if (notesSection) {
+                notesSection.scrollIntoView({ behavior: 'smooth' });
+              }
+            }}
+            className="w-14 h-14 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 flex items-center justify-center"
+            title="Add Note"
+          >
+            <FaPlus className="w-6 h-6" />
+          </button>
+        </div>
       </div>
     </div>
   );
