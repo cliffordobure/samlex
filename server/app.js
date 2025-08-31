@@ -29,6 +29,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const allowedOrigins = [
+  "https://samlex-client.vercel.app",
   "https://lawfirm-saas-client.vercel.app",
   "http://localhost:5001",
   "http://localhost:5002",
@@ -78,15 +79,15 @@ app.use(accessLogger);
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
-// Allow embedding uploads in iframe from localhost:5001
+// Allow embedding uploads in iframe from Vercel domains
 app.use("/uploads", (req, res, next) => {
   res.setHeader(
     "Content-Security-Policy",
-    "frame-ancestors 'self' https://lawfirm-saas-client.vercel.app"
+    "frame-ancestors 'self' https://samlex-client.vercel.app https://lawfirm-saas-client.vercel.app"
   );
   res.setHeader(
     "X-Frame-Options",
-    "ALLOW-FROM https://lawfirm-saas-client.vercel.app"
+    "ALLOW-FROM https://samlex-client.vercel.app"
   );
   next();
 });

@@ -1586,9 +1586,7 @@ ChartJS.register(
                       Escalation: {(revenueAnalytics.overview?.totalEscalationFees || 0).toLocaleString()} | 
                       Promised: {(revenueAnalytics.overview?.totalPromisedPayments || 0).toLocaleString()}
                     </p>
-                    <p className="text-red-400 text-xs mt-1">
-                      Debug: {JSON.stringify(revenueAnalytics.overview)}
-                    </p>
+
                   </div>
                   <div className="p-3 bg-emerald-500/20 rounded-lg">
                     <FaReceipt className="text-emerald-400 text-xl" />
