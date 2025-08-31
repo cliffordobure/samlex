@@ -1,0 +1,9 @@
+export { default as SystemOwner } from "./SystemOwner.js";
+export { default as LawFirm } from "./LawFirm.js";
+export { default as Department } from "./Department.js";
+export { default as User } from "./User.js";
+export { default as CreditCase } from "./CreditCase.js";
+export { default as LegalCase } from "./LegalCase.js";
+export { default as Payment } from "./Payment.js";
+export { default as Document } from "./Document.js";
+export { default as Notification } from "./Notification.js";

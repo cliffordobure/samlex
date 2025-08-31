@@ -1,0 +1,86 @@
+import express from "express";
+import {
+  createCreditCase,
+  moveCreditCase,
+  assignCreditCase,
+  commentOnCreditCase,
+  addNoteToCreditCase,
+  addFollowUpToCreditCase,
+  addPromisedPaymentToCreditCase,
+  updatePromisedPaymentStatus,
+  escalateCreditCase,
+  getCreditCases,
+  getCreditCaseById,
+  getCaseComments,
+  addCaseComment,
+  initiateEscalation,
+  confirmEscalationPayment,
+  getEscalationFee,
+  getEscalatedCreditCases,
+  addDocumentToCreditCase,
+  updateEscalatedCaseStatus,
+} from "../controllers/creditCaseController.js";
+import { protect } from "../middleware/auth.js";
+// (Optional) import authentication/authorization middleware if needed
+
+const router = express.Router();
+
+// Get all credit collection cases
+router.get("/", protect, getCreditCases);
+
+// Get escalated credit cases for legal department
+router.get("/escalated", protect, getEscalatedCreditCases);
+
+// Create a new credit collection case
+router.post("/", protect, createCreditCase);
+
+// Move (update stage/status) a credit case
+router.patch("/:id/move", protect, moveCreditCase);
+
+// Assign a case to an officer (or self)
+router.patch("/:id/assign", protect, assignCreditCase);
+
+// Add a comment to a case
+router.post("/:id/comment", protect, commentOnCreditCase);
+
+// Add a private note to a case
+router.post("/:id/note", protect, addNoteToCreditCase);
+
+// Add a note to a case (plural route for RESTful convention)
+router.post("/:id/notes", protect, addNoteToCreditCase);
+
+// Add a follow-up to a case
+router.post("/:id/follow-up", protect, addFollowUpToCreditCase);
+
+// Add a promised payment to a case
+router.post("/:id/promised-payment", protect, addPromisedPaymentToCreditCase);
+
+// Update promised payment status
+router.patch(
+  "/:id/promised-payment/:paymentId",
+  protect,
+  updatePromisedPaymentStatus
+);
+
+// Escalate a case
+router.patch("/:id/escalate", protect, escalateCreditCase);
+
+// Get a single credit collection case by ID
+router.get("/:id", protect, getCreditCaseById);
+
+// Comments endpoints
+router.get("/:id/comments", protect, getCaseComments);
+router.post("/:id/comments", protect, addCaseComment);
+
+// Escalation endpoints
+router.get("/:id/escalation-fee", protect, getEscalationFee);
+router.post("/:id/initiate-escalation", protect, initiateEscalation);
+router.post("/:id/confirm-escalation", protect, confirmEscalationPayment);
+
+// Document endpoints
+router.post("/:id/documents", protect, addDocumentToCreditCase);
+
+// Escalated case status update
+router.patch("/:id/escalated-status", protect, updateEscalatedCaseStatus);
+
+export default router;
