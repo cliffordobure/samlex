@@ -302,18 +302,28 @@ export const registerLawFirm = async (req, res) => {
     // Check if firm email already exists
     const existingEmail = await LawFirm.findOne({ firmEmail: email });
     if (existingEmail) {
+      console.log(`❌ Law firm email conflict: ${email} already exists (${existingEmail.firmName})`);
       return res.status(400).json({
         success: false,
-        message: "A law firm with this email already exists",
+        message: `A law firm with the email "${email}" already exists (${existingEmail.firmName})`,
+        conflict: {
+          type: "firm_email",
+          existingFirm: existingEmail.firmName
+        }
       });
     }
 
     // Check if admin email already exists
     const existingAdmin = await User.findOne({ email: adminEmail });
     if (existingAdmin) {
+      console.log(`❌ Admin email conflict: ${adminEmail} already exists (${existingAdmin.firstName} ${existingAdmin.lastName})`);
       return res.status(400).json({
         success: false,
-        message: "An account with this admin email already exists",
+        message: `An account with the admin email "${adminEmail}" already exists (${existingAdmin.firstName} ${existingAdmin.lastName})`,
+        conflict: {
+          type: "admin_email",
+          existingUser: `${existingAdmin.firstName} ${existingAdmin.lastName}`
+        }
       });
     }
 
