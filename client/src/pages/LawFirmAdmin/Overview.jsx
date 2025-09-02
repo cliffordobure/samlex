@@ -5,6 +5,7 @@ import { getUsers } from "../../store/slices/userSlice";
 import { getDepartments } from "../../store/slices/departmentSlice";
 import { getCreditCases } from "../../store/slices/creditCaseSlice";
 import { getLegalCases } from "../../store/slices/legalCaseSlice";
+import reportsApi from "../../store/api/reportsApi";
 import {
   FaUsers,
   FaBuilding,
@@ -26,6 +27,8 @@ import {
   FaSearch,
   FaTimes,
   FaBars,
+  FaFilePdf,
+  FaFileCsv,
 } from "react-icons/fa";
 
 const AdminOverview = () => {
@@ -259,6 +262,95 @@ const AdminOverview = () => {
     URL.revokeObjectURL(url);
   };
 
+  const handleExportPDF = async () => {
+    try {
+      const response = await reportsApi.downloadPDF(user.lawFirm._id, "overview");
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${user.lawFirm.firmName.replace(/\s+/g, "_")}_dashboard_report.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Error downloading PDF:", error);
+      alert("Failed to download PDF. Please try again.");
+    }
+  };
+
+  const handleExportCSV = async () => {
+    try {
+      // Create CSV data from dashboard data
+      const csvData = [
+        // Stats section
+        ['Dashboard Statistics', ''],
+        ['Total Users', stats.totalUsers],
+        ['Total Departments', stats.totalDepartments],
+        ['Total Cases', stats.totalCases],
+        ['Active Cases', stats.activeCases],
+        ['Pending Cases', stats.pendingCases],
+        ['Resolved Cases', stats.resolvedCases],
+        ['Urgent Cases', stats.urgentCases],
+        ['This Month Cases', stats.thisMonthCases],
+        ['Last Month Cases', stats.lastMonthCases],
+        ['Case Growth (%)', stats.caseGrowth],
+        [''],
+        
+        // Case Trends section
+        ['Case Trends', ''],
+        ['Month', 'Credit Cases', 'Legal Cases'],
+        ...caseTrends.map(trend => [
+          trend.month,
+          trend.creditCases,
+          trend.legalCases
+        ]),
+        [''],
+        
+        // Top Performers section
+        ['Top Performers', ''],
+        ['Name', 'Role', 'Performance', 'Cases Handled'],
+        ...topPerformers.map(performer => [
+          performer.name,
+          performer.role,
+          performer.performance,
+          performer.casesHandled
+        ]),
+        [''],
+        
+        // Departments section
+        ['Departments', ''],
+        ['Name', 'Type', 'Status', 'Members', 'Cases'],
+        ...departments.map(dept => [
+          dept.name,
+          dept.departmentType.replace("_", " ").toUpperCase(),
+          dept.isActive ? 'Active' : 'Inactive',
+          users.filter(u => u.department === dept._id).length,
+          [...creditCases, ...legalCases].filter(c => c.department === dept._id).length
+        ])
+      ];
+
+      // Convert to CSV string
+      const csvString = csvData.map(row => 
+        row.map(cell => `"${cell}"`).join(',')
+      ).join('\n');
+
+      const blob = new Blob([csvString], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${user.lawFirm.firmName.replace(/\s+/g, "_")}_dashboard_report.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Error downloading CSV:", error);
+      alert("Failed to download CSV. Please try again.");
+    }
+  };
+
   const handleSearch = (e) => {
     e.preventDefault();
     if (searchQuery.trim()) {
@@ -481,12 +573,24 @@ const AdminOverview = () => {
               <button className="px-2 sm:px-3 py-1 bg-slate-700/50 hover:bg-slate-600/50 text-slate-300 rounded-lg text-xs sm:text-sm transition-colors">
                 Last 6 Months
               </button>
-              <button 
-                onClick={handleExportData}
-                className="px-2 sm:px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs sm:text-sm transition-colors"
-              >
-                Export
-              </button>
+              <div className="flex items-center gap-1">
+                <button 
+                  onClick={handleExportPDF}
+                  className="px-2 sm:px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs sm:text-sm transition-colors flex items-center gap-1"
+                  title="Export as PDF"
+                >
+                  <FaFilePdf className="w-3 h-3" />
+                  PDF
+                </button>
+                <button 
+                  onClick={handleExportCSV}
+                  className="px-2 sm:px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs sm:text-sm transition-colors flex items-center gap-1"
+                  title="Export as CSV"
+                >
+                  <FaFileCsv className="w-3 h-3" />
+                  CSV
+                </button>
+              </div>
             </div>
               </div>
           
@@ -664,14 +768,25 @@ const AdminOverview = () => {
               <FaFilter className="w-3 h-3 sm:w-4 sm:h-4 inline mr-1 sm:mr-2" />
               View All
             </button>
-            <button 
-              onClick={handleExportData}
-              className="px-3 sm:px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs sm:text-sm transition-colors"
-            >
-              <FaDownload className="w-3 h-3 sm:w-4 sm:h-4 inline mr-1 sm:mr-2" />
-              Export
-            </button>
-        </div>
+            <div className="flex items-center gap-1">
+              <button 
+                onClick={handleExportPDF}
+                className="px-3 sm:px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs sm:text-sm transition-colors flex items-center gap-1"
+                title="Export as PDF"
+              >
+                <FaFilePdf className="w-3 h-3 sm:w-4 sm:h-4" />
+                PDF
+              </button>
+              <button 
+                onClick={handleExportCSV}
+                className="px-3 sm:px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs sm:text-sm transition-colors flex items-center gap-1"
+                title="Export as CSV"
+              >
+                <FaFileCsv className="w-3 h-3 sm:w-4 sm:h-4" />
+                CSV
+              </button>
+            </div>
+          </div>
       </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">

@@ -2556,6 +2556,9 @@ const addLawFirmHeader = async (doc, lawFirm, reportTitle) => {
             response.on("end", () => {
               const buffer = Buffer.concat(chunks);
               try {
+                // Create a white background rectangle for the logo to ensure it's visible
+                doc.rect(40, 40, 100, 100).fill("#ffffff");
+                
                 // Position logo in top-left of header with professional styling
                 doc.image(buffer, 45, 45, { width: 90, height: 90 });
                 

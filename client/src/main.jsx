@@ -31,7 +31,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
             error: {
               iconTheme: {
                 primary: "#ef4444",
-                secondary: "#f8fafc",
+                secondary: "#f8fafc", 
               },
             },
           }}

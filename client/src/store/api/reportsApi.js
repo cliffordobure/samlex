@@ -37,7 +37,6 @@ const reportsApi = {
   getDashboardAnalytics: (lawFirmId) =>
     api.get(`/reports/dashboard/${lawFirmId}`),
 
-  // New enhanced reports APIs
   getAdminOwnCases: () => api.get("/reports/admin-own-cases"),
 
   getLegalPerformance: (lawFirmId, params = {}) =>
@@ -49,7 +48,6 @@ const reportsApi = {
   getEnhancedRevenue: (lawFirmId, params = {}) =>
     api.get(`/reports/enhanced-revenue/${lawFirmId}`, { params }),
 
-  // Download reports with law firm branding
   downloadPDF: (lawFirmId, reportType = "overview") =>
     api.get(`/reports/download-pdf/${lawFirmId}`, {
       params: { reportType },
@@ -69,7 +67,6 @@ const reportsApi = {
   downloadCreditCasesPDF: () =>
     api.get("/reports/credit-collection/cases-pdf", { responseType: "blob" }),
 
-  // Enhanced credit collection reports
   getDebtCollectorStats: () =>
     api.get("/reports/credit-collection/debt-collector-stats"),
   getDebtCollectorStatsById: (debtCollectorId, params = {}) =>
@@ -87,7 +84,6 @@ const reportsApi = {
   getLawFirmAdminDashboard: (lawFirmId) =>
     api.get(`/reports/law-firm-admin-dashboard/${lawFirmId}`),
 
-  // New enhanced credit collection reports with real statistics
   getComprehensiveCreditCollectionSummary: (params = {}) =>
     api.get("/reports/credit-collection/comprehensive-summary", { params }),
 

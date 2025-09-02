@@ -11,6 +11,8 @@ import { getCurrentUser, clearInvalidToken } from "./store/slices/authSlice";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import PublicRoute from "./components/auth/PublicRoute";
 import Loading from "./components/common/Loading";
+import NetworkStatus from "./components/common/NetworkStatus";
+import NetworkDebugger from "./components/common/NetworkDebugger";
 import CreditCollectionLayout from "./components/layouts/CreditCollectionLayout";
 
 // Pages
@@ -173,6 +175,8 @@ function App() {
 
   return (
     <div className="min-h-screen bg-dark-900">
+      <NetworkStatus />
+      <NetworkDebugger />
       <Routes>
         {/* Public Routes */}
         <Route path="/" element={<LandingPage />} />
