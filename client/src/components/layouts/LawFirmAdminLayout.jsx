@@ -93,7 +93,7 @@ const LawFirmAdminLayout = ({ children }) => {
   return (
     <div className="h-screen flex overflow-hidden bg-gradient-to-br from-slate-900 via-blue-900/20 to-indigo-900/20">
       {/* Desktop Sidebar */}
-      <div className="hidden lg:flex lg:w-72 lg:flex-col lg:fixed lg:inset-y-0">
+      <div className="hidden md:flex md:w-72 md:flex-col md:fixed md:inset-y-0">
         <SidebarContent
           navigation={navigation}
           currentPath={location.pathname}
@@ -106,7 +106,7 @@ const LawFirmAdminLayout = ({ children }) => {
 
       {/* Mobile Sidebar Overlay */}
       <div
-        className={`fixed inset-0 flex z-50 lg:hidden ${
+        className={`fixed inset-0 flex z-50 md:hidden ${
           sidebarOpen ? "" : "hidden"
         }`}
       >
@@ -135,11 +135,11 @@ const LawFirmAdminLayout = ({ children }) => {
       </div>
 
       {/* Main Content */}
-      <div className="flex flex-col w-0 flex-1 overflow-hidden lg:ml-72">
+      <div className="flex flex-col w-0 flex-1 overflow-hidden md:ml-72">
         {/* Top Navigation Bar */}
         <div className="relative z-10 flex-shrink-0 flex h-16 bg-gradient-to-r from-slate-800/90 to-slate-700/90 backdrop-blur-xl border-b border-slate-600/50 shadow-lg">
           <button
-            className="px-4 border-r border-slate-600/50 text-slate-400 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500 lg:hidden"
+            className="px-4 border-r border-slate-600/50 text-slate-400 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500 md:hidden"
             onClick={() => setSidebarOpen(true)}
           >
             <FaBars className="h-6 w-6" />
