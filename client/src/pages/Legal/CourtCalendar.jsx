@@ -66,7 +66,7 @@ import {
   FaLink,
   FaList,
   FaColumns,
-  FaGrid3,
+  FaTh,
   FaCalendarDay,
   FaCalendarWeek,
   FaChevronLeft,
