@@ -224,14 +224,19 @@ const CompleteCaseInfo = () => {
     );
   }
 
-  // Check if user is assigned to this case
-  if (currentCase.assignedTo?._id !== user._id) {
+  // Check if user has permission to update this case
+  const canUpdateCase = 
+    currentCase.assignedTo?._id === user._id || // Assigned advocate
+    user.role === "legal_head" || // Legal head
+    user.role === "law_firm_admin"; // Law firm admin
+
+  if (!canUpdateCase) {
     return (
       <div className="space-y-6">
         <div className="alert alert-error">
           <FaExclamationTriangle />
           <span>
-            You don't have permission to complete this case information.
+            You don't have permission to update this case information.
           </span>
         </div>
         <button
@@ -259,7 +264,7 @@ const CompleteCaseInfo = () => {
           </button>
           <div>
             <h1 className="text-3xl font-bold text-white">
-              Complete Case Information
+              Update Case Details
             </h1>
             <p className="text-dark-400 mt-2">
               Case: {currentCase.caseNumber} - {currentCase.title}
@@ -591,7 +596,7 @@ const CompleteCaseInfo = () => {
             ) : (
               <FaSave />
             )}
-            Complete Information
+            Update Case Details
           </button>
         </div>
       </form>

@@ -74,6 +74,19 @@ io.on("connection", (socket) => {
 
   socket.on("join-case", (caseId) => {
     socket.join(`case-${caseId}`);
+    console.log(`User ${socket.id} joined case room: ${caseId}`);
+  });
+
+  socket.on("leave-case", (caseId) => {
+    socket.leave(`case-${caseId}`);
+    console.log(`User ${socket.id} left case room: ${caseId}`);
+  });
+
+  // Handle legal case comments
+  socket.on("legalCaseCommented", (data) => {
+    // Broadcast to all users in the case room
+    socket.to(`case-${data.caseId}`).emit("legalCaseCommented", data.comment);
+    console.log(`Legal case comment broadcasted for case: ${data.caseId}`);
   });
 
   socket.on("disconnect", () => {

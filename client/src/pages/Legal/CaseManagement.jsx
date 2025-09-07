@@ -9,6 +9,7 @@ import {
   getLegalCaseStatistics,
 } from "../../store/slices/legalCaseSlice";
 import { getUsers } from "../../store/slices/userSlice";
+import LegalKanbanBoard from "./LegalKanbanBoard";
 import toast from "react-hot-toast";
 import {
   FaPlus,
@@ -149,13 +150,13 @@ const LegalCaseManagement = () => {
     const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
 
     const activeCases = cases.filter((c) =>
-      ["assigned", "under_review", "court_proceedings"].includes(c.status)
+      ["assigned", "under_review", "court_proceedings"].includes(c.status || "pending")
     );
     const resolvedCases = cases.filter((c) =>
-      ["resolved", "closed"].includes(c.status)
+      ["resolved", "closed"].includes(c.status || "pending")
     );
-    const pendingCases = cases.filter((c) => c.status === "pending_assignment");
-    const urgentCases = cases.filter((c) => c.priority === "urgent" || c.priority === "high");
+    const pendingCases = cases.filter((c) => (c.status || "pending") === "pending_assignment");
+    const urgentCases = cases.filter((c) => (c.priority || "medium") === "urgent" || (c.priority || "medium") === "high");
     
     const thisMonthCases = cases.filter((c) =>
       new Date(c.createdAt) >= thisMonth
@@ -181,16 +182,16 @@ const LegalCaseManagement = () => {
 
     // Apply filters
     if (filters.status) {
-      filtered = filtered.filter((case_) => case_.status === filters.status);
+      filtered = filtered.filter((case_) => (case_.status || "pending") === filters.status);
     }
     if (filters.caseType) {
       filtered = filtered.filter(
-        (case_) => case_.caseType === filters.caseType
+        (case_) => (case_.caseType || "other") === filters.caseType
       );
     }
     if (filters.priority) {
       filtered = filtered.filter(
-        (case_) => case_.priority === filters.priority
+        (case_) => (case_.priority || "medium") === filters.priority
       );
     }
     if (filters.assignedTo) {
@@ -586,7 +587,7 @@ const LegalCaseManagement = () => {
                     ? "bg-blue-600 text-white" 
                     : "bg-slate-700/50 text-slate-300 hover:bg-slate-600/50"
                 }`}
-                title="Kanban View"
+                title="Kanban Board"
               >
                 <FaColumns className="w-4 h-4" />
               </button>
@@ -763,7 +764,7 @@ const LegalCaseManagement = () => {
                           <div className="flex items-center gap-2">
                             <CaseTypeIcon className={`w-5 h-5 ${getCaseTypeColor(legalCase.caseType)}`} />
                             <span className={`text-xs font-medium ${getCaseTypeColor(legalCase.caseType)}`}>
-                              {legalCase.caseType.replace("_", " ").toUpperCase()}
+                              {(legalCase.caseType || "other").replace("_", " ").toUpperCase()}
                             </span>
                           </div>
                           <input
@@ -795,10 +796,10 @@ const LegalCaseManagement = () => {
                         {/* Status and Priority */}
                         <div className="flex items-center gap-2 mb-4">
                           <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getStatusBgColor(legalCase.status)} ${getStatusColor(legalCase.status)}`}>
-                            {legalCase.status.replace("_", " ")}
+                            {(legalCase.status || "pending").replace("_", " ")}
                           </span>
                           <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getPriorityBgColor(legalCase.priority)} ${getPriorityColor(legalCase.priority)}`}>
-                            {legalCase.priority}
+                            {legalCase.priority || "medium"}
                           </span>
                         </div>
 
@@ -862,7 +863,7 @@ const LegalCaseManagement = () => {
                              View
                            </button>
 
-                           {user.role === "legal_head" && legalCase.status === "pending_assignment" && (
+                           {user.role === "legal_head" && (legalCase.status || "pending") === "pending_assignment" && (
                              <button
                                onClick={(e) => {
                                  e.stopPropagation();
@@ -940,18 +941,18 @@ const LegalCaseManagement = () => {
                             <div className="flex items-center gap-2">
                               <CaseTypeIcon className={`w-4 h-4 ${getCaseTypeColor(legalCase.caseType)}`} />
                               <span className={`text-sm font-medium ${getCaseTypeColor(legalCase.caseType)}`}>
-                                {legalCase.caseType.replace("_", " ")}
+                                {(legalCase.caseType || "other").replace("_", " ")}
                               </span>
                             </div>
                           </td>
                           <td className="p-4">
                             <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusBgColor(legalCase.status)} ${getStatusColor(legalCase.status)}`}>
-                              {legalCase.status.replace("_", " ")}
+                              {(legalCase.status || "pending").replace("_", " ")}
                             </span>
                           </td>
                           <td className="p-4">
                             <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getPriorityBgColor(legalCase.priority)} ${getPriorityColor(legalCase.priority)}`}>
-                              {legalCase.priority}
+                              {legalCase.priority || "medium"}
                             </span>
                           </td>
                           <td className="p-4">
@@ -985,7 +986,7 @@ const LegalCaseManagement = () => {
                                 View
                               </button>
 
-                              {user.role === "legal_head" && legalCase.status === "pending_assignment" && (
+                              {user.role === "legal_head" && (legalCase.status || "pending") === "pending_assignment" && (
                                 <button
                                   onClick={() => {
                                     setAssignmentData({
@@ -1028,54 +1029,11 @@ const LegalCaseManagement = () => {
 
             {/* Kanban View */}
             {viewMode === "kanban" && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-                {["pending_assignment", "assigned", "under_review", "court_proceedings", "settlement", "resolved", "closed"].map((status) => {
-                  const statusCases = filteredCases.filter(c => c.status === status);
-                  const statusTitle = status.replace("_", " ").replace(/\b\w/g, l => l.toUpperCase());
-                  
-                  return (
-                    <div key={status} className="bg-slate-700/30 rounded-xl border border-slate-600/30">
-                      <div className="p-4 border-b border-slate-600/30">
-                        <h3 className="font-bold text-white">{statusTitle}</h3>
-                        <p className="text-sm text-slate-400">{statusCases.length} cases</p>
-                      </div>
-                      <div className="p-4 space-y-3">
-                        {statusCases.map((legalCase) => {
-                          const CaseTypeIcon = getCaseTypeIcon(legalCase.caseType);
-                          return (
-                            <div
-                              key={legalCase._id}
-                              className="bg-slate-600/30 rounded-lg p-3 border border-slate-500/30 hover:border-slate-400/50 transition-all duration-300 cursor-pointer"
-                              onClick={() => navigate(`/legal/cases/${legalCase._id}`)}
-                            >
-                              <div className="flex items-start justify-between mb-2">
-                                <div className="flex items-center gap-2">
-                                  <CaseTypeIcon className={`w-4 h-4 ${getCaseTypeColor(legalCase.caseType)}`} />
-                                  <span className={`text-xs font-medium ${getCaseTypeColor(legalCase.caseType)}`}>
-                                    {legalCase.caseType.replace("_", " ")}
-                                  </span>
-                                </div>
-                                <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getPriorityBgColor(legalCase.priority)} ${getPriorityColor(legalCase.priority)}`}>
-                                  {legalCase.priority}
-                                </span>
-                              </div>
-                              <h4 className="font-medium text-white text-sm mb-1">{legalCase.title}</h4>
-                              <p className="text-xs text-slate-400 mb-2">{legalCase.caseNumber}</p>
-                              <div className="text-xs text-slate-400">
-                                {legalCase.assignedTo ? (
-                                  `Assigned to: ${legalCase.assignedTo.firstName} ${legalCase.assignedTo.lastName}`
-                                ) : (
-                                  "Unassigned"
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+              <LegalKanbanBoard
+                cases={filteredCases}
+                isLoading={isLoading}
+                isAdminView={false}
+              />
             )}
           </>
         )}

@@ -74,7 +74,7 @@ router.get(
 );
 router.get(
   "/legal-performance/:lawFirmId",
-  authorize("admin", "law_firm_admin", "legal_head"),
+  authorize("admin", "law_firm_admin", "legal_head", "advocate"),
   getLegalPerformance
 );
 router.get(
@@ -91,12 +91,12 @@ router.get(
 // Download reports with law firm branding
 router.get(
   "/download-pdf/:lawFirmId",
-  authorize("admin", "law_firm_admin"),
+  authorize("admin", "law_firm_admin", "legal_head", "advocate"),
   downloadComprehensivePDF
 );
 router.get(
   "/download-excel/:lawFirmId",
-  authorize("admin", "law_firm_admin"),
+  authorize("admin", "law_firm_admin", "legal_head", "advocate"),
   downloadComprehensiveExcel
 );
 

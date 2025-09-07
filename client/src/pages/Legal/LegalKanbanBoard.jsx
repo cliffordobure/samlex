@@ -60,9 +60,10 @@ const LegalKanbanBoard = ({
   // Check if user is admin
   const isAdmin = user?.role === "admin" || user?.role === "law_firm_admin";
   const isAdvocate = user?.role === "advocate";
+  const isLegalHead = user?.role === "legal_head";
 
-  // Allow admins to change status in both normal and admin view
-  const canChangeStatus = isAdmin;
+  // Allow admins, legal heads, and advocates to change status
+  const canChangeStatus = isAdmin || isLegalHead || isAdvocate;
   const canAssignCases = isAdmin || isAdminView;
 
   // Load users for assignment dropdown
@@ -99,14 +100,22 @@ const LegalKanbanBoard = ({
     };
   }, [dispatch]);
 
-  // Handle drag end - allow admins to change status in both normal and admin view
+  // Handle drag end - allow admins, legal heads, and advocates to change status
   const onDragEnd = (result) => {
     const { destination, source, draggableId } = result;
     if (!destination || destination.droppableId === source.droppableId) return;
 
-    // Only allow admins to change status
+    // Only allow users with appropriate permissions to change status
     if (!canChangeStatus) {
       return;
+    }
+
+    // For advocates, only allow them to move their own cases
+    if (isAdvocate) {
+      const caseToMove = localCases.find(c => c._id === draggableId);
+      if (!caseToMove || (caseToMove.assignedTo !== user._id && caseToMove.assignedTo?._id !== user._id)) {
+        return; // Advocate can't move cases not assigned to them
+      }
     }
 
     // Optimistically update localCases
@@ -265,25 +274,33 @@ const LegalKanbanBoard = ({
     }
   };
 
-  // Helper to determine if a case can be dragged (based on status)
+  // Helper to determine if a case can be dragged (based on status and user permissions)
   const canChangeStatusForCase = (case_) => {
-    return canChangeStatus;
+    if (!canChangeStatus) return false;
+    
+    // For advocates, only allow them to move their own cases
+    if (isAdvocate) {
+      return case_.assignedTo === user._id || case_.assignedTo?._id === user._id;
+    }
+    
+    // Admins and legal heads can move any case
+    return true;
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-dark-900 to-dark-800">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900/20 to-indigo-900/20">
       {/* Header with user info and permissions */}
-      <div className="bg-white/5 border-b border-dark-700 p-4">
+      <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl border-b border-slate-600/50 p-4">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-white mb-2">
               Legal Case Management Board
             </h1>
-            <div className="flex items-center space-x-4 text-sm text-dark-300">
+            <div className="flex items-center space-x-4 text-sm text-slate-300">
               <span>
                 Welcome, {user?.firstName} {user?.lastName}
               </span>
-              <span className="px-2 py-1 rounded bg-primary-500/20 text-primary-300">
+              <span className="px-2 py-1 rounded bg-blue-500/20 text-blue-300">
                 {user?.role?.replace("_", " ").toUpperCase()}
               </span>
               {isAdmin && (
@@ -293,22 +310,32 @@ const LegalKanbanBoard = ({
               )}
             </div>
             {isAdmin && (
-              <div className="mt-2 text-xs text-dark-400">
+              <div className="mt-2 text-xs text-slate-400">
                 💡 Admin Features:{" "}
                 {isAdminView
                   ? "Drag cards to change status • Assign cases to advocates • Monitor progress"
                   : "Drag cards to change status • Assign cases to advocates • Monitor progress"}
               </div>
             )}
+            {isAdvocate && (
+              <div className="mt-2 text-xs text-slate-400">
+                💡 Advocate Features: Drag your assigned cases to update status • Add comments • View case details
+              </div>
+            )}
+            {isLegalHead && !isAdmin && (
+              <div className="mt-2 text-xs text-slate-400">
+                💡 Legal Head Features: Drag cards to change status • Monitor team progress • Add comments
+              </div>
+            )}
           </div>
-          <div className="text-right text-sm text-dark-300">
+          <div className="text-right text-sm text-slate-300">
             <div>Total Cases: {filteredCases.length}</div>
             <div>
               Your Cases: {isAdvocate ? filteredCases.length : "All visible"}
             </div>
             {isAdmin && progressMetrics && (
-              <div className="mt-2 pt-2 border-t border-dark-600">
-                <div className="text-xs text-dark-400 mb-1">
+              <div className="mt-2 pt-2 border-t border-slate-600">
+                <div className="text-xs text-slate-400 mb-1">
                   Progress Overview:
                 </div>
                 <div className="flex space-x-3 text-xs">
@@ -316,7 +343,7 @@ const LegalKanbanBoard = ({
                     <div className="text-green-400">
                       {progressMetrics.completionRate}% Complete
                     </div>
-                    <div className="text-dark-400">
+                    <div className="text-slate-400">
                       ({progressMetrics.resolved} cases)
                     </div>
                   </div>
@@ -324,7 +351,7 @@ const LegalKanbanBoard = ({
                     <div className="text-blue-400">
                       {progressMetrics.progressRate}% In Progress
                     </div>
-                    <div className="text-dark-400">
+                    <div className="text-slate-400">
                       ({progressMetrics.inProgress} cases)
                     </div>
                   </div>
@@ -349,23 +376,23 @@ const LegalKanbanBoard = ({
                 <div
                   ref={provided.innerRef}
                   {...provided.droppableProps}
-                  className={`bg-white/5 rounded-2xl shadow-lg w-80 min-h-[60vh] flex flex-col border border-dark-700 transition-all duration-200 ${
+                  className={`bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl shadow-lg w-80 min-h-[60vh] flex flex-col border border-slate-600/50 transition-all duration-200 ${
                     snapshot.isDraggingOver
-                      ? "ring-2 ring-primary-400 scale-105"
+                      ? "ring-2 ring-blue-400 scale-105"
                       : ""
                   }`}
                 >
-                  <div className="px-5 pt-5 pb-3 border-b border-dark-700 flex items-center justify-between">
+                  <div className="px-5 pt-5 pb-3 border-b border-slate-600/50 flex items-center justify-between">
                     <h2 className="text-lg font-bold text-white tracking-wide">
                       {col.label}
                     </h2>
-                    <span className="text-xs text-dark-400 font-semibold">
+                    <span className="text-xs text-slate-400 font-semibold">
                       {casesByStatus[col.key]?.length || 0}
                     </span>
                   </div>
                   <div className="flex-1 px-4 py-4 overflow-y-auto custom-scrollbar max-h-[60vh]">
                     {isLoading ? (
-                      <div className="text-dark-400 text-center py-8">
+                      <div className="text-slate-400 text-center py-8">
                         Loading...
                       </div>
                     ) : (
@@ -387,7 +414,7 @@ const LegalKanbanBoard = ({
                                   ref={provided.innerRef}
                                   {...provided.draggableProps}
                                   {...provided.dragHandleProps}
-                                  className={`bg-white/90 bg-opacity-80 rounded-2xl shadow-lg mb-5 p-5 cursor-pointer border-l-4 border-primary-400 hover:shadow-2xl transition-all duration-200 ${
+                                  className={`bg-gradient-to-br from-slate-700/90 to-slate-600/90 backdrop-blur-xl rounded-2xl shadow-lg mb-5 p-5 cursor-pointer border-l-4 border-blue-400 hover:shadow-2xl transition-all duration-200 ${
                                     snapshot.isDragging
                                       ? "scale-105 ring-2 ring-primary-400"
                                       : ""
@@ -399,31 +426,31 @@ const LegalKanbanBoard = ({
                                   onClick={() => openModal(legalCase)}
                                 >
                                   <div className="flex items-center justify-between mb-2">
-                                    <div className="font-bold text-dark-900 truncate max-w-[160px] text-base">
+                                    <div className="font-bold text-white truncate max-w-[160px] text-base">
                                       {legalCase.title || legalCase._id}
                                     </div>
                                     <div className="flex items-center space-x-2">
                                       {canChangeStatusForCase(legalCase) && (
-                                        <span className="text-xs text-dark-500">
+                                        <span className="text-xs text-slate-500">
                                           ⋮⋮
                                         </span>
                                       )}
-                                      <span className="text-xs px-2 py-0.5 rounded-full bg-primary-100 text-primary-700 font-bold uppercase tracking-wide shadow">
+                                      <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-bold uppercase tracking-wide shadow">
                                         {col.label}
                                       </span>
                                     </div>
                                   </div>
                                   <div className="flex items-center mb-2">
-                                    <div className="w-8 h-8 rounded-full bg-primary-400 flex items-center justify-center text-white font-bold text-lg mr-2 shadow">
+                                    <div className="w-8 h-8 rounded-full bg-blue-400 flex items-center justify-center text-white font-bold text-lg mr-2 shadow">
                                       {legalCase.assignedTo?.firstName
                                         ? legalCase.assignedTo.firstName[0]
                                         : "?"}
                                     </div>
                                     <div className="flex-1">
-                                      <div className="text-xs text-dark-500">
+                                      <div className="text-xs text-slate-500">
                                         Assigned to
                                       </div>
-                                      <div className="font-medium text-dark-700 text-sm">
+                                      <div className="font-medium text-slate-200 text-sm">
                                         {legalCase.assignedTo?.firstName &&
                                         legalCase.assignedTo?.lastName
                                           ? `${legalCase.assignedTo.firstName} ${legalCase.assignedTo.lastName}`
@@ -437,12 +464,12 @@ const LegalKanbanBoard = ({
                                         ? `/admin/legal-case/${legalCase._id}`
                                         : `/legal/cases/${legalCase._id}`
                                     }
-                                    className="text-primary-500 hover:text-primary-700 text-xs block mb-2 underline font-semibold"
+                                    className="text-blue-500 hover:text-blue-700 text-xs block mb-2 underline font-semibold"
                                     onClick={(e) => e.stopPropagation()}
                                   >
                                     View Details
                                   </Link>
-                                  <div className="flex items-center text-xs text-dark-400 mb-1">
+                                  <div className="flex items-center text-xs text-slate-400 mb-1">
                                     <span className="mr-2">Created:</span>
                                     <span>
                                       {new Date(
@@ -451,7 +478,7 @@ const LegalKanbanBoard = ({
                                     </span>
                                   </div>
                                   {!canChangeStatusForCase(legalCase) && (
-                                    <div className="mt-2 text-xs text-dark-500 italic">
+                                    <div className="mt-2 text-xs text-slate-500 italic">
                                       (View only - contact case handler for
                                       status changes)
                                     </div>
@@ -464,10 +491,10 @@ const LegalKanbanBoard = ({
                         {/* Show remaining cases if more than 3 */}
                         {casesByStatus[col.key]?.length > 3 && (
                           <div className="text-center py-4">
-                            <div className="text-xs text-dark-400 mb-2">
+                            <div className="text-xs text-slate-400 mb-2">
                               +{casesByStatus[col.key].length - 3} more cases
                             </div>
-                            <div className="w-full h-1 bg-gradient-to-r from-transparent via-primary-400 to-transparent rounded-full opacity-50"></div>
+                            <div className="w-full h-1 bg-gradient-to-r from-transparent via-blue-400 to-transparent rounded-full opacity-50"></div>
                           </div>
                         )}
 
@@ -488,7 +515,7 @@ const LegalKanbanBoard = ({
                                   ref={provided.innerRef}
                                   {...provided.draggableProps}
                                   {...provided.dragHandleProps}
-                                  className={`bg-white/90 bg-opacity-80 rounded-2xl shadow-lg mb-5 p-5 cursor-pointer border-l-4 border-primary-400 hover:shadow-2xl transition-all duration-200 ${
+                                  className={`bg-gradient-to-br from-slate-700/90 to-slate-600/90 backdrop-blur-xl rounded-2xl shadow-lg mb-5 p-5 cursor-pointer border-l-4 border-blue-400 hover:shadow-2xl transition-all duration-200 ${
                                     snapshot.isDragging
                                       ? "scale-105 ring-2 ring-primary-400"
                                       : ""
@@ -500,31 +527,31 @@ const LegalKanbanBoard = ({
                                   onClick={() => openModal(legalCase)}
                                 >
                                   <div className="flex items-center justify-between mb-2">
-                                    <div className="font-bold text-dark-900 truncate max-w-[160px] text-base">
+                                    <div className="font-bold text-white truncate max-w-[160px] text-base">
                                       {legalCase.title || legalCase._id}
                                     </div>
                                     <div className="flex items-center space-x-2">
                                       {canChangeStatusForCase(legalCase) && (
-                                        <span className="text-xs text-dark-500">
+                                        <span className="text-xs text-slate-500">
                                           ⋮⋮
                                         </span>
                                       )}
-                                      <span className="text-xs px-2 py-0.5 rounded-full bg-primary-100 text-primary-700 font-bold uppercase tracking-wide shadow">
+                                      <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-bold uppercase tracking-wide shadow">
                                         {col.label}
                                       </span>
                                     </div>
                                   </div>
                                   <div className="flex items-center mb-2">
-                                    <div className="w-8 h-8 rounded-full bg-primary-400 flex items-center justify-center text-white font-bold text-lg mr-2 shadow">
+                                    <div className="w-8 h-8 rounded-full bg-blue-400 flex items-center justify-center text-white font-bold text-lg mr-2 shadow">
                                       {legalCase.assignedTo?.firstName
                                         ? legalCase.assignedTo.firstName[0]
                                         : "?"}
                                     </div>
                                     <div className="flex-1">
-                                      <div className="text-xs text-dark-500">
+                                      <div className="text-xs text-slate-500">
                                         Assigned to
                                       </div>
-                                      <div className="font-medium text-dark-700 text-sm">
+                                      <div className="font-medium text-slate-200 text-sm">
                                         {legalCase.assignedTo?.firstName &&
                                         legalCase.assignedTo?.lastName
                                           ? `${legalCase.assignedTo.firstName} ${legalCase.assignedTo.lastName}`
@@ -538,12 +565,12 @@ const LegalKanbanBoard = ({
                                         ? `/admin/legal-case/${legalCase._id}`
                                         : `/legal/cases/${legalCase._id}`
                                     }
-                                    className="text-primary-500 hover:text-primary-700 text-xs block mb-2 underline font-semibold"
+                                    className="text-blue-500 hover:text-blue-700 text-xs block mb-2 underline font-semibold"
                                     onClick={(e) => e.stopPropagation()}
                                   >
                                     View Details
                                   </Link>
-                                  <div className="flex items-center text-xs text-dark-400 mb-1">
+                                  <div className="flex items-center text-xs text-slate-400 mb-1">
                                     <span className="mr-2">Created:</span>
                                     <span>
                                       {new Date(
@@ -552,7 +579,7 @@ const LegalKanbanBoard = ({
                                     </span>
                                   </div>
                                   {!canChangeStatusForCase(legalCase) && (
-                                    <div className="mt-2 text-xs text-dark-500 italic">
+                                    <div className="mt-2 text-xs text-slate-500 italic">
                                       (View only - contact case handler for
                                       status changes)
                                     </div>
@@ -574,13 +601,13 @@ const LegalKanbanBoard = ({
 
       {/* Case Details Modal */}
       {showModal && selectedCase && (
-        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
-          <div className="bg-dark-800 rounded-lg p-6 w-full max-w-md mx-4">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-gradient-to-br from-slate-800 to-slate-700 rounded-lg p-6 w-full max-w-md mx-4 border border-slate-600/50 shadow-2xl">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold text-white">Case Details</h3>
               <button
                 onClick={closeModal}
-                className="text-dark-400 hover:text-white text-2xl font-bold"
+                className="text-slate-400 hover:text-white text-2xl font-bold"
               >
                 &times;
               </button>
@@ -591,16 +618,16 @@ const LegalKanbanBoard = ({
                 <h4 className="font-medium text-white mb-2">
                   {selectedCase.title}
                 </h4>
-                <p className="text-dark-300 text-sm mb-2">
+                <p className="text-slate-300 text-sm mb-2">
                   {selectedCase.description}
                 </p>
-                <div className="text-xs text-dark-400">
+                <div className="text-xs text-slate-400">
                   Case Number: {selectedCase.caseNumber}
                 </div>
-                <div className="text-xs text-dark-400">
+                <div className="text-xs text-slate-400">
                   Status: {selectedCase.status.replace("_", " ").toUpperCase()}
                 </div>
-                <div className="text-xs text-dark-400">
+                <div className="text-xs text-slate-400">
                   Assigned to:{" "}
                   {selectedCase.assignedTo?.firstName &&
                   selectedCase.assignedTo?.lastName
@@ -611,11 +638,11 @@ const LegalKanbanBoard = ({
 
               {canAssignCases && (
                 <div>
-                  <label className="block text-sm font-medium text-dark-200 mb-2">
+                  <label className="block text-sm font-medium text-slate-200 mb-2">
                     Assign to Advocate, Legal Head, or Admin
                   </label>
                   <select
-                    className="select select-bordered w-full"
+                    className="w-full bg-slate-700/50 text-white border border-slate-600/50 rounded-xl px-4 py-3 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                     value={assignUserId}
                     onChange={(e) => setAssignUserId(e.target.value)}
                   >
@@ -632,7 +659,7 @@ const LegalKanbanBoard = ({
                         ].includes(u.role)
                       )
                       .map((user) => (
-                        <option key={user._id} value={user._id}>
+                        <option key={user._id} value={user._id} className="bg-slate-700 text-white">
                           {user.firstName} {user.lastName} (
                           {user.role.replace("_", " ")})
                         </option>
@@ -641,7 +668,7 @@ const LegalKanbanBoard = ({
                   <button
                     onClick={handleAssign}
                     disabled={assignLoading || !assignUserId}
-                    className="btn btn-primary btn-sm mt-2 w-full"
+                    className="w-full mt-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-xl transition-colors font-medium"
                   >
                     {assignLoading ? "Assigning..." : "Assign Case"}
                   </button>
@@ -649,11 +676,11 @@ const LegalKanbanBoard = ({
               )}
 
               <div>
-                <label className="block text-sm font-medium text-dark-200 mb-2">
+                <label className="block text-sm font-medium text-slate-200 mb-2">
                   Add Comment
                 </label>
                 <textarea
-                  className="textarea textarea-bordered w-full"
+                  className="w-full bg-slate-700/50 text-white border border-slate-600/50 rounded-xl px-4 py-3 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none"
                   placeholder="Add a comment..."
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
@@ -662,14 +689,14 @@ const LegalKanbanBoard = ({
                 <button
                   onClick={handleComment}
                   disabled={commentLoading || !comment.trim()}
-                  className="btn btn-secondary btn-sm mt-2 w-full"
+                  className="w-full mt-2 px-4 py-2 bg-slate-600 hover:bg-slate-700 disabled:bg-slate-500 disabled:cursor-not-allowed text-white rounded-xl transition-colors font-medium"
                 >
                   {commentLoading ? "Adding..." : "Add Comment"}
                 </button>
               </div>
 
               {modalError && (
-                <div className="alert alert-error text-sm">
+                <div className="bg-red-500/20 border border-red-500/30 text-red-300 px-4 py-3 rounded-xl text-sm">
                   <span>{modalError}</span>
                 </div>
               )}

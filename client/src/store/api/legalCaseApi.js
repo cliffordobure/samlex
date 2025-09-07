@@ -45,6 +45,10 @@ const legalCaseApi = {
       content: comment.comment,
       isInternal: false,
     }),
+  addCaseComment: (id, comment) =>
+    api.post(`/legal-cases/${id}/comments`, comment),
+  getCaseComments: (id) =>
+    api.get(`/legal-cases/${id}/comments`),
   addDocument: (id, documents) =>
     api.post(`/legal-cases/${id}/documents`, { documents }),
   updateCourtDates: (id, courtDates) =>
@@ -56,6 +60,8 @@ const legalCaseApi = {
     api.post(`/legal-cases/${id}/notify-client`, { message }),
   completeCaseInfo: (id, data) =>
     api.put(`/legal-cases/${id}/complete-info`, data),
+  updateFilingFeePayment: (id, paymentData) =>
+    api.patch(`/legal-cases/${id}/filing-fee-payment`, paymentData),
 };
 
 export default legalCaseApi;

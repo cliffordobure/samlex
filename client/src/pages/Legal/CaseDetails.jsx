@@ -1,9 +1,10 @@
 /* eslint-disable no-unused-vars */
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { getLegalCase } from "../../store/slices/legalCaseSlice";
 import legalCaseApi from "../../store/api/legalCaseApi";
+import socket from "../../utils/socket";
 import toast from "react-hot-toast";
 import {
   FaArrowLeft,
@@ -34,6 +35,8 @@ import {
   FaStickyNote,
   FaUpload,
   FaInfoCircle,
+  FaPaperPlane,
+  FaUserCircle,
 } from "react-icons/fa";
 
 const API_BASE = import.meta.env.VITE_API_URL || "/api";
@@ -97,6 +100,12 @@ const CaseDetails = () => {
   const [noteContent, setNoteContent] = useState("");
   const [noteLoading, setNoteLoading] = useState(false);
   const [showNoteModal, setShowNoteModal] = useState(false);
+
+  // Chat/Comments state
+  const [comments, setComments] = useState([]);
+  const [commentInput, setCommentInput] = useState("");
+  const [commentLoading, setCommentLoading] = useState(false);
+  const commentsEndRef = useRef(null);
 
   // Communications state
   const [communications, setCommunications] = useState([]);
@@ -294,8 +303,32 @@ const CaseDetails = () => {
     if (currentCase) {
       fetchNotes();
       fetchCommunications();
+      fetchComments();
     }
   }, [currentCase]);
+
+  // Socket listeners for real-time chat
+  useEffect(() => {
+    if (currentCase && id) {
+      // Join the case room for real-time updates
+      socket.emit("join-case", id);
+      
+      // Listen for new comments
+      socket.on("legalCaseCommented", handleNewComment);
+      
+      return () => {
+        socket.off("legalCaseCommented", handleNewComment);
+        socket.emit("leave-case", id);
+      };
+    }
+  }, [currentCase, id]);
+
+  // Scroll to bottom when comments update
+  useEffect(() => {
+    if (commentsEndRef.current) {
+      commentsEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [comments]);
 
   // Fetch assignable users (advocates)
   const fetchAssignableUsers = async () => {
@@ -422,6 +455,78 @@ const CaseDetails = () => {
       );
     } finally {
       setCommunicationLoading(false);
+    }
+  };
+
+  // Chat/Comments functions
+  const fetchComments = async () => {
+    try {
+      // Get the case details which includes notes
+      const response = await legalCaseApi.getLegalCase(id);
+      if (response.data.success && response.data.data.notes) {
+        // Convert notes to comments format for display
+        const commentsFromNotes = response.data.data.notes.map(note => ({
+          _id: note._id,
+          content: note.content,
+          author: note.createdBy,
+          createdAt: note.createdAt,
+          type: 'comment',
+          isInternal: note.isInternal
+        }));
+        setComments(commentsFromNotes);
+      } else {
+        setComments([]);
+      }
+    } catch (error) {
+      console.error("Error fetching comments:", error);
+      setComments([]);
+    }
+  };
+
+  const handleNewComment = (comment) => {
+    setComments((prev) => {
+      // Ensure prev is always an array
+      const currentComments = Array.isArray(prev) ? prev : [];
+      return [...currentComments, comment];
+    });
+  };
+
+  const handleCommentSubmit = async (e) => {
+    e.preventDefault();
+    if (!commentInput.trim()) return;
+    
+    setCommentLoading(true);
+    try {
+      // Add comment using the notes endpoint
+      const response = await legalCaseApi.addNote(id, {
+        content: commentInput,
+        isInternal: false,
+      });
+      
+      if (response.data.success) {
+        setCommentInput("");
+        toast.success("Message sent successfully");
+        
+        // Emit socket event for real-time updates to other users
+        socket.emit("legalCaseCommented", {
+          caseId: id,
+          comment: {
+            _id: response.data.data.notes[response.data.data.notes.length - 1]._id,
+            content: commentInput,
+            author: user,
+            createdAt: new Date().toISOString(),
+            type: 'comment',
+            isInternal: false
+          }
+        });
+        
+        // Refresh comments to show the new one
+        await fetchComments();
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to send message");
+    } finally {
+      setCommentLoading(false);
     }
   };
 
@@ -572,6 +677,34 @@ const CaseDetails = () => {
   const closeDocumentModal = () => {
     setShowDocumentModal(false);
     setSelectedDocument(null);
+  };
+
+  // Handle payment status update
+  const handlePaymentStatusUpdate = async (paid) => {
+    try {
+      const response = await legalCaseApi.updateFilingFeePayment(id, {
+        paid: paid,
+        paymentId: paid ? `PAY-${Date.now()}` : null, // Generate a simple payment ID
+      });
+
+      if (response.data.success) {
+        // Update the current case state
+        setCurrentCase(prev => ({
+          ...prev,
+          filingFee: {
+            ...prev.filingFee,
+            paid: paid,
+            paidAt: paid ? new Date().toISOString() : null,
+            paymentId: paid ? `PAY-${Date.now()}` : null,
+          }
+        }));
+
+        toast.success(`Filing fee ${paid ? 'marked as paid' : 'marked as unpaid'} successfully`);
+      }
+    } catch (error) {
+      console.error("Error updating payment status:", error);
+      toast.error(error.response?.data?.message || "Failed to update payment status");
+    }
   };
 
   // Get case type icon
@@ -737,6 +870,15 @@ const CaseDetails = () => {
                       Reassign
                     </button>
                   )}
+                  
+                  {/* Update Case Details Button for Legal Heads and Admins */}
+                  <Link
+                    to={`/legal/cases/${currentCase._id}/complete`}
+                    className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-2"
+                  >
+                    <FaEdit className="w-4 h-4" />
+                    Update Case Details
+                  </Link>
                 </>
               )}
               {currentCase.assignedTo?._id === user._id && (
@@ -753,6 +895,16 @@ const CaseDetails = () => {
                     <option value="resolved">Resolved</option>
                     <option value="closed">Closed</option>
                   </select>
+                  
+                  {/* Update Case Details Button - Available for all assigned cases */}
+                  <Link
+                    to={`/legal/cases/${currentCase._id}/complete`}
+                    className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-2"
+                  >
+                    <FaEdit className="w-4 h-4" />
+                    Update Case Details
+                  </Link>
+                  
                   {currentCase.escalatedFrom?.creditCaseId && (
                     <Link
                       to={`/legal/cases/${currentCase._id}/complete`}
@@ -1078,79 +1230,99 @@ const CaseDetails = () => {
               </div>
             </div>
 
-            {/* Notes Card */}
-            <div className="bg-gradient-to-br from-dark-800/50 to-dark-700/50 border border-dark-600 rounded-2xl shadow-2xl backdrop-blur-sm overflow-hidden">
-              <div className="bg-gradient-to-r from-dark-700 to-dark-600 px-8 py-6 border-b border-dark-600">
+            {/* Professional Chat Section */}
+            <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl border border-slate-600/50 shadow-xl overflow-hidden">
+              <div className="bg-gradient-to-r from-slate-700 to-slate-600 px-8 py-6 border-b border-slate-600/50">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center">
-                    <FaComments className="w-5 h-5 text-purple-400" />
+                  <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                    <FaComments className="w-5 h-5 text-blue-400" />
                   </div>
                   <div>
                     <h2 className="text-2xl font-bold text-white">
-                      Notes & Comments
+                      Case Chat & Comments
                     </h2>
-                    <p className="text-dark-300">
-                      Case notes and internal comments
+                    <p className="text-slate-300">
+                      Real-time communication with team members and clients
                     </p>
                   </div>
                 </div>
               </div>
-              <div className="p-8">
-                <form onSubmit={handleAddNote} className="mb-6">
-                  <div className="space-y-4">
-                    <textarea
-                      value={noteContent}
-                      onChange={(e) => setNoteContent(e.target.value)}
-                      placeholder="Add a note or comment..."
-                      className="w-full px-4 py-3 bg-dark-900/50 border border-dark-600 rounded-lg text-white placeholder-dark-400 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all duration-200 resize-none"
-                      rows={4}
-                    />
-                    <div className="flex justify-end">
-                      <button
-                        type="submit"
-                        disabled={noteLoading}
-                        className="px-6 py-3 bg-primary-500 hover:bg-primary-600 text-white rounded-lg font-medium transition-all duration-200 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {noteLoading ? (
-                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        ) : (
-                          <FaStickyNote className="w-4 h-4" />
-                        )}
-                        Add Note
-                      </button>
+              
+              <div className="flex flex-col h-96">
+                {/* Chat Messages */}
+                <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-900/30">
+                  {(!comments || !Array.isArray(comments) || comments.length === 0) ? (
+                    <div className="text-center py-12">
+                      <FaComments className="w-16 h-16 text-slate-500 mx-auto mb-4" />
+                      <p className="text-slate-400 text-lg">No messages yet</p>
+                      <p className="text-slate-500 text-sm">Start the conversation below</p>
                     </div>
-                  </div>
-                </form>
-
-                {notes && notes.length > 0 ? (
-                  <div className="space-y-4">
-                    {notes.map((note, index) => (
+                  ) : (
+                    comments.map((comment) => (
                       <div
-                        key={index}
-                        className="bg-dark-900/30 border border-dark-600 rounded-lg p-4"
+                        key={comment._id}
+                        className={`flex ${comment.author?._id === user?._id ? 'justify-end' : 'justify-start'}`}
                       >
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            <FaUser className="w-4 h-4 text-dark-400" />
-                            <span className="text-sm font-medium text-white">
-                              {note.createdBy?.firstName}{" "}
-                              {note.createdBy?.lastName}
+                        <div className={`max-w-xs lg:max-w-md px-4 py-3 rounded-2xl ${
+                          comment.author?._id === user?._id 
+                            ? 'bg-blue-600 text-white' 
+                            : 'bg-slate-700/50 text-slate-200'
+                        }`}>
+                          <div className="flex items-center gap-2 mb-1">
+                            <FaUserCircle className="w-4 h-4" />
+                            <span className="text-sm font-medium">
+                              {comment.author?.firstName} {comment.author?.lastName}
+                            </span>
+                            <span className={`text-xs px-2 py-1 rounded-full ${
+                              comment.author?._id === user?._id 
+                                ? 'bg-blue-500/30 text-blue-200' 
+                                : 'bg-slate-600/50 text-slate-300'
+                            }`}>
+                              {comment.author?.role?.replace('_', ' ')}
                             </span>
                           </div>
-                          <span className="text-xs text-dark-400">
-                            {new Date(note.createdAt).toLocaleDateString()}
-                          </span>
+                          <p className="text-sm">{comment.content}</p>
+                          <p className={`text-xs mt-1 ${
+                            comment.author?._id === user?._id 
+                              ? 'text-blue-200' 
+                              : 'text-slate-400'
+                          }`}>
+                            {new Date(comment.createdAt).toLocaleString()}
+                          </p>
                         </div>
-                        <p className="text-white">{note.content}</p>
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-dark-400">
-                    <FaStickyNote className="mx-auto text-4xl mb-4" />
-                    <p>No notes added yet</p>
-                  </div>
-                )}
+                    ))
+                  )}
+                  <div ref={commentsEndRef} />
+                </div>
+
+                {/* Chat Input */}
+                <div className="p-6 border-t border-slate-600/50 bg-slate-800/50">
+                  <form onSubmit={handleCommentSubmit} className="flex gap-3">
+                    <div className="flex-1">
+                      <textarea
+                        value={commentInput}
+                        onChange={(e) => setCommentInput(e.target.value)}
+                        placeholder="Type your message here..."
+                        className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200 resize-none"
+                        rows={2}
+                        disabled={commentLoading}
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={commentLoading || !commentInput.trim()}
+                      className="px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-xl font-medium transition-all duration-200 flex items-center gap-2"
+                    >
+                      {commentLoading ? (
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      ) : (
+                        <FaPaperPlane className="w-4 h-4" />
+                      )}
+                      Send
+                    </button>
+                  </form>
+                </div>
               </div>
             </div>
           </div>
@@ -1276,15 +1448,38 @@ const CaseDetails = () => {
                     <label className="block text-sm font-semibold text-white">
                       Status
                     </label>
-                    <span
-                      className={`inline-block px-3 py-2 rounded-lg text-sm font-bold ${
-                        currentCase.filingFee.paid
-                          ? "bg-green-500"
-                          : "bg-yellow-500"
-                      } text-white shadow-sm`}
-                    >
-                      {currentCase.filingFee.paid ? "Paid" : "Pending"}
-                    </span>
+                    <div className="flex items-center gap-3">
+                      <span
+                        className={`inline-block px-3 py-2 rounded-lg text-sm font-bold ${
+                          currentCase.filingFee.paid
+                            ? "bg-green-500"
+                            : "bg-yellow-500"
+                        } text-white shadow-sm`}
+                      >
+                        {currentCase.filingFee.paid ? "Paid" : "Pending"}
+                      </span>
+                      
+                      {/* Payment Status Update Button for Advocates */}
+                      {user?.role === "advocate" && currentCase.assignedTo?._id === user._id && (
+                        <button
+                          onClick={() => handlePaymentStatusUpdate(!currentCase.filingFee.paid)}
+                          className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
+                            currentCase.filingFee.paid
+                              ? "bg-red-500 hover:bg-red-600 text-white"
+                              : "bg-green-500 hover:bg-green-600 text-white"
+                          }`}
+                        >
+                          {currentCase.filingFee.paid ? "Mark as Unpaid" : "Mark as Paid"}
+                        </button>
+                      )}
+                    </div>
+                    
+                    {/* Payment Date */}
+                    {currentCase.filingFee.paid && currentCase.filingFee.paidAt && (
+                      <p className="text-dark-400 text-sm">
+                        Paid on: {new Date(currentCase.filingFee.paidAt).toLocaleDateString()}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>

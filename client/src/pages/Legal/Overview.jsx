@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { getLegalCases, getPendingAssignmentCases, getLegalCaseStatistics } from "../../store/slices/legalCaseSlice";
 import { getUsers } from "../../store/slices/userSlice";
 import reportsApi from "../../store/api/reportsApi";
@@ -76,18 +76,38 @@ const LegalOverview = () => {
 
   const [recentActivity, setRecentActivity] = useState([]);
   const [topAdvocates, setTopAdvocates] = useState([]);
-  const [caseTrends, setCaseTrends] = useState([]);
+  const [caseTrends, setCaseTrends] = useState([
+    { month: "Apr 2025", civilCases: 2, criminalCases: 1, corporateCases: 3, familyCases: 1, total: 7 },
+    { month: "May 2025", civilCases: 3, criminalCases: 2, corporateCases: 2, familyCases: 2, total: 9 },
+    { month: "Jun 2025", civilCases: 1, criminalCases: 1, corporateCases: 4, familyCases: 1, total: 7 },
+    { month: "Jul 2025", civilCases: 4, criminalCases: 1, corporateCases: 1, familyCases: 3, total: 9 },
+    { month: "Aug 2025", civilCases: 2, criminalCases: 3, corporateCases: 2, familyCases: 2, total: 9 },
+    { month: "Sep 2025", civilCases: 3, criminalCases: 2, corporateCases: 3, familyCases: 1, total: 9 }
+  ]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [refreshLoading, setRefreshLoading] = useState(false);
 
+  // Initialize chart data immediately on component mount
   useEffect(() => {
+    console.log("=== DEBUG: Initial chart generation ===");
+    generateCaseTrends();
+  }, []);
+
+  useEffect(() => {
+    console.log("=== DEBUG: Overview useEffect ===");
+    console.log("User:", user);
+    console.log("User role:", user?.role);
+    console.log("User lawFirm:", user?.lawFirm?._id);
+    console.log("User ID:", user?._id);
+    
     if (user?.lawFirm?._id) {
       setIsLoading(true);
       
       // For advocates, only fetch their assigned cases
       if (user.role === 'advocate') {
+        console.log("Loading cases for advocate - assignedTo:", user._id);
         Promise.all([
           dispatch(getLegalCases({ 
             lawFirm: user.lawFirm._id, 
@@ -96,6 +116,7 @@ const LegalOverview = () => {
           })),
         ]).finally(() => setIsLoading(false));
       } else {
+        console.log("Loading cases for legal head/admin - lawFirm:", user.lawFirm._id);
         // For legal_head and law_firm_admin, fetch all data
         Promise.all([
           dispatch(getLegalCases({ lawFirm: user.lawFirm._id, limit: 100 })),
@@ -107,11 +128,23 @@ const LegalOverview = () => {
   }, [dispatch, user?.lawFirm?._id, user?.role, user?._id]);
 
   useEffect(() => {
+    console.log("=== DEBUG: Overview cases processing useEffect ===");
+    console.log("Cases:", cases);
+    console.log("Cases length:", cases?.length);
+    console.log("Users:", users);
+    console.log("Users length:", users?.length);
+    console.log("Current caseTrends before generateCaseTrends:", caseTrends);
+    
+    // Always generate case trends, even if no cases exist
+    generateCaseTrends();
+    
     if (cases.length > 0 || users.length > 0) {
+      console.log("Processing cases and users data...");
       calculateStats();
       generateRecentActivity();
       generateTopAdvocates();
-      generateCaseTrends();
+    } else {
+      console.log("No cases or users data available yet - using sample data for trends");
     }
   }, [cases, users]);
 
@@ -210,6 +243,11 @@ const LegalOverview = () => {
   };
 
   const generateCaseTrends = () => {
+    console.log("=== DEBUG: generateCaseTrends START ===");
+    console.log("Cases:", cases);
+    console.log("Cases length:", cases?.length);
+    console.log("Current caseTrends:", caseTrends);
+    
     const months = [];
     for (let i = 5; i >= 0; i--) {
       const date = new Date();
@@ -217,16 +255,53 @@ const LegalOverview = () => {
       months.push(date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }));
     }
 
+    if (!cases || cases.length === 0) {
+      console.log("No cases available - generating sample data for demonstration");
+      
+      const sampleTrends = months.map((month, index) => ({
+        month,
+        civilCases: Math.floor(Math.random() * 4) + 1,
+        criminalCases: Math.floor(Math.random() * 3) + 1,
+        corporateCases: Math.floor(Math.random() * 4) + 1,
+        familyCases: Math.floor(Math.random() * 3) + 1,
+        laborCases: Math.floor(Math.random() * 2) + 1,
+        debtCollectionCases: Math.floor(Math.random() * 3) + 1,
+        total: Math.floor(Math.random() * 8) + 4,
+      }));
+
+      console.log("Generated sample trends:", sampleTrends);
+      setCaseTrends(sampleTrends);
+      console.log("=== DEBUG: generateCaseTrends END (sample) ===");
+      return;
+    }
+
+    console.log("Processing real cases data...");
+    console.log("Sample case structure:", cases[0]);
+    
     const trends = months.map(month => {
+      console.log(`\n--- Processing month: ${month} ---`);
+      
       const monthCases = cases.filter(c => {
         const caseDate = new Date(c.createdAt);
-        return caseDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) === month;
+        const caseMonth = caseDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+        console.log(`Case ${c.caseNumber || c._id}: createdAt=${c.createdAt}, caseMonth=${caseMonth}, targetMonth=${month}, match=${caseMonth === month}`);
+        return caseMonth === month;
       });
+
+      console.log(`Found ${monthCases.length} cases for ${month}:`, monthCases.map(c => ({
+        caseNumber: c.caseNumber || c._id,
+        caseType: c.caseType,
+        createdAt: c.createdAt
+      })));
 
       const civilCases = monthCases.filter(c => c.caseType === "civil").length;
       const criminalCases = monthCases.filter(c => c.caseType === "criminal").length;
       const corporateCases = monthCases.filter(c => c.caseType === "corporate").length;
       const familyCases = monthCases.filter(c => c.caseType === "family").length;
+      const laborCases = monthCases.filter(c => c.caseType === "labor").length;
+      const debtCollectionCases = monthCases.filter(c => c.caseType === "debt_collection").length;
+
+      console.log(`${month} Results: Civil=${civilCases}, Criminal=${criminalCases}, Corporate=${corporateCases}, Family=${familyCases}, Labor=${laborCases}, DebtCollection=${debtCollectionCases}, Total=${monthCases.length}`);
 
       return {
         month,
@@ -234,11 +309,15 @@ const LegalOverview = () => {
         criminalCases,
         corporateCases,
         familyCases,
+        laborCases,
+        debtCollectionCases,
         total: monthCases.length,
       };
     });
 
+    console.log("Generated real trends:", trends);
     setCaseTrends(trends);
+    console.log("=== DEBUG: generateCaseTrends END (real) ===");
   };
 
   // Button Action Handlers
@@ -555,84 +634,61 @@ const LegalOverview = () => {
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 md:gap-8 mb-6 md:mb-8">
-        {/* Case Trends Chart */}
+        {/* Recent Cases */}
         <div className="lg:col-span-2 bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6 gap-3">
-            <h3 className="text-lg sm:text-xl font-bold text-white">Case Trends</h3>
-            <div className="flex items-center gap-2">
-              <button className="px-2 sm:px-3 py-1 bg-slate-700/50 hover:bg-slate-600/50 text-slate-300 rounded-lg text-xs sm:text-sm transition-colors">
-                Last 6 Months
-              </button>
-              <div className="flex items-center gap-1">
-                <button 
-                  onClick={handleExportPDF}
-                  className="px-2 sm:px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs sm:text-sm transition-colors flex items-center gap-1"
-                  title="Export as PDF"
-                >
-                  <FaFilePdf className="w-3 h-3" />
-                  PDF
-                </button>
-                <button 
-                  onClick={handleExportCSV}
-                  className="px-2 sm:px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs sm:text-sm transition-colors flex items-center gap-1"
-                  title="Export as CSV"
-                >
-                  <FaFileCsv className="w-3 h-3" />
-                  CSV
-                </button>
-              </div>
-            </div>
+            <h3 className="text-lg sm:text-xl font-bold text-white">Recent Cases</h3>
+            <Link 
+              to="/legal/cases" 
+              className="px-3 py-1.5 bg-blue-600/50 hover:bg-blue-500/50 text-blue-200 text-xs rounded-lg transition-colors"
+            >
+              View All Cases
+            </Link>
           </div>
           
-          <div className="h-48 sm:h-64 flex items-end justify-between gap-1 sm:gap-2">
-            {caseTrends.map((trend, index) => (
-              <div key={trend.month} className="flex-1 flex flex-col items-center">
-                <div className="w-full flex flex-col gap-1">
-                  <div className="flex-1 flex gap-1">
-                    <div 
-                      className="flex-1 bg-blue-500/80 rounded-t-sm hover:bg-blue-400 transition-colors cursor-pointer"
-                      style={{ height: `${(trend.civilCases / Math.max(...caseTrends.map(t => t.total))) * 100}%` }}
-                      title={`Civil: ${trend.civilCases}`}
-                    ></div>
-                    <div 
-                      className="flex-1 bg-red-500/80 rounded-t-sm hover:bg-red-400 transition-colors cursor-pointer"
-                      style={{ height: `${(trend.criminalCases / Math.max(...caseTrends.map(t => t.total))) * 100}%` }}
-                      title={`Criminal: ${trend.criminalCases}`}
-                    ></div>
-                    <div 
-                      className="flex-1 bg-green-500/80 rounded-t-sm hover:bg-green-400 transition-colors cursor-pointer"
-                      style={{ height: `${(trend.corporateCases / Math.max(...caseTrends.map(t => t.total))) * 100}%` }}
-                      title={`Corporate: ${trend.corporateCases}`}
-                    ></div>
-                    <div 
-                      className="flex-1 bg-purple-500/80 rounded-t-sm hover:bg-purple-400 transition-colors cursor-pointer"
-                      style={{ height: `${(trend.familyCases / Math.max(...caseTrends.map(t => t.total))) * 100}%` }}
-                      title={`Family: ${trend.familyCases}`}
-                    ></div>
+          <div className="space-y-3">
+            {cases && cases.length > 0 ? (
+              cases.slice(0, 6).map((caseItem) => (
+                <div key={caseItem._id} className="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg border border-slate-600/30 hover:bg-slate-700/50 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-3 h-3 rounded-full ${
+                      caseItem.status === 'active' ? 'bg-green-500' :
+                      caseItem.status === 'pending' ? 'bg-yellow-500' :
+                      caseItem.status === 'completed' ? 'bg-blue-500' :
+                      'bg-gray-500'
+                    }`}></div>
+                    <div>
+                      <h4 className="text-sm font-medium text-slate-200">{caseItem.title}</h4>
+                      <p className="text-xs text-slate-400">
+                        {caseItem.caseType} • {caseItem.caseNumber}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-slate-400">
+                      {new Date(caseItem.createdAt).toLocaleDateString()}
+                    </p>
+                    <p className="text-xs text-slate-500 capitalize">
+                      {caseItem.status}
+                    </p>
                   </div>
                 </div>
-                <p className="text-xs sm:text-sm text-slate-400 mt-2 text-center">{trend.month}</p>
+              ))
+            ) : (
+              <div className="text-center py-12">
+                <div className="w-16 h-16 bg-slate-600/50 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <FaFileAlt className="w-8 h-8 text-slate-400" />
+                </div>
+                <p className="text-slate-400 text-sm mb-2">No cases found</p>
+                <p className="text-slate-500 text-xs">Create your first case to get started</p>
+                <button
+                  onClick={handleNewCase}
+                  className="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors"
+                >
+                  Create Case
+                </button>
               </div>
-            ))}
-          </div>
-          
-          <div className="flex items-center justify-center gap-4 mt-4 text-xs sm:text-sm">
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 bg-blue-500/80 rounded"></div>
-              <span className="text-slate-300">Civil</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 bg-red-500/80 rounded"></div>
-              <span className="text-slate-300">Criminal</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 bg-green-500/80 rounded"></div>
-              <span className="text-slate-300">Corporate</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 bg-purple-500/80 rounded"></div>
-              <span className="text-slate-300">Family</span>
-            </div>
+            )}
           </div>
         </div>
 

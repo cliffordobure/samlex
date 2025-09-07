@@ -936,6 +936,20 @@ export const addNoteToCase = async (req, res) => {
 
     const updatedCase = await legalCase.save();
 
+    // Emit socket event for real-time updates
+    const io = req.app.get("io");
+    if (io) {
+      const newNote = updatedCase.notes[updatedCase.notes.length - 1];
+      io.to(`case-${id}`).emit("legalCaseCommented", {
+        _id: newNote._id,
+        content: newNote.content,
+        author: req.user,
+        createdAt: newNote.createdAt,
+        type: 'comment',
+        isInternal: newNote.isInternal
+      });
+    }
+
     res.json({
       success: true,
       data: updatedCase,
@@ -1433,6 +1447,99 @@ export const completeCaseInfo = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Server error completing case information",
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * @desc    Update filing fee payment status
+ * @route   PATCH /api/legal-cases/:id/filing-fee-payment
+ * @access  Private (advocate, legal_head, law_firm_admin)
+ */
+export const updateFilingFeePayment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { paid, paymentId } = req.body;
+
+    const legalCase = await LegalCase.findById(id);
+    if (!legalCase) {
+      return res.status(404).json({
+        success: false,
+        message: "Legal case not found",
+      });
+    }
+
+    // Check permissions - advocates can only update cases assigned to them
+    if (
+      req.user.role === "advocate" &&
+      legalCase.assignedTo?.toString() !== req.user._id.toString()
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "You can only update payment status for cases assigned to you",
+      });
+    }
+
+    // Update filing fee payment status
+    const updateData = {
+      "filingFee.paid": paid,
+    };
+
+    if (paid) {
+      updateData["filingFee.paidAt"] = new Date();
+      if (paymentId) {
+        updateData["filingFee.paymentId"] = paymentId;
+      }
+    } else {
+      updateData["filingFee.paidAt"] = null;
+      updateData["filingFee.paymentId"] = null;
+    }
+
+    const updatedCase = await LegalCase.findByIdAndUpdate(
+      id,
+      { $set: updateData },
+      { new: true, runValidators: true }
+    )
+      .populate("assignedTo", "firstName lastName email")
+      .populate("assignedBy", "firstName lastName email")
+      .populate("client", "firstName lastName email phoneNumber")
+      .populate("createdBy", "firstName lastName email")
+      .populate("department", "name code");
+
+    // Create notification for legal head/admin
+    await createNotification({
+      user: legalCase.assignedBy || req.user.lawFirm.owner,
+      title: `Filing Fee Payment ${paid ? 'Confirmed' : 'Updated'}: ${updatedCase.caseNumber}`,
+      message: `Advocate ${req.user.firstName} ${req.user.lastName} has ${paid ? 'confirmed' : 'updated'} the filing fee payment status for case "${updatedCase.title}".`,
+      type: "payment_update",
+      priority: "medium",
+      relatedCase: updatedCase._id,
+      actionUrl: `/legal/cases/${updatedCase._id}`,
+      metadata: {
+        caseNumber: updatedCase.caseNumber,
+        caseTitle: updatedCase.title,
+        paymentStatus: paid,
+        updatedBy: req.user._id,
+      },
+    });
+
+    // Emit socket event for real-time updates
+    const io = req.app.get("io");
+    if (io) {
+      io.to(`case-${id}`).emit("legalCaseUpdated", updatedCase);
+    }
+
+    res.json({
+      success: true,
+      data: updatedCase,
+      message: `Filing fee payment status ${paid ? 'confirmed' : 'updated'} successfully`,
+    });
+  } catch (error) {
+    console.error("Error in updateFilingFeePayment:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error updating payment status",
       error: error.message,
     });
   }

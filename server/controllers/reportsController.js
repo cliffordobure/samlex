@@ -1620,13 +1620,23 @@ export const getLawFirmAdminDashboard = async (req, res) => {
     // Revenue (sum of filing fees and escalation fees)
     const filingFees = await LegalCase.aggregate([
       { $match: { lawFirm: lawFirmId } },
-      { $group: { _id: null, total: { $sum: "$filingFee.amount" } } },
+      { 
+        $group: { 
+          _id: null, 
+          total: { 
+            $sum: {
+              $cond: ["$filingFee.paid", "$filingFee.amount", 0]
+            }
+          } 
+        } 
+      },
     ]);
     const escalationFees = await Payment.aggregate([
       {
         $match: {
           lawFirm: lawFirmId,
           purpose: "escalation_fee",
+          status: "completed", // Only count completed payments
         },
       },
       { $group: { _id: null, total: { $sum: "$amount" } } },
@@ -1761,6 +1771,7 @@ export const getLegalPerformance = async (req, res) => {
   try {
     const { lawFirmId } = req.params;
     const { period = "30" } = req.query;
+    const { user } = req;
 
     if (!validateObjectId(lawFirmId)) {
       return res.status(400).json({
@@ -1772,9 +1783,17 @@ export const getLegalPerformance = async (req, res) => {
     const daysAgo = new Date();
     daysAgo.setDate(daysAgo.getDate() - parseInt(period));
 
+    // Build match condition based on user role
+    let matchCondition = { lawFirm: lawFirmId };
+    
+    // If user is an advocate, only show their assigned cases
+    if (user.role === "advocate") {
+      matchCondition.assignedTo = user._id;
+    }
+
     // Get legal cases by status
     const casesByStatus = await LegalCase.aggregate([
-      { $match: { lawFirm: lawFirmId } },
+      { $match: matchCondition },
       {
         $group: {
           _id: "$status",
@@ -1787,36 +1806,39 @@ export const getLegalPerformance = async (req, res) => {
       },
     ]);
 
-    // Get cases by advocate/legal head
-    const casesByAssignee = await LegalCase.aggregate([
-      { $match: { lawFirm: lawFirmId, assignedTo: { $ne: null } } },
-      {
-        $lookup: {
-          from: "users",
-          localField: "assignedTo",
-          foreignField: "_id",
-          as: "assignee",
-        },
-      },
-      {
-        $group: {
-          _id: "$assignedTo",
-          assigneeName: { $first: "$assignee.firstName" },
-          assigneeLastName: { $first: "$assignee.lastName" },
-          assigneeRole: { $first: "$assignee.role" },
-          count: { $sum: 1 },
-          resolvedCount: {
-            $sum: { $cond: [{ $eq: ["$status", "resolved"] }, 1, 0] },
+    // Get cases by advocate/legal head (only for legal_head and admin roles)
+    let casesByAssignee = [];
+    if (user.role === "legal_head" || user.role === "law_firm_admin" || user.role === "admin") {
+      casesByAssignee = await LegalCase.aggregate([
+        { $match: { lawFirm: lawFirmId, assignedTo: { $ne: null } } },
+        {
+          $lookup: {
+            from: "users",
+            localField: "assignedTo",
+            foreignField: "_id",
+            as: "assignee",
           },
-          totalFilingFees: { $sum: "$filingFee.amount" },
         },
-      },
-      { $sort: { count: -1 } },
-    ]);
+        {
+          $group: {
+            _id: "$assignedTo",
+            assigneeName: { $first: "$assignee.firstName" },
+            assigneeLastName: { $first: "$assignee.lastName" },
+            assigneeRole: { $first: "$assignee.role" },
+            count: { $sum: 1 },
+            resolvedCount: {
+              $sum: { $cond: [{ $eq: ["$status", "resolved"] }, 1, 0] },
+            },
+            totalFilingFees: { $sum: "$filingFee.amount" },
+          },
+        },
+        { $sort: { count: -1 } },
+      ]);
+    }
 
     // Get monthly trends
     const monthlyTrends = await LegalCase.aggregate([
-      { $match: { lawFirm: lawFirmId } },
+      { $match: matchCondition },
       {
         $group: {
           _id: {
@@ -1835,7 +1857,7 @@ export const getLegalPerformance = async (req, res) => {
 
     // Get case type distribution
     const casesByType = await LegalCase.aggregate([
-      { $match: { lawFirm: lawFirmId } },
+      { $match: matchCondition },
       {
         $group: {
           _id: "$caseType",

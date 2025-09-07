@@ -44,8 +44,9 @@ const CreateLegalCase = () => {
       phone: "",
     },
     filingFee: {
-      amount: 0,
+      amount: "",
       currency: "KES",
+      paid: false,
     },
     courtDetails: {
       courtName: "",
@@ -267,6 +268,10 @@ const CreateLegalCase = () => {
       // Create case with Cloudinary URLs (or empty array if upload failed)
       const caseData = {
         ...formData,
+        filingFee: {
+          ...formData.filingFee,
+          amount: formData.filingFee.amount === "" ? 0 : parseFloat(formData.filingFee.amount) || 0,
+        },
         documents: uploadedDocuments,
       };
 
@@ -877,12 +882,12 @@ const CreateLegalCase = () => {
                   <input
                     type="number"
                     className="w-full px-4 py-3 bg-dark-900/50 border border-dark-600 rounded-lg text-white placeholder-dark-400 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all duration-200"
-                    value={formData.filingFee.amount}
+                    value={formData.filingFee.amount === "" ? "" : formData.filingFee.amount}
                     onChange={(e) =>
                       handleNestedInputChange(
                         "filingFee",
                         "amount",
-                        parseFloat(e.target.value) || 0
+                        e.target.value === "" ? "" : parseFloat(e.target.value) || ""
                       )
                     }
                     placeholder="Enter amount"
@@ -913,6 +918,31 @@ const CreateLegalCase = () => {
                     <option value="GBP">GBP (British Pound)</option>
                   </select>
                 </div>
+              </div>
+              
+              {/* Payment Status */}
+              <div className="mt-6">
+                <div className="flex items-center space-x-3">
+                  <input
+                    type="checkbox"
+                    id="filingFeePaid"
+                    className="w-5 h-5 text-primary-500 bg-dark-900 border-dark-600 rounded focus:ring-primary-500 focus:ring-2"
+                    checked={formData.filingFee.paid}
+                    onChange={(e) =>
+                      handleNestedInputChange(
+                        "filingFee",
+                        "paid",
+                        e.target.checked
+                      )
+                    }
+                  />
+                  <label htmlFor="filingFeePaid" className="text-sm font-semibold text-white">
+                    Filing fee has been paid
+                  </label>
+                </div>
+                <p className="text-dark-400 text-sm mt-2 ml-8">
+                  Check this box if the client has already paid the filing fee
+                </p>
               </div>
             </div>
           </div>

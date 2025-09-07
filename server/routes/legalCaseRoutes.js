@@ -13,6 +13,7 @@ import {
   getLegalCaseStatistics,
   updateCourtDates,
   completeCaseInfo,
+  updateFilingFeePayment,
 } from "../controllers/legalCaseController.js";
 import { protect } from "../middleware/auth.js";
 import { validateLegalCase } from "../middleware/validation.js";
@@ -55,10 +56,19 @@ router.post("/:id/documents", addDocumentToCase);
 // Add note to a legal case
 router.post("/:id/notes", addNoteToCase);
 
+// Add comment to a legal case
+router.post("/:id/comments", addNoteToCase); // Reuse the same controller for now
+
+// Get comments for a legal case
+router.get("/:id/comments", getLegalCaseById); // Will need to modify to return comments
+
 // Update court dates for a legal case
 router.put("/:id/court-dates", updateCourtDates);
 
 // Complete case information (for advocates to add missing details)
 router.put("/:id/complete-info", completeCaseInfo);
+
+// Update filing fee payment status
+router.patch("/:id/filing-fee-payment", updateFilingFeePayment);
 
 export default router;
