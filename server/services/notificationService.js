@@ -534,7 +534,7 @@ const sendDailySummaryEmail = async (user, summaryData) => {
 
     htmlContent += `
       <p><a href="${
-        process.env.CLIENT_URL || "http://localhost:3000"
+        process.env.CLIENT_URL || "https://samlex-client.vercel.app"
       }/legal">View Dashboard</a></p>
     `;
 
