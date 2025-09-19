@@ -415,6 +415,7 @@ export const createLegalCase = async (req, res) => {
           caseTitle: savedCase.title,
           assignedBy: `${req.user.firstName} ${req.user.lastName}`,
         },
+        sendEmail: true, // Enable email notification
       });
     }
 
@@ -677,6 +678,7 @@ export const assignLegalCase = async (req, res) => {
         caseTitle: legalCase.title,
         assignedBy: `${req.user.firstName} ${req.user.lastName}`,
       },
+      sendEmail: true, // Enable email notification
     });
 
     // Emit socket event

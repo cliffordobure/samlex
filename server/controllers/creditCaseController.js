@@ -64,6 +64,32 @@ export const createCreditCase = async (req, res) => {
     console.log("Assigned To:", savedCase.assignedTo);
     console.log("Status:", savedCase.status);
     console.log("Full saved case:", JSON.stringify(savedCase, null, 2));
+
+    // Create notification if case is assigned to someone else
+    if (
+      savedCase.assignedTo &&
+      savedCase.assignedTo.toString() !== req.user._id.toString()
+    ) {
+      await createNotification({
+        user: savedCase.assignedTo,
+        title: `Credit Case Assigned: ${savedCase.caseNumber}`,
+        message: `You have been assigned credit collection case "${savedCase.title}" by ${req.user.firstName} ${req.user.lastName}.`,
+        type: "credit_case_assigned",
+        priority: "high",
+        relatedCreditCase: savedCase._id,
+        actionUrl: `/credit-collection/cases/${savedCase._id}`,
+        metadata: {
+          caseNumber: savedCase.caseNumber,
+          caseTitle: savedCase.title,
+          assignedBy: `${req.user.firstName} ${req.user.lastName}`,
+          debtorName: savedCase.debtorName,
+          debtAmount: savedCase.debtAmount,
+          currency: savedCase.currency,
+        },
+        sendEmail: true, // Enable email notification
+      });
+    }
+
     req.app.get("io").emit("caseCreated", savedCase);
     res.status(201).json({ success: true, data: savedCase });
   } catch (error) {
@@ -245,6 +271,26 @@ export const assignCreditCase = async (req, res) => {
       },
       { new: true }
     );
+
+    // Create notification for the assigned debt collector
+    await createNotification({
+      user: assignedTo,
+      title: `Credit Case Assigned: ${updatedCase.caseNumber}`,
+      message: `You have been assigned credit collection case "${updatedCase.title}" by ${req.user.firstName} ${req.user.lastName}.`,
+      type: "credit_case_assigned",
+      priority: "high",
+      relatedCreditCase: updatedCase._id,
+      actionUrl: `/credit-collection/cases/${updatedCase._id}`,
+      metadata: {
+        caseNumber: updatedCase.caseNumber,
+        caseTitle: updatedCase.title,
+        assignedBy: `${req.user.firstName} ${req.user.lastName}`,
+        debtorName: updatedCase.debtorName,
+        debtAmount: updatedCase.debtAmount,
+        currency: updatedCase.currency,
+      },
+      sendEmail: true, // Enable email notification
+    });
 
     req.app.get("io").emit("caseAssigned", updatedCase);
     res.json({ success: true, data: updatedCase });

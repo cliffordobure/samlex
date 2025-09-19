@@ -18,6 +18,7 @@ export const createNotification = async ({
   eventDate = null,
   actionUrl = null,
   metadata = {},
+  sendEmail = false,
 }) => {
   try {
     const notification = new Notification({
@@ -34,6 +35,12 @@ export const createNotification = async ({
     });
 
     await notification.save();
+
+    // Send email if requested and it's a case assignment
+    if (sendEmail && (type === "case_assigned" || type === "credit_case_assigned")) {
+      await sendCaseAssignmentEmail(notification);
+    }
+
     return notification;
   } catch (error) {
     console.error("Error creating notification:", error);
@@ -579,6 +586,130 @@ export const markAllNotificationsAsRead = async (userId) => {
   } catch (error) {
     console.error("Error marking all notifications as read:", error);
     throw error;
+  }
+};
+
+/**
+ * Send case assignment email to user
+ */
+const sendCaseAssignmentEmail = async (notification) => {
+  try {
+    // Get user details
+    const user = await User.findById(notification.user).populate('lawFirm', 'firmName');
+    if (!user) {
+      console.error("User not found for notification:", notification._id);
+      return;
+    }
+
+    let caseData = null;
+    let caseType = "Case";
+    let caseUrl = "";
+
+    // Get case details based on notification type
+    if (notification.relatedCase) {
+      caseData = await LegalCase.findById(notification.relatedCase);
+      caseType = "Legal Case";
+      caseUrl = `${process.env.CLIENT_URL || "https://samlex-client.vercel.app"}/legal/cases/${notification.relatedCase}`;
+    } else if (notification.relatedCreditCase) {
+      caseData = await CreditCase.findById(notification.relatedCreditCase);
+      caseType = "Credit Collection Case";
+      caseUrl = `${process.env.CLIENT_URL || "https://samlex-client.vercel.app"}/credit-collection/cases/${notification.relatedCreditCase}`;
+    }
+
+    if (!caseData) {
+      console.error("Case not found for notification:", notification._id);
+      return;
+    }
+
+    const subject = `📋 ${caseType} Assigned: ${caseData.caseNumber}`;
+    
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f8fafc; padding: 20px;">
+        <div style="background-color: white; border-radius: 12px; padding: 30px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+          <div style="text-align: center; margin-bottom: 30px;">
+            <div style="background: linear-gradient(135deg, #0ea5e9, #3b82f6); color: white; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+              <h1 style="margin: 0; font-size: 24px; font-weight: bold;">📋 Case Assignment</h1>
+              <p style="margin: 10px 0 0 0; opacity: 0.9;">You have been assigned a new case</p>
+            </div>
+          </div>
+
+          <div style="background-color: #f1f5f9; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+            <h2 style="color: #1e293b; margin-top: 0; font-size: 20px;">Case Details</h2>
+            <div style="display: grid; gap: 10px;">
+              <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e2e8f0;">
+                <span style="font-weight: bold; color: #475569;">Case Number:</span>
+                <span style="color: #1e293b;">${caseData.caseNumber}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e2e8f0;">
+                <span style="font-weight: bold; color: #475569;">Title:</span>
+                <span style="color: #1e293b;">${caseData.title}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e2e8f0;">
+                <span style="font-weight: bold; color: #475569;">Type:</span>
+                <span style="color: #1e293b;">${caseType}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e2e8f0;">
+                <span style="font-weight: bold; color: #475569;">Status:</span>
+                <span style="color: #1e293b; text-transform: capitalize;">${caseData.status.replace('_', ' ')}</span>
+              </div>
+              ${caseData.priority ? `
+              <div style="display: flex; justify-content: space-between; padding: 8px 0;">
+                <span style="font-weight: bold; color: #475569;">Priority:</span>
+                <span style="color: #1e293b; text-transform: capitalize;">${caseData.priority}</span>
+              </div>
+              ` : ''}
+            </div>
+          </div>
+
+          ${caseData.description ? `
+          <div style="background-color: #fef3c7; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #f59e0b;">
+            <h3 style="color: #92400e; margin-top: 0; font-size: 16px;">Description</h3>
+            <p style="color: #92400e; margin: 0; line-height: 1.5;">${caseData.description}</p>
+          </div>
+          ` : ''}
+
+          ${notification.metadata.assignedBy ? `
+          <div style="background-color: #ecfdf5; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #10b981;">
+            <h3 style="color: #065f46; margin-top: 0; font-size: 16px;">Assigned By</h3>
+            <p style="color: #065f46; margin: 0; font-weight: bold;">${notification.metadata.assignedBy}</p>
+          </div>
+          ` : ''}
+
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${caseUrl}" 
+               style="background: linear-gradient(135deg, #0ea5e9, #3b82f6); color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: bold; font-size: 16px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+              📋 View Case Details
+            </a>
+          </div>
+
+          <div style="background-color: #f8fafc; padding: 15px; border-radius: 8px; margin-top: 20px;">
+            <h3 style="color: #475569; margin-top: 0; font-size: 14px;">Next Steps</h3>
+            <ul style="color: #64748b; margin: 0; padding-left: 20px; font-size: 14px;">
+              <li>Review the case details and requirements</li>
+              <li>Contact the client if needed</li>
+              <li>Update the case status as you progress</li>
+              <li>Add notes and documents as required</li>
+            </ul>
+          </div>
+
+          <hr style="margin: 30px 0; border: none; border-top: 1px solid #e2e8f0;">
+          <p style="color: #64748b; font-size: 12px; text-align: center; margin: 0;">
+            This is an automated notification from ${user.lawFirm?.firmName || 'Samlex'} Case Management System.<br>
+            If you have any questions, please contact your supervisor or system administrator.
+          </p>
+        </div>
+      </div>
+    `;
+
+    await emailService.sendEmail({
+      to: user.email,
+      subject,
+      html,
+    });
+
+    console.log(`📧 Case assignment email sent to ${user.email} for case ${caseData.caseNumber}`);
+  } catch (error) {
+    console.error("Error sending case assignment email:", error);
   }
 };
 

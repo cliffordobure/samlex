@@ -24,6 +24,7 @@ const notificationSchema = new mongoose.Schema(
         "mentioning_date",
         "hearing_date",
         "case_assigned",
+        "credit_case_assigned",
         "case_reassigned",
         "case_updated",
         "payment_update",
