@@ -63,17 +63,43 @@ const AdminOverview = () => {
 
   useEffect(() => {
     if (user?.lawFirm?._id) {
+      console.log("🔄 Loading data for law firm:", user.lawFirm._id);
       setIsLoading(true);
       Promise.all([
         dispatch(getUsers({ lawFirm: user.lawFirm._id, limit: 50 })),
         dispatch(getDepartments({ lawFirm: user.lawFirm._id })),
         dispatch(getCreditCases({ lawFirm: user.lawFirm._id, limit: 100 })),
         dispatch(getLegalCases({ lawFirm: user.lawFirm._id, limit: 100 })),
-      ]).finally(() => setIsLoading(false));
+      ]).then((results) => {
+        console.log("📥 API Results:", results);
+        results.forEach((result, index) => {
+          const apiNames = ['Users', 'Departments', 'CreditCases', 'LegalCases'];
+          console.log(`📊 ${apiNames[index]} API Result:`, result);
+        });
+      }).catch((error) => {
+        console.error("❌ API Error:", error);
+      }).finally(() => {
+        console.log("✅ Data loading completed");
+        setIsLoading(false);
+      });
     }
   }, [dispatch, user?.lawFirm?._id]);
 
   useEffect(() => {
+    console.log("📊 Data state:", {
+      users: users.length,
+      departments: departments.length,
+      creditCases: creditCases.length,
+      legalCases: legalCases.length
+    });
+    
+    // Debug the actual data structure
+    console.log("🔍 Raw data structures:");
+    console.log("Users:", users);
+    console.log("Departments:", departments);
+    console.log("Credit Cases:", creditCases);
+    console.log("Legal Cases:", legalCases);
+    
     if (users.length > 0 || departments.length > 0 || creditCases.length > 0 || legalCases.length > 0) {
       calculateStats();
       generateRecentActivity();
@@ -789,36 +815,278 @@ const AdminOverview = () => {
           </div>
       </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-          {departments.map((dept) => (
-                         <div 
-               key={dept._id} 
-               className="p-3 sm:p-4 bg-slate-700/30 rounded-xl sm:rounded-2xl border border-slate-600/30 hover:border-slate-500/50 transition-all duration-300 hover:scale-105 group cursor-pointer"
-               onClick={() => navigate(`/admin/departments`)}
-             >
-              <div className="flex items-center justify-between mb-2 sm:mb-3">
-                <h4 className="font-semibold text-white group-hover:text-blue-300 transition-colors text-sm sm:text-base">{dept.name}</h4>
-                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                  dept.isActive 
-                    ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
-                    : 'bg-red-500/20 text-red-400 border border-red-500/30'
-                }`}>
-                  {dept.isActive ? 'Active' : 'Inactive'}
-                </span>
+        {/* Debug Information */}
+        <div className="mb-6 p-4 bg-yellow-500/20 border border-yellow-500/30 rounded-xl">
+          <h4 className="text-yellow-300 font-semibold mb-2">Debug Information</h4>
+          <div className="text-sm text-yellow-200 space-y-1">
+            <p>Users: {users.length} | Departments: {departments.length} | Credit Cases: {creditCases.length} | Legal Cases: {legalCases.length}</p>
+            <p>Law Firm ID: {user?.lawFirm?._id || 'Not found'}</p>
+            <p>Loading: {isLoading ? 'Yes' : 'No'}</p>
+          </div>
         </div>
-              <p className="text-xs sm:text-sm text-slate-400 mb-2 sm:mb-3">
-                {dept.departmentType.replace("_", " ").toUpperCase()}
-              </p>
-              <div className="flex items-center justify-between text-xs sm:text-sm">
-                <span className="text-slate-300">
-                  {users.filter(u => u.department === dept._id).length} members
-                          </span>
-                <span className="text-slate-400">
-                  {[...creditCases, ...legalCases].filter(c => c.department === dept._id).length} cases
-                          </span>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          {isLoading ? (
+            <div className="col-span-full text-center py-12">
+              <div className="bg-gradient-to-r from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl p-8 border border-slate-600/50 shadow-2xl">
+                <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                <h3 className="text-xl font-semibold text-white mb-2">Loading Department Data</h3>
+                <p className="text-slate-400">
+                  Please wait while we fetch your department information...
+                </p>
               </div>
             </div>
-          ))}
+          ) : departments.length === 0 ? (
+            <div className="col-span-full text-center py-12">
+              <div className="bg-gradient-to-r from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl p-8 border border-slate-600/50 shadow-2xl">
+                <FaBuilding className="w-16 h-16 text-slate-400 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-white mb-2">No Departments Found</h3>
+                <p className="text-slate-400 mb-6">
+                  Create your first department to start organizing your team and cases.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <button
+                    onClick={() => navigate('/admin/departments')}
+                    className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl font-semibold transition-all duration-300 hover:scale-105"
+                  >
+                    Create Department
+                  </button>
+                  <button
+                    onClick={() => {
+                      console.log("🧪 Testing data structure...");
+                      console.log("Current Redux state:", {
+                        users: users,
+                        departments: departments,
+                        creditCases: creditCases,
+                        legalCases: legalCases
+                      });
+                      
+                      // Test individual API calls
+                      console.log("🔄 Testing individual API calls...");
+                      if (user?.lawFirm?._id) {
+                        Promise.all([
+                          dispatch(getUsers({ lawFirm: user.lawFirm._id, limit: 50 })),
+                          dispatch(getDepartments({ lawFirm: user.lawFirm._id })),
+                          dispatch(getCreditCases({ lawFirm: user.lawFirm._id, limit: 100 })),
+                          dispatch(getLegalCases({ lawFirm: user.lawFirm._id, limit: 100 })),
+                        ]).then((results) => {
+                          console.log("🔄 Manual API test results:", results);
+                        }).catch((error) => {
+                          console.error("❌ Manual API test error:", error);
+                        });
+                      }
+                    }}
+                    className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-xl font-semibold transition-all duration-300 hover:scale-105"
+                  >
+                    Debug Data
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            departments.map((dept) => {
+              console.log("🏢 Processing department:", dept.name, "ID:", dept._id);
+              
+              // Fix filtering logic - handle both string and ObjectId comparisons
+              const deptUsers = users.filter(u => {
+                const userDept = u.department;
+                const deptId = dept._id;
+                
+                // Handle both string and ObjectId comparisons
+                if (typeof userDept === 'string' && typeof deptId === 'string') {
+                  return userDept === deptId;
+                } else if (typeof userDept === 'object' && userDept?._id) {
+                  return userDept._id === deptId;
+                } else if (typeof deptId === 'object' && deptId?._id) {
+                  return userDept === deptId._id;
+                }
+                return false;
+              });
+              
+              const deptCreditCases = creditCases.filter(c => {
+                const caseDept = c.department;
+                const deptId = dept._id;
+                
+                if (typeof caseDept === 'string' && typeof deptId === 'string') {
+                  return caseDept === deptId;
+                } else if (typeof caseDept === 'object' && caseDept?._id) {
+                  return caseDept._id === deptId;
+                } else if (typeof deptId === 'object' && deptId?._id) {
+                  return caseDept === deptId._id;
+                }
+                return false;
+              });
+              
+              const deptLegalCases = legalCases.filter(c => {
+                const caseDept = c.department;
+                const deptId = dept._id;
+                
+                if (typeof caseDept === 'string' && typeof deptId === 'string') {
+                  return caseDept === deptId;
+                } else if (typeof caseDept === 'object' && caseDept?._id) {
+                  return caseDept._id === deptId;
+                } else if (typeof deptId === 'object' && deptId?._id) {
+                  return caseDept === deptId._id;
+                }
+                return false;
+              });
+              
+              const allDeptCases = [...deptCreditCases, ...deptLegalCases];
+              
+              console.log("📊 Department data for", dept.name, ":", {
+                users: deptUsers.length,
+                creditCases: deptCreditCases.length,
+                legalCases: deptLegalCases.length,
+                totalCases: allDeptCases.length,
+                sampleUser: users[0]?.department,
+                sampleCreditCase: creditCases[0]?.department,
+                sampleLegalCase: legalCases[0]?.department
+              });
+              
+              // Enhanced debugging - show all data types and values
+              console.log("🔍 Enhanced Debug for", dept.name, ":");
+              console.log("  Department ID:", dept._id, "Type:", typeof dept._id);
+              console.log("  All Users:", users.map(u => ({ id: u._id, dept: u.department, deptType: typeof u.department, hasDept: !!u.department })));
+              console.log("  All Credit Cases:", creditCases.map(c => ({ id: c._id, dept: c.department, deptType: typeof c.department, hasDept: !!c.department })));
+              console.log("  All Legal Cases:", legalCases.map(c => ({ id: c._id, dept: c.department, deptType: typeof c.department, hasDept: !!c.department })));
+              console.log("  Filtered Users:", deptUsers.map(u => ({ id: u._id, dept: u.department })));
+              console.log("  Filtered Credit Cases:", deptCreditCases.map(c => ({ id: c._id, dept: c.department })));
+              console.log("  Filtered Legal Cases:", deptLegalCases.map(c => ({ id: c._id, dept: c.department })));
+              
+              // Check if users/cases have departments at all
+              const usersWithDept = users.filter(u => u.department);
+              const creditCasesWithDept = creditCases.filter(c => c.department);
+              const legalCasesWithDept = legalCases.filter(c => c.department);
+              
+              console.log("📊 Department Assignment Summary:");
+              console.log("  Users with departments:", usersWithDept.length, "out of", users.length);
+              console.log("  Credit cases with departments:", creditCasesWithDept.length, "out of", creditCases.length);
+              console.log("  Legal cases with departments:", legalCasesWithDept.length, "out of", legalCases.length);
+            
+            // Calculate department statistics
+            const activeCases = allDeptCases.filter(c => 
+              ["assigned", "in_progress", "under_review", "court_proceedings"].includes(c.status)
+            );
+            const resolvedCases = allDeptCases.filter(c => 
+              ["resolved", "closed"].includes(c.status)
+            );
+            const pendingCases = allDeptCases.filter(c => 
+              ["new", "filed"].includes(c.status)
+            );
+            const urgentCases = allDeptCases.filter(c => 
+              c.priority === "high" || c.priority === "urgent"
+            );
+            
+            // Calculate completion rate
+            const completionRate = allDeptCases.length > 0 
+              ? Math.round((resolvedCases.length / allDeptCases.length) * 100) 
+              : 0;
+            
+            // Calculate this month's cases
+            const thisMonth = new Date();
+            thisMonth.setDate(1);
+            const thisMonthCases = allDeptCases.filter(c => 
+              new Date(c.createdAt) >= thisMonth
+            );
+
+            return (
+              <div 
+                key={dept._id} 
+                className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl hover:shadow-blue-500/25 transition-all duration-300 hover:scale-105 group cursor-pointer"
+                onClick={() => navigate(`/admin/departments`)}
+              >
+                {/* Header */}
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500/20 to-indigo-500/20 rounded-xl flex items-center justify-center">
+                      {dept.departmentType === 'credit_collection' ? (
+                        <FaFileContract className="w-5 h-5 text-blue-400" />
+                      ) : (
+                        <FaGavel className="w-5 h-5 text-blue-400" />
+                      )}
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-white group-hover:text-blue-300 transition-colors text-base sm:text-lg">
+                        {dept.name}
+                      </h4>
+                      <p className="text-xs sm:text-sm text-slate-400">
+                        {dept.departmentType.replace("_", " ").toUpperCase()}
+                      </p>
+                    </div>
+                  </div>
+                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                    dept.isActive 
+                      ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
+                      : 'bg-red-500/20 text-red-400 border border-red-500/30'
+                  }`}>
+                    {dept.isActive ? 'Active' : 'Inactive'}
+                  </span>
+                </div>
+
+                {/* Statistics Grid */}
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  <div className="bg-slate-700/50 rounded-xl p-3 border border-slate-600/30">
+                    <div className="flex items-center gap-2 mb-1">
+                      <FaUsers className="w-3 h-3 text-blue-400" />
+                      <span className="text-xs text-slate-400">Members</span>
+                    </div>
+                    <div className="text-lg font-bold text-white">{deptUsers.length}</div>
+                  </div>
+                  
+                  <div className="bg-slate-700/50 rounded-xl p-3 border border-slate-600/30">
+                    <div className="flex items-center gap-2 mb-1">
+                      <FaFolderOpen className="w-3 h-3 text-green-400" />
+                      <span className="text-xs text-slate-400">Total Cases</span>
+                    </div>
+                    <div className="text-lg font-bold text-white">{allDeptCases.length}</div>
+                  </div>
+                </div>
+
+                {/* Case Status Breakdown */}
+                <div className="space-y-2 mb-4">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-400">Active Cases</span>
+                    <span className="text-blue-400 font-semibold">{activeCases.length}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-400">Resolved</span>
+                    <span className="text-green-400 font-semibold">{resolvedCases.length}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-400">Pending</span>
+                    <span className="text-yellow-400 font-semibold">{pendingCases.length}</span>
+                  </div>
+                  {urgentCases.length > 0 && (
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-slate-400">Urgent</span>
+                      <span className="text-red-400 font-semibold">{urgentCases.length}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Progress Bar */}
+                <div className="mb-4">
+                  <div className="flex items-center justify-between text-xs mb-1">
+                    <span className="text-slate-400">Completion Rate</span>
+                    <span className="text-white font-semibold">{completionRate}%</span>
+                  </div>
+                  <div className="w-full bg-slate-700/50 rounded-full h-2">
+                    <div 
+                      className="bg-gradient-to-r from-blue-500 to-green-500 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${completionRate}%` }}
+                    ></div>
+                  </div>
+                </div>
+
+                {/* This Month's Activity */}
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-400">This Month</span>
+                  <span className="text-purple-400 font-semibold">{thisMonthCases.length} new cases</span>
+                </div>
+              </div>
+            );
+          })
+          )}
         </div>
       </div>
     </div>

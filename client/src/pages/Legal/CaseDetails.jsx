@@ -873,7 +873,9 @@ const CaseDetails = () => {
                   
                   {/* Update Case Details Button for Legal Heads and Admins */}
                   <Link
-                    to={`/legal/cases/${currentCase._id}/complete`}
+                    to={window.location.pathname.includes('/admin') 
+                      ? `/admin/legal-case/${currentCase._id}/complete`
+                      : `/legal/cases/${currentCase._id}/complete`}
                     className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-2"
                   >
                     <FaEdit className="w-4 h-4" />
@@ -898,7 +900,9 @@ const CaseDetails = () => {
                   
                   {/* Update Case Details Button - Available for all assigned cases */}
                   <Link
-                    to={`/legal/cases/${currentCase._id}/complete`}
+                    to={window.location.pathname.includes('/admin') 
+                      ? `/admin/legal-case/${currentCase._id}/complete`
+                      : `/legal/cases/${currentCase._id}/complete`}
                     className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-2"
                   >
                     <FaEdit className="w-4 h-4" />
@@ -1082,18 +1086,6 @@ const CaseDetails = () => {
                         >
                           <FaCalendar className="w-4 h-4" />
                           Update Dates
-                        </button>
-                        {/* Temporary test button */}
-                        <button
-                          onClick={() => {
-                            console.log(
-                              "Test button clicked - setting modal to true"
-                            );
-                            setShowCourtDatesModal(true);
-                          }}
-                          className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition-all duration-200 flex items-center gap-2"
-                        >
-                          Test Modal
                         </button>
                       </div>
                     )}
@@ -1490,88 +1482,138 @@ const CaseDetails = () => {
 
       {/* Assignment Modal */}
       {showAssignmentModal && (
-        <div className="modal modal-open">
-          <div className="modal-box">
-            <h3 className="font-bold text-lg mb-4">
-              {currentCase.assignedTo ? "Reassign Case" : "Assign Case"} to
-              Advocate
-            </h3>
-
-            {currentCase.assignedTo && (
-              <div className="alert alert-info mb-4">
-                <FaUser />
-                <span>
-                  Currently assigned to: {currentCase.assignedTo.firstName}{" "}
-                  {currentCase.assignedTo.lastName}
-                </span>
-              </div>
-            )}
-
-            <div className="space-y-4">
-              <div>
-                <label className="label">
-                  <span className="label-text">Select Advocate</span>
-                </label>
-                <select
-                  className="select select-bordered w-full"
-                  value={assignmentData.assignedTo}
-                  onChange={(e) =>
-                    setAssignmentData({
-                      ...assignmentData,
-                      assignedTo: e.target.value,
-                    })
-                  }
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-gradient-to-br from-slate-800/95 to-slate-700/95 backdrop-blur-xl rounded-2xl sm:rounded-3xl border border-slate-600/50 shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            {/* Header */}
+            <div className="p-6 sm:p-8 border-b border-slate-600/50">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500/20 to-indigo-500/20 rounded-xl flex items-center justify-center">
+                    <FaUserPlus className="w-6 h-6 text-blue-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-400 via-indigo-500 to-purple-500 bg-clip-text text-transparent">
+                      {currentCase.assignedTo ? "Reassign Case" : "Assign Case"} to Advocate
+                    </h3>
+                    <p className="text-slate-300 text-lg mt-1">
+                      {currentCase.assignedTo ? "Transfer case to a different advocate" : "Assign this case to an available advocate"}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowAssignmentModal(false)}
+                  className="p-2 hover:bg-slate-700/50 rounded-lg transition-all duration-200 hover:scale-105"
                 >
-                  <option value="">Choose an advocate</option>
-                  {assignableUsers.map((advocate) => (
-                    <option key={advocate._id} value={advocate._id}>
-                      {advocate.firstName} {advocate.lastName}
-                      {advocate.email && ` (${advocate.email})`}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="label">
-                  <span className="label-text">
-                    Assignment Notes (Optional)
-                  </span>
-                </label>
-                <textarea
-                  className="textarea textarea-bordered w-full"
-                  placeholder="Add any notes about this assignment..."
-                  value={assignmentData.notes}
-                  onChange={(e) =>
-                    setAssignmentData({
-                      ...assignmentData,
-                      notes: e.target.value,
-                    })
-                  }
-                />
+                  <FaTimes className="w-5 h-5 text-slate-400 hover:text-white" />
+                </button>
               </div>
             </div>
 
-            <div className="modal-action">
-              <button
-                className="btn btn-outline"
-                onClick={() => setShowAssignmentModal(false)}
-              >
-                Cancel
-              </button>
-              <button
-                className="btn btn-primary"
-                onClick={handleAssignCase}
-                disabled={!assignmentData.assignedTo || assignLoading}
-              >
-                {assignLoading ? (
-                  <div className="loading loading-spinner loading-sm"></div>
-                ) : currentCase.assignedTo ? (
-                  "Reassign Case"
-                ) : (
-                  "Assign Case"
-                )}
-              </button>
+            <div className="p-6 sm:p-8">
+              {/* Current Assignment Info */}
+              {currentCase.assignedTo && (
+                <div className="mb-8">
+                  <div className="bg-gradient-to-r from-blue-500/20 to-indigo-500/20 backdrop-blur-xl rounded-2xl p-6 border border-blue-500/30 shadow-lg">
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 bg-blue-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <FaUser className="w-4 h-4 text-blue-400" />
+                      </div>
+                      <div>
+                        <h4 className="text-blue-300 font-semibold text-lg mb-2">Current Assignment</h4>
+                        <p className="text-slate-300">
+                          <span className="font-medium">Currently assigned to:</span> {currentCase.assignedTo.firstName} {currentCase.assignedTo.lastName}
+                        </p>
+                        <p className="text-slate-400 text-sm mt-1">
+                          This will be reassigned to the selected advocate
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Form Fields */}
+              <div className="space-y-6">
+                {/* Advocate Selection */}
+                <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl p-6 border border-slate-600/50 shadow-lg">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-8 h-8 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-lg flex items-center justify-center">
+                      <FaUserTie className="w-4 h-4 text-green-400" />
+                    </div>
+                    <h4 className="text-white font-semibold text-lg">Select Advocate</h4>
+                  </div>
+                  <select
+                    className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:border-green-500/50 transition-all duration-200"
+                    value={assignmentData.assignedTo}
+                    onChange={(e) =>
+                      setAssignmentData({
+                        ...assignmentData,
+                        assignedTo: e.target.value,
+                      })
+                    }
+                  >
+                    <option value="">Choose an advocate</option>
+                    {assignableUsers.map((advocate) => (
+                      <option key={advocate._id} value={advocate._id}>
+                        {advocate.firstName} {advocate.lastName}
+                        {advocate.email && ` (${advocate.email})`}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-slate-400 text-sm mt-2">
+                    Select the advocate who will handle this case
+                  </p>
+                </div>
+
+                {/* Assignment Notes */}
+                <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl p-6 border border-slate-600/50 shadow-lg">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-8 h-8 bg-gradient-to-br from-purple-500/20 to-indigo-500/20 rounded-lg flex items-center justify-center">
+                      <FaFileAlt className="w-4 h-4 text-purple-400" />
+                    </div>
+                    <h4 className="text-white font-semibold text-lg">Assignment Notes</h4>
+                  </div>
+                  <textarea
+                    className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all duration-200 resize-none"
+                    rows={4}
+                    placeholder="Add any notes about this assignment..."
+                    value={assignmentData.notes}
+                    onChange={(e) =>
+                      setAssignmentData({
+                        ...assignmentData,
+                        notes: e.target.value,
+                      })
+                    }
+                  />
+                  <p className="text-slate-400 text-sm mt-2">
+                    Optional notes about the case assignment
+                  </p>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-col sm:flex-row justify-end gap-4 mt-8 pt-6 border-t border-slate-600/50">
+                <button
+                  type="button"
+                  className="px-6 py-3 bg-slate-700/50 hover:bg-slate-600/50 text-slate-300 hover:text-white rounded-xl font-medium transition-all duration-300 hover:scale-105 border border-slate-600/50"
+                  onClick={() => setShowAssignmentModal(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                  onClick={handleAssignCase}
+                  disabled={!assignmentData.assignedTo || assignLoading}
+                >
+                  {assignLoading ? (
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  ) : (
+                    <FaUserPlus className="w-4 h-4" />
+                  )}
+                  {assignLoading ? "Assigning..." : currentCase.assignedTo ? "Reassign Case" : "Assign Case"}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1658,294 +1700,355 @@ const CaseDetails = () => {
 
       {/* Court Dates Modal */}
       {showCourtDatesModal && (
-        <div className="modal modal-open">
-          <div className="modal-box max-w-2xl">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h3 className="text-2xl font-bold text-white mb-2">
-                  Update Court Dates
-                </h3>
-                <p className="text-dark-300">
-                  Manage hearing dates, mentioning dates, and court information
-                  for case: {currentCase?.caseNumber}
-                </p>
-                {currentCase?.status && (
-                  <div className="mt-2">
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                      Status:{" "}
-                      {currentCase.status.replace("_", " ").toUpperCase()}
-                    </span>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-gradient-to-br from-slate-800/95 to-slate-700/95 backdrop-blur-xl rounded-2xl sm:rounded-3xl border border-slate-600/50 shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            {/* Header */}
+            <div className="p-6 sm:p-8 border-b border-slate-600/50">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500/20 to-indigo-500/20 rounded-xl flex items-center justify-center">
+                    <FaCalendar className="w-6 h-6 text-blue-400" />
                   </div>
-                )}
-              </div>
-              <div className="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center">
-                <FaCalendar className="w-6 h-6 text-blue-400" />
+                  <div>
+                    <h3 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-400 via-indigo-500 to-purple-500 bg-clip-text text-transparent">
+                      Update Court Dates
+                    </h3>
+                    <p className="text-slate-300 text-lg mt-1">
+                      Manage hearing dates, mentioning dates, and court information
+                    </p>
+                    <p className="text-slate-400 text-sm mt-1">
+                      Case: {currentCase?.caseNumber}
+                    </p>
+                    {currentCase?.status && (
+                      <div className="mt-2">
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                          Status: {currentCase.status.replace("_", " ").toUpperCase()}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowCourtDatesModal(false)}
+                  className="p-2 hover:bg-slate-700/50 rounded-lg transition-all duration-200 hover:scale-105"
+                >
+                  <FaTimes className="w-5 h-5 text-slate-400 hover:text-white" />
+                </button>
               </div>
             </div>
 
-            <form onSubmit={handleUpdateCourtDates}>
-              {/* Current Court Details Summary */}
-              {currentCase?.courtDetails && (
-                <div className="mb-6 p-4 bg-dark-800/50 border border-dark-600 rounded-lg">
-                  <h4 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-                    <FaInfoCircle className="w-4 h-4 text-blue-400" />
-                    Current Court Information
-                  </h4>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    {currentCase.courtDetails.courtName && (
-                      <div>
-                        <span className="text-dark-400">Court:</span>
-                        <span className="text-white ml-2">
-                          {currentCase.courtDetails.courtName}
-                        </span>
+            <div className="p-6 sm:p-8">
+              <form onSubmit={handleUpdateCourtDates}>
+                {/* Current Court Details Summary */}
+                {currentCase?.courtDetails && (
+                  <div className="mb-8">
+                    <div className="bg-gradient-to-r from-blue-500/20 to-indigo-500/20 backdrop-blur-xl rounded-2xl p-6 border border-blue-500/30 shadow-lg">
+                      <div className="flex items-start gap-3">
+                        <div className="w-8 h-8 bg-blue-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <FaInfoCircle className="w-4 h-4 text-blue-400" />
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="text-blue-300 font-semibold text-lg mb-4">Current Court Information</h4>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            {currentCase.courtDetails.courtName && (
+                              <div className="flex items-center gap-3">
+                                <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                                <div>
+                                  <span className="text-slate-400 text-sm">Court:</span>
+                                  <span className="text-white font-medium ml-2">
+                                    {currentCase.courtDetails.courtName}
+                                  </span>
+                                </div>
+                              </div>
+                            )}
+                            {currentCase.courtDetails.courtLocation && (
+                              <div className="flex items-center gap-3">
+                                <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                                <div>
+                                  <span className="text-slate-400 text-sm">Location:</span>
+                                  <span className="text-white font-medium ml-2">
+                                    {currentCase.courtDetails.courtLocation}
+                                  </span>
+                                </div>
+                              </div>
+                            )}
+                            {currentCase.courtDetails.judgeAssigned && (
+                              <div className="flex items-center gap-3">
+                                <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                                <div>
+                                  <span className="text-slate-400 text-sm">Judge:</span>
+                                  <span className="text-white font-medium ml-2">
+                                    {currentCase.courtDetails.judgeAssigned}
+                                  </span>
+                                </div>
+                              </div>
+                            )}
+                            {currentCase.courtDetails.courtRoom && (
+                              <div className="flex items-center gap-3">
+                                <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                                <div>
+                                  <span className="text-slate-400 text-sm">Room:</span>
+                                  <span className="text-white font-medium ml-2">
+                                    {currentCase.courtDetails.courtRoom}
+                                  </span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                    )}
-                    {currentCase.courtDetails.courtLocation && (
-                      <div>
-                        <span className="text-dark-400">Location:</span>
-                        <span className="text-white ml-2">
-                          {currentCase.courtDetails.courtLocation}
-                        </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Form Fields */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Next Hearing Date */}
+                  <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl p-6 border border-slate-600/50 shadow-lg">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-8 h-8 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-lg flex items-center justify-center">
+                        <FaCalendar className="w-4 h-4 text-green-400" />
                       </div>
-                    )}
-                    {currentCase.courtDetails.judgeAssigned && (
-                      <div>
-                        <span className="text-dark-400">Judge:</span>
-                        <span className="text-white ml-2">
-                          {currentCase.courtDetails.judgeAssigned}
-                        </span>
+                      <h4 className="text-white font-semibold text-lg">Next Hearing Date</h4>
+                    </div>
+                    <div className="relative">
+                      <FaCalendar className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+                      <input
+                        type="datetime-local"
+                        className="w-full pl-12 pr-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:border-green-500/50 transition-all duration-200"
+                        value={courtDatesData.nextHearingDate}
+                        onChange={(e) =>
+                          setCourtDatesData({
+                            ...courtDatesData,
+                            nextHearingDate: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                    <p className="text-slate-400 text-sm mt-2">
+                      Set the next scheduled court hearing date and time
+                    </p>
+                  </div>
+
+                  {/* Mentioning Date */}
+                  <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl p-6 border border-slate-600/50 shadow-lg">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-8 h-8 bg-gradient-to-br from-purple-500/20 to-indigo-500/20 rounded-lg flex items-center justify-center">
+                        <FaCalendar className="w-4 h-4 text-purple-400" />
                       </div>
-                    )}
-                    {currentCase.courtDetails.courtRoom && (
-                      <div>
-                        <span className="text-dark-400">Room:</span>
-                        <span className="text-white ml-2">
-                          {currentCase.courtDetails.courtRoom}
-                        </span>
+                      <h4 className="text-white font-semibold text-lg">Mentioning Date</h4>
+                    </div>
+                    <div className="relative">
+                      <FaCalendar className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+                      <input
+                        type="datetime-local"
+                        className="w-full pl-12 pr-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all duration-200"
+                        value={courtDatesData.mentioningDate}
+                        onChange={(e) =>
+                          setCourtDatesData({
+                            ...courtDatesData,
+                            mentioningDate: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                    <p className="text-slate-400 text-sm mt-2">
+                      Set the mentioning date for case updates and status checks
+                    </p>
+                  </div>
+
+                  {/* Court Date */}
+                  <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl p-6 border border-slate-600/50 shadow-lg">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-8 h-8 bg-gradient-to-br from-blue-500/20 to-indigo-500/20 rounded-lg flex items-center justify-center">
+                        <FaCalendar className="w-4 h-4 text-blue-400" />
                       </div>
-                    )}
+                      <h4 className="text-white font-semibold text-lg">Main Court Date</h4>
+                    </div>
+                    <div className="relative">
+                      <FaCalendar className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+                      <input
+                        type="datetime-local"
+                        className="w-full pl-12 pr-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-200"
+                        value={courtDatesData.courtDate}
+                        onChange={(e) =>
+                          setCourtDatesData({
+                            ...courtDatesData,
+                            courtDate: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                    <p className="text-slate-400 text-sm mt-2">
+                      Set the main court date for proceedings and hearings
+                    </p>
                   </div>
-                </div>
-              )}
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Next Hearing Date */}
-                <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-white">
-                    Next Hearing Date
-                  </label>
-                  <div className="relative">
-                    <FaCalendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-dark-400 w-4 h-4" />
-                    <input
-                      type="datetime-local"
-                      className="w-full pl-10 pr-4 py-3 bg-dark-900/50 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
-                      value={courtDatesData.nextHearingDate}
-                      onChange={(e) =>
-                        setCourtDatesData({
-                          ...courtDatesData,
-                          nextHearingDate: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                  <p className="text-xs text-dark-400">
-                    Set the next scheduled court hearing date and time
-                  </p>
-                </div>
-
-                {/* Mentioning Date */}
-                <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-white">
-                    Mentioning Date
-                  </label>
-                  <div className="relative">
-                    <FaCalendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-dark-400 w-4 h-4" />
-                    <input
-                      type="datetime-local"
-                      className="w-full pl-10 pr-4 py-3 bg-dark-900/50 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
-                      value={courtDatesData.mentioningDate}
-                      onChange={(e) =>
-                        setCourtDatesData({
-                          ...courtDatesData,
-                          mentioningDate: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                  <p className="text-xs text-dark-400">
-                    Set the mentioning date for case updates and status checks
-                  </p>
-                </div>
-
-                {/* Court Date */}
-                <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-white">
-                    Main Court Date
-                  </label>
-                  <div className="relative">
-                    <FaCalendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-dark-400 w-4 h-4" />
-                    <input
-                      type="datetime-local"
-                      className="w-full pl-10 pr-4 py-3 bg-dark-900/50 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
-                      value={courtDatesData.courtDate}
-                      onChange={(e) =>
-                        setCourtDatesData({
-                          ...courtDatesData,
-                          courtDate: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                  <p className="text-xs text-dark-400">
-                    Set the main court date for proceedings and hearings
-                  </p>
-                </div>
-
-                {/* Court Room */}
-                <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-white">
-                    Court Room
-                  </label>
-                  <input
-                    type="text"
-                    className="w-full px-4 py-3 bg-dark-900/50 border border-dark-600 rounded-lg text-white placeholder-dark-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
-                    placeholder="Enter court room number"
-                    value={courtDatesData.courtRoom}
-                    onChange={(e) =>
-                      setCourtDatesData({
-                        ...courtDatesData,
-                        courtRoom: e.target.value,
-                      })
-                    }
-                  />
-                  <p className="text-xs text-dark-400">
-                    Specify the court room for hearings
-                  </p>
-                </div>
-
-                {/* Judge Assigned */}
-                <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-white">
-                    Judge Assigned
-                  </label>
-                  <div className="relative">
-                    <FaUserTie className="absolute left-3 top-1/2 transform -translate-y-1/2 text-dark-400 w-4 h-4" />
+                  {/* Court Room */}
+                  <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl p-6 border border-slate-600/50 shadow-lg">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-8 h-8 bg-gradient-to-br from-orange-500/20 to-red-500/20 rounded-lg flex items-center justify-center">
+                        <FaBuilding className="w-4 h-4 text-orange-400" />
+                      </div>
+                      <h4 className="text-white font-semibold text-lg">Court Room</h4>
+                    </div>
                     <input
                       type="text"
-                      className="w-full pl-10 pr-4 py-3 bg-dark-900/50 border border-dark-600 rounded-lg text-white placeholder-dark-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
-                      placeholder="Enter judge name"
-                      value={courtDatesData.judgeAssigned}
+                      className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50 transition-all duration-200"
+                      placeholder="Enter court room number"
+                      value={courtDatesData.courtRoom}
                       onChange={(e) =>
                         setCourtDatesData({
                           ...courtDatesData,
-                          judgeAssigned: e.target.value,
+                          courtRoom: e.target.value,
                         })
                       }
                     />
-                  </div>
-                  <p className="text-xs text-dark-400">
-                    Assign or update the presiding judge
-                  </p>
-                </div>
-              </div>
-
-              {/* Notes Section */}
-              <div className="mt-6 space-y-4">
-                <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-white">
-                    Hearing Notes
-                  </label>
-                  <textarea
-                    className="w-full px-4 py-3 bg-dark-900/50 border border-dark-600 rounded-lg text-white placeholder-dark-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200 resize-none"
-                    rows={4}
-                    placeholder="Enter detailed hearing notes, proceedings, and outcomes..."
-                    value={courtDatesData.hearingNotes}
-                    onChange={(e) =>
-                      setCourtDatesData({
-                        ...courtDatesData,
-                        hearingNotes: e.target.value,
-                      })
-                    }
-                  />
-                  <p className="text-xs text-dark-400">
-                    Document important details from the hearing
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-white">
-                    Adjournment Reason
-                  </label>
-                  <textarea
-                    className="w-full px-4 py-3 bg-dark-900/50 border border-dark-600 rounded-lg text-white placeholder-dark-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200 resize-none"
-                    rows={3}
-                    placeholder="Enter adjournment reason if the case was adjourned..."
-                    value={courtDatesData.adjournmentReason}
-                    onChange={(e) =>
-                      setCourtDatesData({
-                        ...courtDatesData,
-                        adjournmentReason: e.target.value,
-                      })
-                    }
-                  />
-                  <p className="text-xs text-dark-400">
-                    Specify reason if case was adjourned
-                  </p>
-                </div>
-              </div>
-
-              {/* Helpful Note */}
-              <div className="mt-6 p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-                <div className="flex items-start gap-3">
-                  <FaInfoCircle className="w-5 h-5 text-blue-400 mt-0.5 flex-shrink-0" />
-                  <div className="text-sm">
-                    <p className="text-blue-300 font-medium mb-1">
-                      What happens when you update court dates?
+                    <p className="text-slate-400 text-sm mt-2">
+                      Specify the court room for hearings
                     </p>
-                    <ul className="text-blue-200 space-y-1">
-                      <li>
-                        • Notifications will be sent for upcoming hearings (7
-                        days in advance)
-                      </li>
-                      <li>
-                        • Case status may be automatically updated based on
-                        dates
-                      </li>
-                      <li>
-                        • All changes are logged and tracked for audit purposes
-                      </li>
-                      <li>
-                        • You can update dates multiple times as court schedules
-                        change
-                      </li>
-                    </ul>
+                  </div>
+
+                  {/* Judge Assigned */}
+                  <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl p-6 border border-slate-600/50 shadow-lg">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-8 h-8 bg-gradient-to-br from-red-500/20 to-pink-500/20 rounded-lg flex items-center justify-center">
+                        <FaUserTie className="w-4 h-4 text-red-400" />
+                      </div>
+                      <h4 className="text-white font-semibold text-lg">Judge Assigned</h4>
+                    </div>
+                    <div className="relative">
+                      <FaUserTie className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+                      <input
+                        type="text"
+                        className="w-full pl-12 pr-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500/50 transition-all duration-200"
+                        placeholder="Enter judge name"
+                        value={courtDatesData.judgeAssigned}
+                        onChange={(e) =>
+                          setCourtDatesData({
+                            ...courtDatesData,
+                            judgeAssigned: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                    <p className="text-slate-400 text-sm mt-2">
+                      Assign or update the presiding judge
+                    </p>
                   </div>
                 </div>
-              </div>
 
-              {/* Action Buttons */}
-              <div className="flex justify-end gap-4 mt-8 pt-6 border-t border-dark-600">
-                <button
-                  type="button"
-                  className="px-6 py-3 bg-dark-700 hover:bg-dark-600 text-white rounded-lg border border-dark-600 hover:border-blue-400 transition-all duration-200 font-medium"
-                  onClick={() => setShowCourtDatesModal(false)}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-8 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                  disabled={courtDatesLoading}
-                >
-                  {courtDatesLoading ? (
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  ) : (
-                    <FaCalendar className="w-4 h-4" />
-                  )}
-                  {courtDatesLoading ? "Updating..." : "Update Court Dates"}
-                </button>
-              </div>
-            </form>
+                {/* Notes Section */}
+                <div className="mt-8 space-y-6">
+                  {/* Hearing Notes */}
+                  <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl p-6 border border-slate-600/50 shadow-lg">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-8 h-8 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 rounded-lg flex items-center justify-center">
+                        <FaFileAlt className="w-4 h-4 text-indigo-400" />
+                      </div>
+                      <h4 className="text-white font-semibold text-lg">Hearing Notes</h4>
+                    </div>
+                    <textarea
+                      className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all duration-200 resize-none"
+                      rows={4}
+                      placeholder="Enter detailed hearing notes, proceedings, and outcomes..."
+                      value={courtDatesData.hearingNotes}
+                      onChange={(e) =>
+                        setCourtDatesData({
+                          ...courtDatesData,
+                          hearingNotes: e.target.value,
+                        })
+                      }
+                    />
+                    <p className="text-slate-400 text-sm mt-2">
+                      Document important details from the hearing
+                    </p>
+                  </div>
+
+                  {/* Adjournment Reason */}
+                  <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl p-6 border border-slate-600/50 shadow-lg">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-8 h-8 bg-gradient-to-br from-yellow-500/20 to-orange-500/20 rounded-lg flex items-center justify-center">
+                        <FaExclamationTriangle className="w-4 h-4 text-yellow-400" />
+                      </div>
+                      <h4 className="text-white font-semibold text-lg">Adjournment Reason</h4>
+                    </div>
+                    <textarea
+                      className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-yellow-500/50 focus:border-yellow-500/50 transition-all duration-200 resize-none"
+                      rows={3}
+                      placeholder="Enter adjournment reason if the case was adjourned..."
+                      value={courtDatesData.adjournmentReason}
+                      onChange={(e) =>
+                        setCourtDatesData({
+                          ...courtDatesData,
+                          adjournmentReason: e.target.value,
+                        })
+                      }
+                    />
+                    <p className="text-slate-400 text-sm mt-2">
+                      Specify reason if case was adjourned
+                    </p>
+                  </div>
+                </div>
+
+                {/* Helpful Note */}
+                <div className="mt-8">
+                  <div className="bg-gradient-to-r from-blue-500/20 to-indigo-500/20 backdrop-blur-xl rounded-2xl p-6 border border-blue-500/30 shadow-lg">
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 bg-blue-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <FaInfoCircle className="w-4 h-4 text-blue-400" />
+                      </div>
+                      <div>
+                        <h4 className="text-blue-300 font-semibold text-lg mb-3">
+                          What happens when you update court dates?
+                        </h4>
+                        <ul className="text-slate-300 space-y-2">
+                          <li className="flex items-start gap-2">
+                            <div className="w-1.5 h-1.5 bg-blue-400 rounded-full mt-2 flex-shrink-0"></div>
+                            <span>Notifications will be sent for upcoming hearings (7 days in advance)</span>
+                          </li>
+                          <li className="flex items-start gap-2">
+                            <div className="w-1.5 h-1.5 bg-blue-400 rounded-full mt-2 flex-shrink-0"></div>
+                            <span>Case status may be automatically updated based on dates</span>
+                          </li>
+                          <li className="flex items-start gap-2">
+                            <div className="w-1.5 h-1.5 bg-blue-400 rounded-full mt-2 flex-shrink-0"></div>
+                            <span>All changes are logged and tracked for audit purposes</span>
+                          </li>
+                          <li className="flex items-start gap-2">
+                            <div className="w-1.5 h-1.5 bg-blue-400 rounded-full mt-2 flex-shrink-0"></div>
+                            <span>You can update dates multiple times as court schedules change</span>
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex flex-col sm:flex-row justify-end gap-4 mt-8 pt-6 border-t border-slate-600/50">
+                  <button
+                    type="button"
+                    className="px-6 py-3 bg-slate-700/50 hover:bg-slate-600/50 text-slate-300 hover:text-white rounded-xl font-medium transition-all duration-300 hover:scale-105 border border-slate-600/50"
+                    onClick={() => setShowCourtDatesModal(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                    disabled={courtDatesLoading}
+                  >
+                    {courtDatesLoading ? (
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    ) : (
+                      <FaCalendar className="w-4 h-4" />
+                    )}
+                    {courtDatesLoading ? "Updating..." : "Update Court Dates"}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}

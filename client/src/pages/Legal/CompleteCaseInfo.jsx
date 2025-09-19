@@ -18,6 +18,7 @@ import {
   FaFileAlt,
   FaExclamationTriangle,
   FaCheckCircle,
+  FaFolderOpen,
 } from "react-icons/fa";
 
 const CompleteCaseInfo = () => {
@@ -62,6 +63,7 @@ const CompleteCaseInfo = () => {
   // Fetch case details
   useEffect(() => {
     if (id) {
+      console.log("Fetching case details for ID:", id);
       dispatch(getLegalCase(id));
     }
   }, [dispatch, id]);
@@ -69,6 +71,7 @@ const CompleteCaseInfo = () => {
   // Update form data when case is loaded
   useEffect(() => {
     if (currentCase) {
+      console.log("Case loaded successfully:", currentCase.caseNumber);
       setFormData({
         client: {
           name:
@@ -167,13 +170,27 @@ const CompleteCaseInfo = () => {
         };
       }
 
+      console.log("Submitting case info for case ID:", id);
+      console.log("Submit data:", submitData);
+      
       await legalCaseApi.completeCaseInfo(id, submitData);
       toast.success("Case information completed successfully");
-      navigate(`/legal/cases/${id}`);
+      
+      // Navigate to case details page
+      console.log("Navigating to case details:", `/legal/cases/${id}`);
+      const isAdminContext = window.location.pathname.includes('/admin');
+      const targetPath = isAdminContext 
+        ? `/admin/legal-case/${id}` 
+        : `/legal/cases/${id}`;
+      console.log("Target path:", targetPath);
+      navigate(targetPath);
     } catch (error) {
+      console.error("Error completing case info:", error);
+      console.error("Error response:", error.response?.data);
       toast.error(
         error.response?.data?.message || "Failed to complete case information"
       );
+      // Don't navigate away on error - stay on the form
     } finally {
       setIsSubmitting(false);
     }
@@ -228,154 +245,217 @@ const CompleteCaseInfo = () => {
   const canUpdateCase = 
     currentCase.assignedTo?._id === user._id || // Assigned advocate
     user.role === "legal_head" || // Legal head
-    user.role === "law_firm_admin"; // Law firm admin
+    user.role === "law_firm_admin" || // Law firm admin
+    user.role === "law_firm"; // Law firm (for admin context)
+
+  console.log("Permission check:", {
+    currentCase: currentCase?.caseNumber,
+    assignedTo: currentCase?.assignedTo?._id,
+    userId: user._id,
+    userRole: user.role,
+    canUpdateCase,
+    isAdminContext: window.location.pathname.includes('/admin')
+  });
 
   if (!canUpdateCase) {
+    console.log("Permission denied - redirecting to cases list");
     return (
-      <div className="space-y-6">
-        <div className="alert alert-error">
-          <FaExclamationTriangle />
-          <span>
-            You don't have permission to update this case information.
-          </span>
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900/20 to-indigo-900/20 p-3 sm:p-4 md:p-6">
+        <div className="max-w-2xl mx-auto">
+          <div className="bg-gradient-to-r from-red-500/20 to-orange-500/20 backdrop-blur-xl rounded-2xl p-6 border border-red-500/30 shadow-lg mb-6">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 bg-red-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                <FaExclamationTriangle className="w-4 h-4 text-red-400" />
+              </div>
+              <div>
+                <h3 className="text-red-300 font-semibold text-lg">Access Denied</h3>
+                <p className="text-slate-300 mt-1">
+                  You don't have permission to update this case information. Only the assigned advocate, legal head, or law firm admin can update case details.
+                </p>
+                <div className="mt-3 text-sm text-slate-400">
+                  <p><strong>Your Role:</strong> {user.role}</p>
+                  <p><strong>Case Assigned To:</strong> {currentCase.assignedTo?.firstName} {currentCase.assignedTo?.lastName}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex flex-col sm:flex-row gap-4">
+            <button
+              onClick={() => {
+                const isAdminContext = window.location.pathname.includes('/admin');
+                const targetPath = isAdminContext 
+                  ? `/admin/legal-case/${id}` 
+                  : `/legal/cases/${id}`;
+                navigate(targetPath);
+              }}
+              className="px-6 py-3 bg-slate-700/50 hover:bg-slate-600/50 text-slate-300 hover:text-white rounded-xl font-medium transition-all duration-300 hover:scale-105 border border-slate-600/50 flex items-center justify-center gap-2"
+            >
+              <FaArrowLeft />
+              Back to Case Details
+            </button>
+            <button
+              onClick={() => {
+                const isAdminContext = window.location.pathname.includes('/admin');
+                const targetPath = isAdminContext ? '/admin/cases' : '/legal/cases';
+                navigate(targetPath);
+              }}
+              className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl font-semibold transition-all duration-300 hover:scale-105 flex items-center justify-center gap-2"
+            >
+              <FaFolderOpen />
+              View All Cases
+            </button>
+          </div>
         </div>
-        <button
-          onClick={() => navigate("/legal/cases")}
-          className="btn btn-outline"
-        >
-          <FaArrowLeft />
-          Back to Cases
-        </button>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => navigate(`/legal/cases/${id}`)}
-            className="btn btn-outline btn-sm"
-          >
-            <FaArrowLeft />
-            Back to Case
-          </button>
-          <div>
-            <h1 className="text-3xl font-bold text-white">
-              Update Case Details
-            </h1>
-            <p className="text-dark-400 mt-2">
-              Case: {currentCase.caseNumber} - {currentCase.title}
-            </p>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900/20 to-indigo-900/20 p-3 sm:p-4 md:p-6">
+      {/* Header Section */}
+      <div className="mb-6 md:mb-8">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => {
+                const isAdminContext = window.location.pathname.includes('/admin');
+                const targetPath = isAdminContext 
+                  ? `/admin/legal-case/${id}` 
+                  : `/legal/cases/${id}`;
+                navigate(targetPath);
+              }}
+              className="p-2 sm:p-3 bg-slate-800/50 hover:bg-slate-700/50 rounded-xl sm:rounded-2xl border border-slate-600/50 transition-all duration-300 hover:scale-105 group"
+            >
+              <FaArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 text-slate-300 group-hover:text-blue-400 transition-colors" />
+            </button>
+            <div>
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-400 via-indigo-500 to-purple-500 bg-clip-text text-transparent">
+                Update Case Details
+              </h1>
+              <p className="text-slate-300 text-lg sm:text-xl mt-2">
+                Case: {currentCase.caseNumber} - {currentCase.title}
+              </p>
+              <p className="text-slate-400 mt-1 text-sm sm:text-base">
+                Complete the missing information for this escalated case
+              </p>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Escalation Info */}
       {currentCase.escalatedFrom && (
-        <div className="alert alert-info">
-          <FaExclamationTriangle />
-          <div>
-            <span className="font-bold">Escalated Case</span>
-            <br />
-            <span className="text-sm">
-              This case was escalated from credit collection. Please complete
-              the missing information below.
-            </span>
+        <div className="mb-6 md:mb-8">
+          <div className="bg-gradient-to-r from-blue-500/20 to-indigo-500/20 backdrop-blur-xl rounded-2xl p-4 sm:p-6 border border-blue-500/30 shadow-lg">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 bg-blue-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                <FaExclamationTriangle className="w-4 h-4 text-blue-400" />
+              </div>
+              <div>
+                <h3 className="text-blue-300 font-semibold text-lg">Escalated Case</h3>
+                <p className="text-slate-300 mt-1">
+                  This case was escalated from credit collection. Please complete the missing information below to proceed with legal proceedings.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-6 md:space-y-8">
         {/* Client Information */}
-        <div className="card">
-          <div className="card-body">
-            <h2 className="card-title">
-              <FaUser />
+        <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 border border-slate-600/50 shadow-2xl">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-500/20 to-indigo-500/20 rounded-xl flex items-center justify-center">
+              <FaUser className="w-5 h-5 text-blue-400" />
+            </div>
+            <h2 className="text-xl sm:text-2xl font-bold text-white">
               Client Information
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="label">
-                  <span className="label-text">Client Name</span>
-                </label>
-                <input
-                  type="text"
-                  className="input input-bordered w-full"
-                  placeholder="Enter client name"
-                  value={formData.client.name}
-                  onChange={(e) =>
-                    handleInputChange("client", "name", e.target.value)
-                  }
-                />
-              </div>
-              <div>
-                <label className="label">
-                  <span className="label-text">Email</span>
-                </label>
-                <input
-                  type="email"
-                  className="input input-bordered w-full"
-                  placeholder="Enter client email"
-                  value={formData.client.email}
-                  onChange={(e) =>
-                    handleInputChange("client", "email", e.target.value)
-                  }
-                />
-              </div>
-              <div>
-                <label className="label">
-                  <span className="label-text">Phone Number</span>
-                </label>
-                <input
-                  type="tel"
-                  className="input input-bordered w-full"
-                  placeholder="Enter phone number"
-                  value={formData.client.phone}
-                  onChange={(e) =>
-                    handleInputChange("client", "phone", e.target.value)
-                  }
-                />
-              </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+            <div>
+              <label className="block text-slate-300 font-medium text-sm mb-2">
+                Client Name
+              </label>
+              <input
+                type="text"
+                className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-200"
+                placeholder="Enter client name"
+                value={formData.client.name}
+                onChange={(e) =>
+                  handleInputChange("client", "name", e.target.value)
+                }
+              />
+            </div>
+            <div>
+              <label className="block text-slate-300 font-medium text-sm mb-2">
+                Email
+              </label>
+              <input
+                type="email"
+                className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-200"
+                placeholder="Enter client email"
+                value={formData.client.email}
+                onChange={(e) =>
+                  handleInputChange("client", "email", e.target.value)
+                }
+              />
+            </div>
+            <div>
+              <label className="block text-slate-300 font-medium text-sm mb-2">
+                Phone Number
+              </label>
+              <input
+                type="tel"
+                className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-200"
+                placeholder="Enter phone number"
+                value={formData.client.phone}
+                onChange={(e) =>
+                  handleInputChange("client", "phone", e.target.value)
+                }
+              />
             </div>
           </div>
         </div>
 
         {/* Court Details */}
-        <div className="card">
-          <div className="card-body">
-            <h2 className="card-title">
-              <FaGavel />
+        <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 border border-slate-600/50 shadow-2xl">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 bg-gradient-to-br from-purple-500/20 to-indigo-500/20 rounded-xl flex items-center justify-center">
+              <FaGavel className="w-5 h-5 text-purple-400" />
+            </div>
+            <h2 className="text-xl sm:text-2xl font-bold text-white">
               Court Details
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="label">
-                  <span className="label-text">Court Name</span>
-                </label>
-                <input
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+            <div>
+              <label className="block text-slate-300 font-medium text-sm mb-2">
+                Court Name
+              </label>
+              <input
+                type="text"
+                className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all duration-200"
+                placeholder="Enter court name"
+                value={formData.courtDetails.courtName}
+                onChange={(e) =>
+                  handleInputChange(
+                    "courtDetails",
+                    "courtName",
+                    e.target.value
+                  )
+                }
+              />
+            </div>
+            <div>
+              <label className="block text-slate-300 font-medium text-sm mb-2">
+                Court Location
+              </label>
+              <input
                   type="text"
-                  className="input input-bordered w-full"
-                  placeholder="Enter court name"
-                  value={formData.courtDetails.courtName}
-                  onChange={(e) =>
-                    handleInputChange(
-                      "courtDetails",
-                      "courtName",
-                      e.target.value
-                    )
-                  }
-                />
-              </div>
-              <div>
-                <label className="label">
-                  <span className="label-text">Court Location</span>
-                </label>
-                <input
-                  type="text"
-                  className="input input-bordered w-full"
+                  className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all duration-200"
                   placeholder="Enter court location"
                   value={formData.courtDetails.courtLocation}
                   onChange={(e) =>
@@ -386,14 +466,14 @@ const CompleteCaseInfo = () => {
                     )
                   }
                 />
-              </div>
-              <div>
-                <label className="label">
-                  <span className="label-text">Judge Assigned</span>
+            </div>
+            <div>
+              <label className="block text-slate-300 font-medium text-sm mb-2">
+                  Judge Assigned
                 </label>
-                <input
+              <input
                   type="text"
-                  className="input input-bordered w-full"
+                  className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all duration-200"
                   placeholder="Enter judge name"
                   value={formData.courtDetails.judgeAssigned}
                   onChange={(e) =>
@@ -404,14 +484,14 @@ const CompleteCaseInfo = () => {
                     )
                   }
                 />
-              </div>
-              <div>
-                <label className="label">
-                  <span className="label-text">Court Date</span>
+            </div>
+            <div>
+              <label className="block text-slate-300 font-medium text-sm mb-2">
+                  Court Date
                 </label>
-                <input
+              <input
                   type="date"
-                  className="input input-bordered w-full"
+                  className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all duration-200"
                   value={formData.courtDetails.courtDate}
                   onChange={(e) =>
                     handleInputChange(
@@ -421,14 +501,14 @@ const CompleteCaseInfo = () => {
                     )
                   }
                 />
-              </div>
-              <div>
-                <label className="label">
-                  <span className="label-text">Court Room</span>
+            </div>
+            <div>
+              <label className="block text-slate-300 font-medium text-sm mb-2">
+                  Court Room
                 </label>
-                <input
+              <input
                   type="text"
-                  className="input input-bordered w-full"
+                  className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all duration-200"
                   placeholder="Enter court room"
                   value={formData.courtDetails.courtRoom}
                   onChange={(e) =>
@@ -439,54 +519,56 @@ const CompleteCaseInfo = () => {
                     )
                   }
                 />
-              </div>
             </div>
           </div>
         </div>
 
         {/* Opposing Party */}
-        <div className="card">
-          <div className="card-body">
-            <h2 className="card-title">
-              <FaUser />
+        <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 border border-slate-600/50 shadow-2xl">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 bg-gradient-to-br from-red-500/20 to-orange-500/20 rounded-xl flex items-center justify-center">
+              <FaUser className="w-5 h-5 text-red-400" />
+            </div>
+            <h2 className="text-xl sm:text-2xl font-bold text-white">
               Opposing Party
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="label">
-                  <span className="label-text">Opposing Party Name</span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+            <div>
+              <label className="block text-slate-300 font-medium text-sm mb-2">
+                  Opposing Party Name
                 </label>
-                <input
+              <input
                   type="text"
-                  className="input input-bordered w-full"
+                  className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500/50 transition-all duration-200"
                   placeholder="Enter opposing party name"
                   value={formData.opposingParty.name}
                   onChange={(e) =>
                     handleInputChange("opposingParty", "name", e.target.value)
                   }
                 />
-              </div>
-              <div>
-                <label className="label">
-                  <span className="label-text">Opposing Lawyer</span>
+            </div>
+            <div>
+              <label className="block text-slate-300 font-medium text-sm mb-2">
+                  Opposing Lawyer
                 </label>
-                <input
+              <input
                   type="text"
-                  className="input input-bordered w-full"
+                  className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500/50 transition-all duration-200"
                   placeholder="Enter opposing lawyer name"
                   value={formData.opposingParty.lawyer}
                   onChange={(e) =>
                     handleInputChange("opposingParty", "lawyer", e.target.value)
                   }
                 />
-              </div>
-              <div>
-                <label className="label">
-                  <span className="label-text">Email</span>
+            </div>
+            <div>
+              <label className="block text-slate-300 font-medium text-sm mb-2">
+                  Email
                 </label>
-                <input
+              <input
                   type="email"
-                  className="input input-bordered w-full"
+                  className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500/50 transition-all duration-200"
                   placeholder="Enter opposing party email"
                   value={formData.opposingParty.contact.email}
                   onChange={(e) =>
@@ -498,14 +580,14 @@ const CompleteCaseInfo = () => {
                     )
                   }
                 />
-              </div>
-              <div>
-                <label className="label">
-                  <span className="label-text">Phone</span>
+            </div>
+            <div>
+              <label className="block text-slate-300 font-medium text-sm mb-2">
+                  Phone
                 </label>
-                <input
+              <input
                   type="tel"
-                  className="input input-bordered w-full"
+                  className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500/50 transition-all duration-200"
                   placeholder="Enter opposing party phone"
                   value={formData.opposingParty.contact.phone}
                   onChange={(e) =>
@@ -517,39 +599,41 @@ const CompleteCaseInfo = () => {
                     )
                   }
                 />
-              </div>
             </div>
           </div>
         </div>
 
         {/* Filing Fee */}
-        <div className="card">
-          <div className="card-body">
-            <h2 className="card-title">
-              <FaFileAlt />
+        <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 border border-slate-600/50 shadow-2xl">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-xl flex items-center justify-center">
+              <FaFileAlt className="w-5 h-5 text-green-400" />
+            </div>
+            <h2 className="text-xl sm:text-2xl font-bold text-white">
               Filing Fee
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="label">
-                  <span className="label-text">Amount</span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
+            <div>
+              <label className="block text-slate-300 font-medium text-sm mb-2">
+                  Amount
                 </label>
-                <input
+              <input
                   type="number"
-                  className="input input-bordered w-full"
+                  className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:border-green-500/50 transition-all duration-200"
                   placeholder="Enter amount"
                   value={formData.filingFee.amount}
                   onChange={(e) =>
                     handleInputChange("filingFee", "amount", e.target.value)
                   }
                 />
-              </div>
-              <div>
-                <label className="label">
-                  <span className="label-text">Currency</span>
+            </div>
+            <div>
+              <label className="block text-slate-300 font-medium text-sm mb-2">
+                  Currency
                 </label>
-                <select
-                  className="select select-bordered w-full"
+              <select
+                  className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:border-green-500/50 transition-all duration-200"
                   value={formData.filingFee.currency}
                   onChange={(e) =>
                     handleInputChange("filingFee", "currency", e.target.value)
@@ -561,42 +645,47 @@ const CompleteCaseInfo = () => {
                 </select>
               </div>
               <div className="flex items-end">
-                <label className="label cursor-pointer">
-                  <input
-                    type="checkbox"
-                    className="checkbox checkbox-primary mr-2"
-                    checked={formData.filingFee.paid}
-                    onChange={(e) =>
-                      handleInputChange("filingFee", "paid", e.target.checked)
-                    }
-                  />
-                  <span className="label-text">Paid</span>
-                </label>
-              </div>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="w-5 h-5 text-green-500 bg-slate-700 border-slate-600 rounded focus:ring-green-500/50 focus:ring-2"
+                  checked={formData.filingFee.paid}
+                  onChange={(e) =>
+                    handleInputChange("filingFee", "paid", e.target.checked)
+                  }
+                />
+                <span className="text-slate-300 font-medium">Paid</span>
+              </label>
             </div>
           </div>
         </div>
 
         {/* Submit Button */}
-        <div className="flex justify-end gap-4">
+        <div className="flex flex-col sm:flex-row justify-end gap-4 pt-6">
           <button
             type="button"
-            onClick={() => navigate(`/legal/cases/${id}`)}
-            className="btn btn-outline"
+            onClick={() => {
+              const isAdminContext = window.location.pathname.includes('/admin');
+              const targetPath = isAdminContext 
+                ? `/admin/legal-case/${id}` 
+                : `/legal/cases/${id}`;
+              navigate(targetPath);
+            }}
+            className="px-6 py-3 bg-slate-700/50 hover:bg-slate-600/50 text-slate-300 hover:text-white rounded-xl font-medium transition-all duration-300 hover:scale-105 border border-slate-600/50"
           >
             Cancel
           </button>
           <button
             type="submit"
-            className="btn btn-primary"
+            className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
             disabled={isSubmitting}
           >
             {isSubmitting ? (
-              <div className="loading loading-spinner loading-sm"></div>
+              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
             ) : (
-              <FaSave />
+              <FaSave className="w-4 h-4" />
             )}
-            Update Case Details
+            {isSubmitting ? "Updating..." : "Update Case Details"}
           </button>
         </div>
       </form>

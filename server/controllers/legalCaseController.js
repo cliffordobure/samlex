@@ -1355,14 +1355,16 @@ export const completeCaseInfo = async (req, res) => {
       });
     }
 
-    // Check if user is assigned to this case
-    if (
-      existingCase.lawFirm.toString() !== req.user.lawFirm._id.toString() ||
-      existingCase.assignedTo?._id.toString() !== req.user._id.toString()
-    ) {
+    // Check if user has permission to update this case
+    const isAssignedAdvocate = existingCase.assignedTo?._id.toString() === req.user._id.toString();
+    const isAdmin = req.user.role === "law_firm_admin" || req.user.role === "law_firm";
+    const isLegalHead = req.user.role === "legal_head";
+    const isSameLawFirm = existingCase.lawFirm.toString() === req.user.lawFirm._id.toString();
+
+    if (!isSameLawFirm || (!isAssignedAdvocate && !isAdmin && !isLegalHead)) {
       return res.status(403).json({
         success: false,
-        message: "You don't have permission to update this case",
+        message: "You don't have permission to update this case. Only the assigned advocate, legal head, or law firm admin can update case details.",
       });
     }
 

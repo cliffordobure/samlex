@@ -36,6 +36,7 @@ import NotFound from "./pages/NotFound";
 import CaseManagement from "./pages/CreditCollection/CaseManagement";
 import CaseDetails from "./pages/CreditCollection/CaseDetails";
 import LegalCaseDetails from "./pages/Legal/CaseDetails";
+import CompleteCaseInfo from "./pages/Legal/CompleteCaseInfo";
 import CreateLegalCase from "./pages/Legal/CreateLegalCase";
 import UnifiedCaseDetails from "./pages/LawFirmAdmin/UnifiedCaseDetails";
 import CreateCase from "./pages/CreditCollection/CreateCase";
@@ -219,6 +220,7 @@ function App() {
           <Route path="calendar" element={<AdminCalendar />} />
           <Route path="case/:id" element={<UnifiedCaseDetails />} />
           <Route path="legal-case/:id" element={<LegalCaseDetails />} />
+          <Route path="legal-case/:id/complete" element={<CompleteCaseInfo />} />
           <Route path="credit-case/:id" element={<CaseDetails />} />
           <Route path="create-credit-case" element={<CreateCase />} />
           <Route path="create-legal-case" element={<CreateLegalCase />} />
