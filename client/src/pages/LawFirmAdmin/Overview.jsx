@@ -207,6 +207,12 @@ const AdminOverview = () => {
     const allCases = [...creditCases, ...legalCases];
     const userStats = {};
 
+    console.log("🔍 Generating Top Performers...");
+    console.log("Total cases:", allCases.length);
+    console.log("Credit cases:", creditCases.length);
+    console.log("Legal cases:", legalCases.length);
+    console.log("Users:", users.length);
+
     allCases.forEach(case_ => {
       if (case_.assignedTo) {
         const userId = case_.assignedTo;
@@ -217,13 +223,20 @@ const AdminOverview = () => {
         if (case_.status === "resolved" || case_.status === "closed") {
           userStats[userId].resolved++;
         }
+      } else {
+        console.log("Case without assignedTo:", case_.title || case_.caseNumber);
       }
     });
+
+    console.log("User stats:", userStats);
 
     const performers = Object.entries(userStats)
       .map(([userId, stats]) => {
         const user = users.find(u => u._id === userId);
-        if (!user) return null;
+        if (!user) {
+          console.log("User not found for ID:", userId);
+          return null;
+        }
         
         const resolutionRate = stats.total > 0 ? (stats.resolved / stats.total) * 100 : 0;
         return {
@@ -240,7 +253,25 @@ const AdminOverview = () => {
       .sort((a, b) => b.resolutionRate - a.resolutionRate)
       .slice(0, 5);
 
-    setTopPerformers(performers);
+    console.log("Top performers:", performers);
+    
+    // If no performers from cases, show all users as fallback
+    if (performers.length === 0 && users.length > 0) {
+      console.log("No case assignments found, showing all users as fallback");
+      const fallbackPerformers = users.slice(0, 5).map(user => ({
+        id: user._id,
+        name: `${user.firstName} ${user.lastName}`,
+        email: user.email,
+        resolvedCases: 0,
+        totalCases: 0,
+        resolutionRate: 0,
+        performance: "new",
+      }));
+      console.log("Fallback performers:", fallbackPerformers);
+      setTopPerformers(fallbackPerformers);
+    } else {
+      setTopPerformers(performers);
+    }
   };
 
   const generateCaseTrends = () => {
@@ -792,29 +823,41 @@ const AdminOverview = () => {
           </div>
           
           <div className="space-y-3 sm:space-y-4">
-            {topPerformers.map((performer, index) => (
-                             <div key={performer.id} className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-slate-700/30 rounded-xl sm:rounded-2xl border border-slate-600/30 hover:border-slate-500/50 transition-all duration-300 hover:scale-105 group cursor-pointer" onClick={() => navigate(`/admin/users`)}>
-                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full overflow-hidden bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center text-white font-bold group-hover:scale-110 transition-transform text-sm sm:text-base">
-                  {performer.name.split(' ').map(n => n[0]).join('')}
-                    </div>
-                <div className="flex-1 min-w-0">
-                  <h4 className="font-semibold text-white group-hover:text-blue-300 transition-colors text-sm sm:text-base">{performer.name}</h4>
-                  <p className="text-xs sm:text-sm text-slate-400 truncate">{performer.email}</p>
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4 mt-1 sm:mt-2 gap-1">
-                    <span className="text-xs sm:text-sm text-slate-300">
-                      {performer.resolvedCases}/{performer.totalCases} cases
-                    </span>
-                    <span className={`text-xs sm:text-sm font-medium ${getPerformanceColor(performer.performance)}`}>
-                      {performer.resolutionRate}% success
+            {topPerformers.length > 0 ? (
+              topPerformers.map((performer, index) => (
+                <div key={performer.id} className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-slate-700/30 rounded-xl sm:rounded-2xl border border-slate-600/30 hover:border-slate-500/50 transition-all duration-300 hover:scale-105 group cursor-pointer" onClick={() => navigate(`/admin/users`)}>
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full overflow-hidden bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center text-white font-bold group-hover:scale-110 transition-transform text-sm sm:text-base">
+                    {performer.name.split(' ').map(n => n[0]).join('')}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-semibold text-white group-hover:text-blue-300 transition-colors text-sm sm:text-base">{performer.name}</h4>
+                    <p className="text-xs sm:text-sm text-slate-400 truncate">{performer.email}</p>
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4 mt-1 sm:mt-2 gap-1">
+                      <span className="text-xs sm:text-sm text-slate-300">
+                        {performer.resolvedCases}/{performer.totalCases} cases
                       </span>
+                      <span className={`text-xs sm:text-sm font-medium ${getPerformanceColor(performer.performance)}`}>
+                        {performer.resolutionRate}% success
+                      </span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full ${getPerformanceColor(performer.performance).replace('text-', 'bg-')}`}></div>
                   </div>
                 </div>
-                <div className="text-right">
-                  <div className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full ${getPerformanceColor(performer.performance).replace('text-', 'bg-')}`}></div>
-                    </div>
-                  </div>
-                ))}
+              ))
+            ) : (
+              <div className="text-center py-8">
+                <div className="w-16 h-16 mx-auto mb-4 bg-slate-700/50 rounded-full flex items-center justify-center">
+                  <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                  </svg>
+                </div>
+                <p className="text-slate-400 text-sm">No performance data available</p>
+                <p className="text-slate-500 text-xs mt-1">Assign cases to users to see performance metrics</p>
               </div>
+            )}
+          </div>
           </div>
 
         {/* Recent Activity */}
