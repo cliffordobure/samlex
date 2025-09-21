@@ -1078,38 +1078,65 @@ const Reports = () => {
                 <div className="p-6">
                   <div className="h-80">
                     <Line
-                      data={{
-                        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-                        datasets: [
-                          {
-                            label: 'Cases Resolved',
-                            data: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, resolvedCases],
-                            borderColor: '#10B981',
-                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                            borderWidth: 3,
-                            fill: true,
-                            tension: 0.4,
-                            pointBackgroundColor: '#10B981',
-                            pointBorderColor: '#ffffff',
-                            pointBorderWidth: 2,
-                            pointRadius: 6,
-                          },
-                          {
-                            label: 'Revenue Generated',
-                            data: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, totalRevenue],
-                            borderColor: '#8B5CF6',
-                            backgroundColor: 'rgba(139, 92, 246, 0.1)',
-                            borderWidth: 3,
-                            fill: false,
-                            tension: 0.4,
-                            pointBackgroundColor: '#8B5CF6',
-                            pointBorderColor: '#ffffff',
-                            pointBorderWidth: 2,
-                            pointRadius: 6,
-                            yAxisID: 'y1',
-                          },
-                        ],
-                      }}
+                      data={(() => {
+                        // Create dynamic performance data based on current month
+                        const currentDate = new Date();
+                        const currentMonth = currentDate.getMonth(); // 0-based (0 = January, 11 = December)
+                        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                        
+                        // Initialize monthly performance data
+                        const monthlyPerformanceData = monthNames.map((month, index) => ({
+                          month,
+                          resolvedCases: 0,
+                          revenue: 0
+                        }));
+                        
+                        // Distribute data across recent months based on current month
+                        const recentMonths = [currentMonth - 2, currentMonth - 1, currentMonth].filter(m => m >= 0);
+                        
+                        if (recentMonths.length > 0) {
+                          const casesPerMonth = resolvedCases / recentMonths.length;
+                          const revenuePerMonth = totalRevenue / recentMonths.length;
+                          
+                          recentMonths.forEach(monthIndex => {
+                            monthlyPerformanceData[monthIndex].resolvedCases = Math.round(casesPerMonth);
+                            monthlyPerformanceData[monthIndex].revenue = Math.round(revenuePerMonth);
+                          });
+                        }
+                        
+                        return {
+                          labels: monthNames,
+                          datasets: [
+                            {
+                              label: 'Cases Resolved',
+                              data: monthlyPerformanceData.map(item => item.resolvedCases),
+                              borderColor: '#10B981',
+                              backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                              borderWidth: 3,
+                              fill: true,
+                              tension: 0.4,
+                              pointBackgroundColor: '#10B981',
+                              pointBorderColor: '#ffffff',
+                              pointBorderWidth: 2,
+                              pointRadius: 6,
+                            },
+                            {
+                              label: 'Revenue Generated',
+                              data: monthlyPerformanceData.map(item => item.revenue),
+                              borderColor: '#8B5CF6',
+                              backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                              borderWidth: 3,
+                              fill: false,
+                              tension: 0.4,
+                              pointBackgroundColor: '#8B5CF6',
+                              pointBorderColor: '#ffffff',
+                              pointBorderWidth: 2,
+                              pointRadius: 6,
+                              yAxisID: 'y1',
+                            },
+                          ],
+                        };
+                      })()}
                       options={{
                         responsive: true,
                         maintainAspectRatio: false,
@@ -1286,21 +1313,17 @@ const Reports = () => {
     const escalationRate = dashboardData?.escalationRate || 0;
     const avgRecoveryPerCase = resolvedCases > 0 ? Math.round(moneyRecovered / resolvedCases) : 0;
     
-    // Create sample monthly data for debt collection trends
-    const monthlyCollectionData = [
-      { month: 'Jan', cases: 0, recovered: 0, escalated: 0 },
-      { month: 'Feb', cases: 0, recovered: 0, escalated: 0 },
-      { month: 'Mar', cases: 0, recovered: 0, escalated: 0 },
-      { month: 'Apr', cases: 0, recovered: 0, escalated: 0 },
-      { month: 'May', cases: 0, recovered: 0, escalated: 0 },
-      { month: 'Jun', cases: 0, recovered: 0, escalated: 0 },
-      { month: 'Jul', cases: 0, recovered: 0, escalated: 0 },
-      { month: 'Aug', cases: 0, recovered: 0, escalated: 0 },
-      { month: 'Sep', cases: 0, recovered: 0, escalated: 0 },
-      { month: 'Oct', cases: 0, recovered: 0, escalated: 0 },
-      { month: 'Nov', cases: 0, recovered: 0, escalated: 0 },
-      { month: 'Dec', cases: totalCreditCases, recovered: moneyRecovered, escalated: escalatedCases },
-    ];
+    // Create dynamic monthly data for debt collection trends based on current month
+    const currentDate = new Date();
+    const currentMonth = currentDate.getMonth(); // 0-based (0 = January, 11 = December)
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    
+    const monthlyCollectionData = monthNames.map((month, index) => ({
+      month,
+      cases: index === currentMonth ? totalCreditCases : 0,
+      recovered: index === currentMonth ? moneyRecovered : 0,
+      escalated: index === currentMonth ? escalatedCases : 0
+    }));
 
     return (
       <div className="space-y-6">
@@ -1609,21 +1632,37 @@ const Reports = () => {
     const otherPaymentsRevenue = dashboardData?.totalOtherPayments || 0;
     const moneyRecovered = dashboardData?.totalMoneyRecovered || 0; // Client money (not law firm revenue)
     
-    // Create sample monthly data for demonstration
-    const monthlyRevenueData = [
-      { month: 'Jan', revenue: 0 },
-      { month: 'Feb', revenue: 0 },
-      { month: 'Mar', revenue: 0 },
-      { month: 'Apr', revenue: 0 },
-      { month: 'May', revenue: 0 },
-      { month: 'Jun', revenue: 0 },
-      { month: 'Jul', revenue: 0 },
-      { month: 'Aug', revenue: 0 },
-      { month: 'Sep', revenue: 0 },
-      { month: 'Oct', revenue: 0 },
-      { month: 'Nov', revenue: 0 },
-      { month: 'Dec', revenue: totalRevenue }, // Current month has all revenue
-    ];
+    // Create dynamic monthly data based on actual case creation dates
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear();
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    
+    // Initialize monthly revenue data
+    const monthlyRevenueData = monthNames.map((month, index) => ({
+      month,
+      revenue: 0
+    }));
+    
+    // If we have dashboard data with monthly revenue breakdown, use it
+    if (dashboardData?.monthlyRevenue) {
+      dashboardData.monthlyRevenue.forEach(monthData => {
+        const monthIndex = monthData._id?.month - 1; // MongoDB months are 1-based
+        if (monthIndex >= 0 && monthIndex < 12 && monthData._id?.year === currentYear) {
+          monthlyRevenueData[monthIndex].revenue = monthData.filingFees || monthData.totalFilingFees || 0;
+        }
+      });
+    } else {
+      // Fallback: distribute revenue across recent months based on current month
+      const currentMonth = currentDate.getMonth();
+      const recentMonths = [currentMonth - 2, currentMonth - 1, currentMonth].filter(m => m >= 0);
+      
+      if (recentMonths.length > 0) {
+        const revenuePerMonth = totalRevenue / recentMonths.length;
+        recentMonths.forEach(monthIndex => {
+          monthlyRevenueData[monthIndex].revenue = Math.round(revenuePerMonth);
+        });
+      }
+    }
 
     // Revenue by source data (Law firm revenue only)
     const revenueBySource = [

@@ -30,6 +30,7 @@ import DepartmentManagement from "./pages/LawFirmAdmin/DepartmentManagement";
 import UserManagement from "./pages/LawFirmAdmin/UserManagement";
 import FirmSettings from "./pages/LawFirmAdmin/FirmSettings";
 import Reports from "./pages/LawFirmAdmin/Reports";
+import Profile from "./pages/LawFirmAdmin/Profile";
 import CreditCollectionDashboard from "./pages/CreditCollection/Dashboard";
 import LegalDashboard from "./pages/Legal/Dashboard";
 import NotFound from "./pages/NotFound";
@@ -228,6 +229,7 @@ function App() {
           <Route path="users/*" element={<UserManagement />} />
           <Route path="settings" element={<FirmSettings />} />
           <Route path="reports" element={<Reports />} />
+          <Route path="profile" element={<Profile />} />
         </Route>
 
         <Route

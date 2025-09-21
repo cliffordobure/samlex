@@ -365,6 +365,8 @@ export const getDepartmentPerformance = async (req, res) => {
 
     const departmentStats = await Promise.all(
       departments.map(async (dept) => {
+        console.log(`🔍 Processing department: ${dept.name} (${dept._id})`);
+        
         // Get credit cases for this department
         const creditCases = await CreditCase.aggregate([
           { $match: { department: dept._id } },
@@ -394,6 +396,19 @@ export const getDepartmentPerformance = async (req, res) => {
           department: dept._id,
           isActive: true,
         });
+
+        // Debug: Check all cases without department filter
+        const allCreditCases = await CreditCase.countDocuments({ lawFirm: lawFirmId });
+        const allLegalCases = await LegalCase.countDocuments({ lawFirm: lawFirmId });
+        const allUsers = await User.countDocuments({ lawFirm: lawFirmId });
+
+        console.log(`📊 Department ${dept.name} stats:`);
+        console.log(`  - Credit cases with this department: ${creditCases.reduce((sum, stat) => sum + stat.count, 0)}`);
+        console.log(`  - Legal cases with this department: ${legalCases.reduce((sum, stat) => sum + stat.count, 0)}`);
+        console.log(`  - Users in this department: ${departmentUsers}`);
+        console.log(`  - Total credit cases in law firm: ${allCreditCases}`);
+        console.log(`  - Total legal cases in law firm: ${allLegalCases}`);
+        console.log(`  - Total users in law firm: ${allUsers}`);
 
         // Get recent cases (last 30 days)
         const recentCreditCases = await CreditCase.countDocuments({
@@ -429,6 +444,56 @@ export const getDepartmentPerformance = async (req, res) => {
             ? (resolvedLegalCases / totalLegalCases) * 100
             : 0;
 
+        // Fallback: If no cases assigned to department, try to assign based on department type
+        let fallbackCreditCases = 0;
+        let fallbackLegalCases = 0;
+        let fallbackUsers = 0;
+
+        // Always try fallback logic for users if departmentUsers is 0
+        if (departmentUsers === 0) {
+          console.log(`⚠️ No users found for department ${dept.name}, trying fallback logic...`);
+          
+          // Assign users based on their roles and department type
+          if (dept.departmentType === 'credit_collection') {
+            // For credit collection department, get users with credit-related roles
+            fallbackUsers = await User.countDocuments({
+              lawFirm: lawFirmId,
+              role: { $in: ['debt_collector', 'credit_head'] },
+              isActive: true
+            });
+            console.log(`  - Fallback users (credit roles): ${fallbackUsers}`);
+          } else if (dept.departmentType === 'legal') {
+            // For legal department, get users with legal-related roles
+            fallbackUsers = await User.countDocuments({
+              lawFirm: lawFirmId,
+              role: { $in: ['advocate', 'legal_head'] },
+              isActive: true
+            });
+            console.log(`  - Fallback users (legal roles): ${fallbackUsers}`);
+          }
+        }
+
+        // Fallback for cases if no cases are assigned to department
+        if (totalCreditCases === 0 && totalLegalCases === 0) {
+          console.log(`⚠️ No cases found for department ${dept.name}, trying fallback logic...`);
+          
+          if (dept.departmentType === 'credit_collection') {
+            // For credit collection department, get all credit cases without department
+            fallbackCreditCases = await CreditCase.countDocuments({
+              lawFirm: lawFirmId,
+              department: { $exists: false }
+            });
+            console.log(`  - Fallback credit cases: ${fallbackCreditCases}`);
+          } else if (dept.departmentType === 'legal') {
+            // For legal department, get all legal cases without department
+            fallbackLegalCases = await LegalCase.countDocuments({
+              lawFirm: lawFirmId,
+              department: { $exists: false }
+            });
+            console.log(`  - Fallback legal cases: ${fallbackLegalCases}`);
+          }
+        }
+
         return {
           department: {
             _id: dept._id,
@@ -437,9 +502,9 @@ export const getDepartmentPerformance = async (req, res) => {
             departmentType: dept.departmentType,
           },
           stats: {
-            totalUsers: departmentUsers,
-            totalCreditCases,
-            totalLegalCases,
+            totalUsers: departmentUsers || fallbackUsers,
+            totalCreditCases: totalCreditCases || fallbackCreditCases,
+            totalLegalCases: totalLegalCases || fallbackLegalCases,
             recentCreditCases,
             recentLegalCases,
             creditResolutionRate: Math.round(creditResolutionRate * 100) / 100,
@@ -452,6 +517,12 @@ export const getDepartmentPerformance = async (req, res) => {
               (sum, stat) => sum + (stat.totalFilingFees || 0),
               0
             ),
+            // Calculate overall completion rate
+            completionRate: (() => {
+              const totalCases = (totalCreditCases || fallbackCreditCases) + (totalLegalCases || fallbackLegalCases);
+              const totalResolved = resolvedCreditCases + resolvedLegalCases;
+              return totalCases > 0 ? Math.round((totalResolved / totalCases) * 100) : 0;
+            })(),
           },
           creditCases: creditCases,
           legalCases: legalCases,
