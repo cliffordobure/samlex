@@ -120,7 +120,18 @@ const departmentSlice = createSlice({
       })
       .addCase(getDepartments.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.departments = action.payload;
+        console.log("📊 Departments API Response:", action.payload);
+        
+        // Handle different response structures
+        if (Array.isArray(action.payload)) {
+          state.departments = action.payload;
+        } else if (action.payload && Array.isArray(action.payload.data)) {
+          state.departments = action.payload.data;
+        } else {
+          state.departments = [];
+        }
+        
+        console.log("📊 Processed Departments:", state.departments.length);
       })
       .addCase(getDepartments.rejected, (state, action) => {
         state.isLoading = false;

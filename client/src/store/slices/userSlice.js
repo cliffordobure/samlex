@@ -129,18 +129,34 @@ const userSlice = createSlice({
       })
       .addCase(getUsers.fulfilled, (state, action) => {
         state.isLoading = false;
-        // Defensive: always set users to an array
-        if (
-          action.payload &&
-          action.payload.data &&
-          Array.isArray(action.payload.data.users)
-        ) {
-          state.users = action.payload.data.users;
-          state.pagination = action.payload.data.pagination || {};
+        console.log("📊 Users API Response:", action.payload);
+        
+        // Handle different response structures
+        if (action.payload && action.payload.data) {
+          if (Array.isArray(action.payload.data)) {
+            // Direct array response
+            state.users = action.payload.data;
+          } else if (Array.isArray(action.payload.data.users)) {
+            // Nested users array
+            state.users = action.payload.data.users;
+            state.pagination = action.payload.data.pagination || {};
+          } else if (Array.isArray(action.payload.users)) {
+            // Users at root level
+            state.users = action.payload.users;
+            state.pagination = action.payload.pagination || {};
+          } else {
+            state.users = [];
+            state.pagination = {};
+          }
+        } else if (Array.isArray(action.payload)) {
+          // Direct array payload
+          state.users = action.payload;
         } else {
           state.users = [];
           state.pagination = {};
         }
+        
+        console.log("📊 Processed Users:", state.users.length);
       })
       .addCase(getUsers.rejected, (state, action) => {
         state.isLoading = false;

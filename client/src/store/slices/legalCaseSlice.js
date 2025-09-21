@@ -229,8 +229,27 @@ const legalCaseSlice = createSlice({
       })
       .addCase(getLegalCases.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.cases = action.payload.data;
-        state.pagination = action.payload.pagination;
+        console.log("📊 Legal Cases API Response:", action.payload);
+        
+        // Handle different response structures
+        if (action.payload && action.payload.data) {
+          if (Array.isArray(action.payload.data)) {
+            state.cases = action.payload.data;
+          } else if (Array.isArray(action.payload.data.cases)) {
+            state.cases = action.payload.data.cases;
+          } else {
+            state.cases = [];
+          }
+          state.pagination = action.payload.pagination || action.payload.data.pagination || {};
+        } else if (Array.isArray(action.payload)) {
+          state.cases = action.payload;
+          state.pagination = {};
+        } else {
+          state.cases = [];
+          state.pagination = {};
+        }
+        
+        console.log("📊 Processed Legal Cases:", state.cases.length);
       })
       .addCase(getLegalCases.rejected, (state, action) => {
         state.isLoading = false;

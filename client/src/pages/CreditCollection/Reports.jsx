@@ -344,21 +344,35 @@ ChartJS.register(
 
   const handleDownloadPDF = async () => {
     try {
-      const response = await reportsApi.downloadCreditCollectionPDF({
-        period: dateRange,
-        department: selectedDepartment,
-      });
+      // Use the specialized debt collection report
+      const response = await reportsApi.downloadSpecializedReport(user.lawFirm._id, "debt-collection");
       
-      const blob = new Blob([response.data], { type: 'application/pdf' });
+      // Handle HTML response for PDF (specialized report)
+      const blob = new Blob([response.data], { type: 'text/html' });
       const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `credit-collection-report-${new Date().toISOString().split('T')[0]}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
-      toast.success('PDF downloaded successfully!');
+      
+      // Open in new tab for printing
+      const newWindow = window.open(url, '_blank');
+      if (newWindow) {
+        newWindow.onload = () => {
+          newWindow.print();
+        };
+      } else {
+        // Fallback: download as HTML file
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `debt-collection-report-${new Date().toISOString().split('T')[0]}.html`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
+      
+      // Clean up after a delay
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url);
+      }, 1000);
+      
+      toast.success('Specialized debt collection report opened successfully!');
     } catch (error) {
       console.error('Error downloading PDF:', error);
       toast.error('Failed to download PDF');

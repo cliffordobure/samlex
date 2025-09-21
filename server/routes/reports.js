@@ -27,6 +27,25 @@ import {
   downloadCreditCollectionCSV,
   downloadCreditCollectionPDF,
 } from "../controllers/reportsController.js";
+import LegalCase from "../models/LegalCase.js";
+import {
+  generateProfessionalOverviewPDF,
+  generateProfessionalDepartmentPDF,
+} from "../controllers/professionalReportsController.js";
+import {
+  generateModernProfessionalPDF,
+  generateModernDepartmentPDF,
+  generateExecutiveSummaryPDF,
+} from "../controllers/modernReportsController.js";
+import {
+  generateCleanProfessionalPDF,
+} from "../controllers/cleanReportsController.js";
+import {
+  generateSimpleProfessionalPDF,
+} from "../controllers/simpleReportsController.js";
+import {
+  generateSpecializedReport,
+} from "../controllers/specializedReportsController.js";
 import { protect, authorize } from "../middleware/auth.js";
 
 const router = express.Router();
@@ -98,6 +117,117 @@ router.get(
   "/download-excel/:lawFirmId",
   authorize("admin", "law_firm_admin", "legal_head", "advocate"),
   downloadComprehensiveExcel
+);
+
+// Professional PDF reports - NEW HIGH-QUALITY REPORTS
+router.get(
+  "/professional-pdf/:lawFirmId",
+  authorize("law_firm_admin", "system_owner"),
+  generateProfessionalOverviewPDF
+);
+router.get(
+  "/professional-pdf/:lawFirmId/department/:departmentId",
+  authorize("law_firm_admin", "credit_head", "legal_head", "system_owner"),
+  generateProfessionalDepartmentPDF
+);
+
+// MODERN PROFESSIONAL PDF REPORTS - ULTIMATE QUALITY
+router.get(
+  "/modern-pdf/:lawFirmId",
+  authorize("law_firm_admin", "system_owner"),
+  generateModernProfessionalPDF
+);
+router.get(
+  "/modern-pdf/:lawFirmId/department/:departmentId",
+  authorize("law_firm_admin", "credit_head", "legal_head", "system_owner"),
+  generateModernDepartmentPDF
+);
+router.get(
+  "/modern-pdf/:lawFirmId/executive",
+  authorize("law_firm_admin", "system_owner"),
+  generateExecutiveSummaryPDF
+);
+
+// CLEAN PROFESSIONAL PDF REPORTS - NO ENCODING ISSUES
+router.get(
+  "/clean-pdf/:lawFirmId",
+  authorize("law_firm_admin", "system_owner"),
+  generateCleanProfessionalPDF
+);
+
+// SIMPLE PROFESSIONAL HTML REPORTS - ABSOLUTELY NO ENCODING ISSUES
+router.get(
+  "/simple-pdf/:lawFirmId",
+  authorize("law_firm_admin", "system_owner"),
+  generateSimpleProfessionalPDF
+);
+
+// SPECIALIZED PROFESSIONAL HTML REPORTS - DIFFERENT REPORTS FOR DIFFERENT SECTIONS
+router.get(
+  "/specialized/:lawFirmId/:reportType",
+  protect,
+  generateSpecializedReport
+);
+
+// DEBUG: Manual revenue check endpoint
+router.get(
+  "/debug-revenue/:lawFirmId",
+  protect,
+  async (req, res) => {
+    try {
+      const { lawFirmId } = req.params;
+      
+      // Get all legal cases
+      const legalCases = await LegalCase.find({ lawFirm: lawFirmId }).lean();
+      console.log("=== DEBUG REVENUE CHECK ===");
+      console.log("Law Firm ID:", lawFirmId);
+      console.log("Total Legal Cases:", legalCases.length);
+      
+      const casesWithFilingFees = legalCases.filter(c => c.filingFee);
+      console.log("Cases with Filing Fees:", casesWithFilingFees.length);
+      
+      const paidFilingFeeCases = casesWithFilingFees.filter(c => c.filingFee.paid === true);
+      console.log("Cases with Paid Filing Fees:", paidFilingFeeCases.length);
+      
+      paidFilingFeeCases.forEach((caseItem, index) => {
+        console.log(`Case ${index + 1}:`, {
+          title: caseItem.title,
+          caseNumber: caseItem.caseNumber,
+          filingFeeAmount: caseItem.filingFee.amount,
+          filingFeePaid: caseItem.filingFee.paid,
+          filingFeePaidAt: caseItem.filingFee.paidAt
+        });
+      });
+      
+      const totalFilingFees = paidFilingFeeCases.reduce((sum, c) => sum + (c.filingFee.amount || 0), 0);
+      console.log("Total Filing Fees:", totalFilingFees);
+      console.log("=========================");
+      
+      res.json({
+        success: true,
+        data: {
+          lawFirmId,
+          totalLegalCases: legalCases.length,
+          casesWithFilingFees: casesWithFilingFees.length,
+          paidFilingFeeCases: paidFilingFeeCases.length,
+          totalFilingFees,
+          paidCases: paidFilingFeeCases.map(c => ({
+            title: c.title,
+            caseNumber: c.caseNumber,
+            filingFeeAmount: c.filingFee.amount,
+            filingFeePaid: c.filingFee.paid
+          }))
+        }
+      });
+    } catch (error) {
+      console.error("Error in debug revenue check:", error);
+      res.status(500).json({
+        success: false,
+        message: "Error checking revenue",
+        error: error.message
+      });
+    }
+  }
 );
 
 // Allow credit_head, law_firm_admin, and system_owner for these:

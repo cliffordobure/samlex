@@ -6,6 +6,8 @@ import { getDepartments } from "../../store/slices/departmentSlice";
 import { getCreditCases } from "../../store/slices/creditCaseSlice";
 import { getLegalCases } from "../../store/slices/legalCaseSlice";
 import reportsApi from "../../store/api/reportsApi";
+import { debugDataStructure, debugDepartmentAssignments } from "../../utils/debugDataStructure";
+import SimpleDashboard from "../../components/SimpleDashboard";
 import {
   FaUsers,
   FaBuilding,
@@ -51,6 +53,9 @@ const AdminOverview = () => {
     thisMonthCases: 0,
     lastMonthCases: 0,
     caseGrowth: 0,
+    totalRevenue: 0,
+    escalationRevenue: 0,
+    escalationRate: 0,
   });
 
   const [recentActivity, setRecentActivity] = useState([]);
@@ -60,28 +65,54 @@ const AdminOverview = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [refreshLoading, setRefreshLoading] = useState(false);
+  const [useSimpleDashboard, setUseSimpleDashboard] = useState(true);
 
   useEffect(() => {
     if (user?.lawFirm?._id) {
       console.log("🔄 Loading data for law firm:", user.lawFirm._id);
       setIsLoading(true);
-      Promise.all([
-        dispatch(getUsers({ lawFirm: user.lawFirm._id, limit: 50 })),
-        dispatch(getDepartments({ lawFirm: user.lawFirm._id })),
-        dispatch(getCreditCases({ lawFirm: user.lawFirm._id, limit: 100 })),
-        dispatch(getLegalCases({ lawFirm: user.lawFirm._id, limit: 100 })),
-      ]).then((results) => {
-        console.log("📥 API Results:", results);
-        results.forEach((result, index) => {
-          const apiNames = ['Users', 'Departments', 'CreditCases', 'LegalCases'];
-          console.log(`📊 ${apiNames[index]} API Result:`, result);
-        });
-      }).catch((error) => {
-        console.error("❌ API Error:", error);
-      }).finally(() => {
-        console.log("✅ Data loading completed");
-        setIsLoading(false);
-      });
+      
+      const loadData = async () => {
+        try {
+          const results = await Promise.allSettled([
+            dispatch(getUsers({ lawFirm: user.lawFirm._id, limit: 50 })),
+            dispatch(getDepartments({ lawFirm: user.lawFirm._id })),
+            dispatch(getCreditCases({ lawFirm: user.lawFirm._id, limit: 100 })),
+            dispatch(getLegalCases({ lawFirm: user.lawFirm._id, limit: 100 })),
+            // Fetch revenue data from backend
+            reportsApi.getLawFirmAdminDashboard(user.lawFirm._id),
+          ]);
+          
+          console.log("📥 API Results:", results);
+          results.forEach((result, index) => {
+            const apiNames = ['Users', 'Departments', 'CreditCases', 'LegalCases', 'Dashboard'];
+            if (result.status === 'fulfilled') {
+              console.log(`✅ ${apiNames[index]} API Success:`, result.value);
+              
+              // Handle dashboard data (revenue info)
+              if (index === 4 && result.value?.data?.data) {
+                const dashboardData = result.value.data.data;
+                console.log("💰 Dashboard Revenue Data:", dashboardData);
+                setStats(prevStats => ({
+                  ...prevStats,
+                  totalRevenue: dashboardData.totalRevenue || 0,
+                  escalationRevenue: dashboardData.escalationRevenue || 0,
+                  escalationRate: dashboardData.escalationRate || 0,
+                }));
+              }
+            } else {
+              console.error(`❌ ${apiNames[index]} API Error:`, result.reason);
+            }
+          });
+        } catch (error) {
+          console.error("❌ Unexpected API Error:", error);
+        } finally {
+          console.log("✅ Data loading completed");
+          setIsLoading(false);
+        }
+      };
+      
+      loadData();
     }
   }, [dispatch, user?.lawFirm?._id]);
 
@@ -93,14 +124,16 @@ const AdminOverview = () => {
       legalCases: legalCases.length
     });
     
-    // Debug the actual data structure
-    console.log("🔍 Raw data structures:");
-    console.log("Users:", users);
-    console.log("Departments:", departments);
-    console.log("Credit Cases:", creditCases);
-    console.log("Legal Cases:", legalCases);
+    // Debug the actual data structure using utility
+    debugDataStructure(users, 'Users');
+    debugDataStructure(departments, 'Departments');
+    debugDataStructure(creditCases, 'Credit Cases');
+    debugDataStructure(legalCases, 'Legal Cases');
     
+    // Debug department assignments
     if (users.length > 0 || departments.length > 0 || creditCases.length > 0 || legalCases.length > 0) {
+      debugDepartmentAssignments(users, { creditCases, legalCases }, departments);
+      
       calculateStats();
       generateRecentActivity();
       generateTopPerformers();
@@ -290,19 +323,34 @@ const AdminOverview = () => {
 
   const handleExportPDF = async () => {
     try {
-      const response = await reportsApi.downloadPDF(user.lawFirm._id, "overview");
-      const blob = new Blob([response.data], { type: 'application/pdf' });
+      // Use the specialized overview report for admin dashboard
+      const response = await reportsApi.downloadSpecializedReport(user.lawFirm._id, "overview");
+      const blob = new Blob([response.data], { type: 'text/html' });
       const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${user.lawFirm.firmName.replace(/\s+/g, "_")}_dashboard_report.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      
+      // Open in new tab for printing
+      const newWindow = window.open(url, '_blank');
+      if (newWindow) {
+        newWindow.onload = () => {
+          newWindow.print();
+        };
+      } else {
+        // Fallback: download as HTML file
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${user.lawFirm.firmName.replace(/\s+/g, "_")}_Simple_Professional_Report.html`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
+      
+      // Clean up after a delay
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+      }, 1000);
     } catch (error) {
-      console.error("Error downloading PDF:", error);
-      alert("Failed to download PDF. Please try again.");
+      console.error("Error downloading simple professional report:", error);
+      alert("Failed to download simple professional report. Please try again.");
     }
   };
 
@@ -322,6 +370,9 @@ const AdminOverview = () => {
         ['This Month Cases', stats.thisMonthCases],
         ['Last Month Cases', stats.lastMonthCases],
         ['Case Growth (%)', stats.caseGrowth],
+        ['Total Revenue (KES)', stats.totalRevenue],
+        ['Escalation Revenue (KES)', stats.escalationRevenue],
+        ['Escalation Rate (%)', stats.escalationRate],
         [''],
         
         // Case Trends section
@@ -511,7 +562,7 @@ const AdminOverview = () => {
         </div>
 
       {/* Key Metrics Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6 mb-6 md:mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 md:gap-6 mb-6 md:mb-8">
         {/* Total Cases Card */}
         <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl hover:shadow-blue-500/25 transition-all duration-300 hover:scale-105 group cursor-pointer" onClick={() => navigate('/admin/cases')}>
           <div className="flex items-center justify-between">
@@ -589,6 +640,27 @@ const AdminOverview = () => {
           </div>
         </div>
 
+        {/* Revenue Card */}
+        <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl hover:shadow-green-500/25 transition-all duration-300 hover:scale-105 group cursor-pointer" onClick={() => navigate('/admin/reports')}>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-slate-400 text-xs sm:text-sm font-medium">Total Revenue</p>
+              <p className="text-2xl sm:text-3xl font-bold text-white mt-2 group-hover:text-green-400 transition-colors">
+                KES {stats.totalRevenue?.toLocaleString() || '0'}
+              </p>
+              <div className="flex items-center mt-2">
+                <FaChartLine className="w-3 h-3 sm:w-4 sm:h-4 text-green-500 mr-1" />
+                <span className="text-green-500 text-xs sm:text-sm font-medium">
+                  {stats.escalationRevenue > 0 ? `KES ${stats.escalationRevenue.toLocaleString()} from escalations` : 'No escalations yet'}
+                </span>
+              </div>
+            </div>
+            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-xl sm:rounded-2xl flex items-center justify-center group-hover:bg-green-500/30 transition-all duration-300">
+              <FaChartLine className="w-6 h-6 sm:w-8 sm:h-8 text-green-400 group-hover:text-green-300 transition-colors" />
+            </div>
+          </div>
+        </div>
+
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 md:gap-8 mb-6 md:mb-8">
         {/* Case Trends Chart */}
@@ -603,10 +675,10 @@ const AdminOverview = () => {
                 <button 
                   onClick={handleExportPDF}
                   className="px-2 sm:px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs sm:text-sm transition-colors flex items-center gap-1"
-                  title="Export as PDF"
+                  title="Export as Simple Professional Report"
                 >
                   <FaFilePdf className="w-3 h-3" />
-                  PDF
+                  Simple Report
                 </button>
                 <button 
                   onClick={handleExportCSV}
@@ -798,10 +870,10 @@ const AdminOverview = () => {
               <button 
                 onClick={handleExportPDF}
                 className="px-3 sm:px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs sm:text-sm transition-colors flex items-center gap-1"
-                title="Export as PDF"
+                title="Export as Simple Professional Report"
               >
                 <FaFilePdf className="w-3 h-3 sm:w-4 sm:h-4" />
-                PDF
+                Simple Report
               </button>
               <button 
                 onClick={handleExportCSV}
@@ -822,6 +894,24 @@ const AdminOverview = () => {
             <p>Users: {users.length} | Departments: {departments.length} | Credit Cases: {creditCases.length} | Legal Cases: {legalCases.length}</p>
             <p>Law Firm ID: {user?.lawFirm?._id || 'Not found'}</p>
             <p>Loading: {isLoading ? 'Yes' : 'No'}</p>
+            
+            {/* Enhanced debug info */}
+            <div className="mt-2 pt-2 border-t border-yellow-500/30">
+              <p className="text-xs text-yellow-300/80">Users with departments: {users.filter(u => u.department).length}</p>
+              <p className="text-xs text-yellow-300/80">Credit cases with departments: {creditCases.filter(c => c.department).length}</p>
+              <p className="text-xs text-yellow-300/80">Legal cases with departments: {legalCases.filter(c => c.department).length}</p>
+              
+              {departments.length > 0 && (
+                <div className="mt-1">
+                  <p className="text-xs text-yellow-300/80">Department IDs:</p>
+                  {departments.map(dept => (
+                    <p key={dept._id} className="text-xs text-yellow-200/60 ml-2">
+                      • {dept.name}: {dept._id}
+                    </p>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -892,43 +982,33 @@ const AdminOverview = () => {
                 const userDept = u.department;
                 const deptId = dept._id;
                 
-                // Handle both string and ObjectId comparisons
-                if (typeof userDept === 'string' && typeof deptId === 'string') {
-                  return userDept === deptId;
-                } else if (typeof userDept === 'object' && userDept?._id) {
-                  return userDept._id === deptId;
-                } else if (typeof deptId === 'object' && deptId?._id) {
-                  return userDept === deptId._id;
-                }
-                return false;
+                // Convert both to strings for comparison
+                const userDeptStr = typeof userDept === 'object' && userDept?._id ? userDept._id.toString() : (userDept ? userDept.toString() : '');
+                const deptIdStr = typeof deptId === 'object' && deptId?._id ? deptId._id.toString() : (deptId ? deptId.toString() : '');
+                
+                return userDeptStr === deptIdStr;
               });
               
               const deptCreditCases = creditCases.filter(c => {
                 const caseDept = c.department;
                 const deptId = dept._id;
                 
-                if (typeof caseDept === 'string' && typeof deptId === 'string') {
-                  return caseDept === deptId;
-                } else if (typeof caseDept === 'object' && caseDept?._id) {
-                  return caseDept._id === deptId;
-                } else if (typeof deptId === 'object' && deptId?._id) {
-                  return caseDept === deptId._id;
-                }
-                return false;
+                // Convert both to strings for comparison
+                const caseDeptStr = typeof caseDept === 'object' && caseDept?._id ? caseDept._id.toString() : (caseDept ? caseDept.toString() : '');
+                const deptIdStr = typeof deptId === 'object' && deptId?._id ? deptId._id.toString() : (deptId ? deptId.toString() : '');
+                
+                return caseDeptStr === deptIdStr;
               });
               
               const deptLegalCases = legalCases.filter(c => {
                 const caseDept = c.department;
                 const deptId = dept._id;
                 
-                if (typeof caseDept === 'string' && typeof deptId === 'string') {
-                  return caseDept === deptId;
-                } else if (typeof caseDept === 'object' && caseDept?._id) {
-                  return caseDept._id === deptId;
-                } else if (typeof deptId === 'object' && deptId?._id) {
-                  return caseDept === deptId._id;
-                }
-                return false;
+                // Convert both to strings for comparison
+                const caseDeptStr = typeof caseDept === 'object' && caseDept?._id ? caseDept._id.toString() : (caseDept ? caseDept.toString() : '');
+                const deptIdStr = typeof deptId === 'object' && deptId?._id ? deptId._id.toString() : (deptId ? deptId.toString() : '');
+                
+                return caseDeptStr === deptIdStr;
               });
               
               const allDeptCases = [...deptCreditCases, ...deptLegalCases];

@@ -320,21 +320,56 @@ const LegalReports = () => {
     try {
       // Only allow download for users with appropriate permissions
       if (user?.role === "advocate" || user?.role === "legal_head" || user?.role === "law_firm_admin" || user?.role === "admin") {
-        const endpoint = format === "pdf" ? "download-pdf" : "download-excel";
-        const response = await reportsApi[`download${format.toUpperCase()}`](
-          user.lawFirm._id,
-          "legal-performance"
-        );
+        let response;
         
-        const blob = new Blob([response.data]);
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `${user.lawFirm.firmName.replace(/\s+/g, "_")}_legal_report.${format}`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
+        if (format === "pdf") {
+          // Use the specialized legal performance report
+          response = await reportsApi.downloadSpecializedReport(user.lawFirm._id, "legal-performance");
+        } else {
+          // Use existing Excel download
+          response = await reportsApi.downloadExcel(
+            user.lawFirm._id,
+            "legal-performance"
+          );
+        }
+        
+        if (format === "pdf") {
+          // Handle HTML response for PDF (simple report)
+          const blob = new Blob([response.data], { type: 'text/html' });
+          const url = window.URL.createObjectURL(blob);
+          
+          // Open in new tab for printing
+          const newWindow = window.open(url, '_blank');
+          if (newWindow) {
+            newWindow.onload = () => {
+              newWindow.print();
+            };
+          } else {
+            // Fallback: download as HTML file
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${user.lawFirm.firmName.replace(/\s+/g, "_")}_Simple_Legal_Report.html`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+          }
+          
+          // Clean up after a delay
+          setTimeout(() => {
+            window.URL.revokeObjectURL(url);
+          }, 1000);
+        } else {
+          // Handle Excel response
+          const blob = new Blob([response.data]);
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `${user.lawFirm.firmName.replace(/\s+/g, "_")}_legal_report.${format}`;
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(url);
+          document.body.removeChild(a);
+        }
         
         toast.success(`${format.toUpperCase()} report downloaded successfully!`);
       } else {

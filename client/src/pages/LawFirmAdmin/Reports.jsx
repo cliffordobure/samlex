@@ -73,6 +73,22 @@ ChartJS.register(
   LineElement
 );
 
+// Helper function to map report types to specialized report types
+const getSpecializedReportType = (reportType) => {
+  const typeMap = {
+    'overview': 'overview',
+    'performance': 'legal-performance',
+    'cases': 'case-analysis',
+    'financial': 'revenue-analytics',
+    'legal-performance': 'legal-performance',
+    'debt-collection': 'debt-collection',
+    'revenue-analytics': 'revenue-analytics',
+    'case-analysis': 'case-analysis'
+  };
+  
+  return typeMap[reportType] || 'overview';
+};
+
 const Reports = () => {
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
@@ -126,8 +142,11 @@ const Reports = () => {
 
   const loadDashboardData = async () => {
     try {
+      console.log("Loading dashboard data for law firm:", user.lawFirm._id);
       const res = await reportsApi.getLawFirmAdminDashboard(user.lawFirm._id);
+      console.log("Dashboard API response:", res.data);
       if (res.data.success) {
+        console.log("Dashboard data received:", res.data.data);
         setDashboardData(res.data.data);
       }
     } catch (error) {
@@ -190,6 +209,18 @@ const Reports = () => {
     setRefreshKey(prev => prev + 1);
   };
 
+  const handleDebugRevenue = async () => {
+    try {
+      console.log("Debugging revenue for law firm:", user.lawFirm._id);
+      const res = await reportsApi.debugRevenue(user.lawFirm._id);
+      console.log("Debug revenue response:", res.data);
+      alert(`Debug Revenue Results:\n${JSON.stringify(res.data.data, null, 2)}`);
+    } catch (error) {
+      console.error("Error debugging revenue:", error);
+      alert("Error debugging revenue: " + error.message);
+    }
+  };
+
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
     setFilters(prev => ({
@@ -214,25 +245,54 @@ const Reports = () => {
       let filename;
 
       if (format === "pdf") {
-        response = await reportsApi.downloadPDF(user.lawFirm._id, reportType);
-        filename = `${user.lawFirm.firmName.replace(/\s+/g, "_")}_${reportType}_report.pdf`;
+        // Use the specialized report based on the active tab/report type
+        const specializedReportType = getSpecializedReportType(reportType);
+        response = await reportsApi.downloadSpecializedReport(user.lawFirm._id, specializedReportType);
+        filename = `${user.lawFirm.firmName.replace(/\s+/g, "_")}_${specializedReportType}_Report.html`;
       } else {
         response = await reportsApi.downloadExcel(user.lawFirm._id, reportType);
         filename = `${user.lawFirm.firmName.replace(/\s+/g, "_")}_${reportType}_report.xlsx`;
       }
 
-      // Create download link
-      const blob = new Blob([response.data], {
-        type: format === "pdf" ? "application/pdf" : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
+      if (format === "pdf") {
+        // Handle HTML response for PDF (simple report)
+        const blob = new Blob([response.data], { type: 'text/html' });
+        const url = window.URL.createObjectURL(blob);
+        
+        // Open in new tab for printing
+        const newWindow = window.open(url, '_blank');
+        if (newWindow) {
+          newWindow.onload = () => {
+            newWindow.print();
+          };
+        } else {
+          // Fallback: download as HTML file
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = filename;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }
+        
+        // Clean up after a delay
+        setTimeout(() => {
+          window.URL.revokeObjectURL(url);
+        }, 1000);
+      } else {
+        // Handle Excel response
+        const blob = new Blob([response.data], {
+          type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      }
     } catch (error) {
       console.error("Error downloading report:", error);
       alert("Failed to download report. Please try again.");
@@ -444,23 +504,16 @@ const Reports = () => {
             </div>
           </div>
           <div className="p-6">
-            {caseStatistics?.creditCases?.byStatus?.length > 0 ? (
+            {dashboardData ? (
               <div className="h-80">
                 <Pie
                   data={{
-                    labels: caseStatistics.creditCases.byStatus.map((s) => s._id) || [],
+                    labels: ['Credit Cases', 'Legal Cases'],
                     datasets: [
                       {
-                        data: caseStatistics.creditCases.byStatus.map((s) => s.count) || [],
-                        backgroundColor: [
-                          "#3b82f6", // blue
-                          "#10b981", // green
-                          "#f59e0b", // yellow
-                          "#ef4444", // red
-                          "#8b5cf6", // purple
-                          "#06b6d4", // cyan
-                        ],
-                        borderColor: "#1e293b",
+                        data: [dashboardData.totalCreditCases || 0, dashboardData.totalLegalCases || 0],
+                        backgroundColor: ['#3B82F6', '#8B5CF6'],
+                        borderColor: ['#3B82F6', '#8B5CF6'],
                         borderWidth: 2,
                       },
                     ],
@@ -479,6 +532,14 @@ const Reports = () => {
                         },
                       },
                       tooltip: {
+                        callbacks: {
+                          label: function(context) {
+                            const value = context.parsed;
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                            return `${context.label}: ${value} cases (${percentage}%)`;
+                          },
+                        },
                         backgroundColor: "#1e293b",
                         titleColor: "#f1f5f9",
                         bodyColor: "#cbd5e1",
@@ -515,19 +576,15 @@ const Reports = () => {
             </div>
           </div>
           <div className="p-6">
-            {revenueAnalytics?.monthlyRevenue?.filingFees?.length > 0 ? (
+            {dashboardData ? (
               <div className="h-80">
                 <Bar
                   data={{
-                    labels: revenueAnalytics.monthlyRevenue.filingFees.map(
-                      (item) => `${item._id.month}/${item._id.year}`
-                    ) || [],
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
                     datasets: [
                       {
                         label: "Filing Fees",
-                        data: revenueAnalytics.monthlyRevenue.filingFees.map(
-                          (item) => item.totalFilingFees
-                        ) || [],
+                        data: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, dashboardData.totalRevenue || 0],
                         backgroundColor: "#3b82f6",
                         borderRadius: 6,
                         borderColor: "#1d4ed8",
@@ -535,9 +592,7 @@ const Reports = () => {
                       },
                       {
                         label: "Escalation Fees",
-                        data: revenueAnalytics.monthlyRevenue.escalationFees.map(
-                          (item) => item.totalEscalationFees
-                        ) || [],
+                        data: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, dashboardData.escalationRevenue || 0],
                         backgroundColor: "#f59e0b",
                         borderRadius: 6,
                         borderColor: "#d97706",
@@ -559,6 +614,11 @@ const Reports = () => {
                         },
                       },
                       tooltip: {
+                        callbacks: {
+                          label: function(context) {
+                            return `${context.dataset.label}: KES ${context.parsed.y.toLocaleString()}`;
+                          },
+                        },
                         backgroundColor: "#1e293b",
                         titleColor: "#f1f5f9",
                         bodyColor: "#cbd5e1",
@@ -577,7 +637,7 @@ const Reports = () => {
                         ticks: { 
                           color: "#cbd5e1",
                           callback: function(value) {
-                            return formatCurrency(value);
+                            return 'KES ' + value.toLocaleString();
                           }
                         },
                       },
@@ -833,68 +893,1081 @@ const Reports = () => {
     </div>
   );
 
-  const renderLegalPerformanceTab = () => (
-    <div className="space-y-6">
-      {loadingReports ? (
-        <div className="text-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto mb-4"></div>
-          <p className="text-slate-400 text-lg">Loading legal performance data...</p>
-        </div>
-      ) : legalPerformance ? (
-        <div className="text-center py-12">
-          <FaGavel className="w-16 h-16 text-slate-500 mx-auto mb-4" />
-          <p className="text-slate-400 text-lg">Legal performance data will be displayed here</p>
-        </div>
-      ) : (
-        <div className="text-center py-12">
-          <FaGavel className="w-16 h-16 text-slate-500 mx-auto mb-4" />
-          <p className="text-slate-400 text-lg">No legal performance data available</p>
-        </div>
-      )}
-    </div>
-  );
+  const renderLegalPerformanceTab = () => {
+    // Calculate legal performance data from dashboard data
+    const totalLegalCases = dashboardData?.totalLegalCases || 0;
+    const totalCreditCases = dashboardData?.totalCreditCases || 0;
+    const totalCases = totalLegalCases + totalCreditCases;
+    const escalatedCases = dashboardData?.escalationRate ? Math.round((dashboardData.escalationRate / 100) * totalCreditCases) : 0;
+    const resolvedCases = Math.max(0, totalCreditCases - escalatedCases);
+    const totalRevenue = dashboardData?.totalRevenue || 0;
+    const filingFees = dashboardData?.totalFilingFees || 0;
+    const escalationRevenue = dashboardData?.escalationRevenue || 0;
+    
+    // Calculate performance metrics
+    const resolutionRate = totalCases > 0 ? Math.round((resolvedCases / totalCases) * 100) : 0;
+    const escalationRate = dashboardData?.escalationRate || 0;
+    const avgRevenuePerCase = totalCases > 0 ? Math.round(totalRevenue / totalCases) : 0;
+    const avgFilingFeePerCase = totalLegalCases > 0 ? Math.round(filingFees / totalLegalCases) : 0;
 
-  const renderDebtCollectionTab = () => (
-    <div className="space-y-6">
-      {loadingReports ? (
-        <div className="text-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
-          <p className="text-slate-400 text-lg">Loading debt collection data...</p>
-        </div>
-      ) : debtCollectionPerformance ? (
-        <div className="text-center py-12">
-          <FaMoneyBillWave className="w-16 h-16 text-slate-500 mx-auto mb-4" />
-          <p className="text-slate-400 text-lg">Debt collection data will be displayed here</p>
-        </div>
-      ) : (
-        <div className="text-center py-12">
-          <FaMoneyBillWave className="w-16 h-16 text-slate-500 mx-auto mb-4" />
-          <p className="text-slate-400 text-lg">No debt collection data available</p>
-        </div>
-      )}
-    </div>
-  );
+    return (
+      <div className="space-y-6">
+        {loadingReports ? (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto mb-4"></div>
+            <p className="text-slate-400 text-lg">Loading legal performance data...</p>
+          </div>
+        ) : (
+          <>
+            {/* Legal Performance Summary Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl p-6 border border-slate-600/50 shadow-xl">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="bg-gradient-to-r from-purple-500 to-purple-600 p-3 rounded-xl">
+                    <FaGavel className="text-xl text-white" />
+                  </div>
+                  <div className="text-right">
+                    <FaArrowUp className="w-4 h-4 text-purple-500" />
+                  </div>
+                </div>
+                <div>
+                  <p className="text-slate-400 text-sm font-medium mb-1">Total Legal Cases</p>
+                  <p className="text-2xl font-bold text-white mb-2">
+                    {totalLegalCases}
+                  </p>
+                  <p className="text-slate-400 text-sm">Active legal matters</p>
+                </div>
+              </div>
 
-  const renderEnhancedRevenueTab = () => (
-    <div className="space-y-6">
-      {loadingReports ? (
-        <div className="text-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mx-auto mb-4"></div>
-          <p className="text-slate-400 text-lg">Loading revenue analytics data...</p>
-        </div>
-      ) : enhancedRevenue ? (
-        <div className="text-center py-12">
-          <FaChartLine className="w-16 h-16 text-slate-500 mx-auto mb-4" />
-          <p className="text-slate-400 text-lg">Revenue analytics data will be displayed here</p>
-        </div>
-      ) : (
-        <div className="text-center py-12">
-          <FaChartLine className="w-16 h-16 text-slate-500 mx-auto mb-4" />
-          <p className="text-slate-400 text-lg">No revenue analytics data available</p>
-        </div>
-      )}
-    </div>
-  );
+              <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl p-6 border border-slate-600/50 shadow-xl">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="bg-gradient-to-r from-green-500 to-green-600 p-3 rounded-xl">
+                    <FaCheckCircle className="text-xl text-white" />
+                  </div>
+                  <div className="text-right">
+                    <FaArrowUp className="w-4 h-4 text-green-500" />
+                  </div>
+                </div>
+                <div>
+                  <p className="text-slate-400 text-sm font-medium mb-1">Cases Resolved</p>
+                  <p className="text-2xl font-bold text-white mb-2">
+                    {resolvedCases}
+                  </p>
+                  <p className="text-slate-400 text-sm">{resolutionRate}% success rate</p>
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl p-6 border border-slate-600/50 shadow-xl">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-3 rounded-xl">
+                    <FaMoneyBillWave className="text-xl text-white" />
+                  </div>
+                  <div className="text-right">
+                    <FaArrowUp className="w-4 h-4 text-blue-500" />
+                  </div>
+                </div>
+                <div>
+                  <p className="text-slate-400 text-sm font-medium mb-1">Filing Fees</p>
+                  <p className="text-2xl font-bold text-white mb-2">
+                    KES {filingFees.toLocaleString()}
+                  </p>
+                  <p className="text-slate-400 text-sm">Legal case fees</p>
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl p-6 border border-slate-600/50 shadow-xl">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="bg-gradient-to-r from-orange-500 to-orange-600 p-3 rounded-xl">
+                    <FaExclamationTriangle className="text-xl text-white" />
+                  </div>
+                  <div className="text-right">
+                    <FaArrowUp className="w-4 h-4 text-orange-500" />
+                  </div>
+                </div>
+                <div>
+                  <p className="text-slate-400 text-sm font-medium mb-1">Escalated Cases</p>
+                  <p className="text-2xl font-bold text-white mb-2">
+                    {escalatedCases}
+                  </p>
+                  <p className="text-slate-400 text-sm">{escalationRate}% escalation rate</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Charts Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Case Type Distribution */}
+              <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl border border-slate-600/50 shadow-xl">
+                <div className="p-6 border-b border-slate-600/50">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xl font-semibold text-white flex items-center gap-2">
+                      <FaChartPie className="text-purple-400" />
+                      Case Type Distribution
+                    </h3>
+                    <div className="bg-purple-500/20 px-3 py-1 rounded-full border border-purple-500/30">
+                      <span className="text-purple-400 text-sm font-medium">Overview</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="p-6">
+                  {totalCases > 0 ? (
+                    <div className="h-80">
+                      <Doughnut
+                        data={{
+                          labels: ['Legal Cases', 'Credit Cases'],
+                          datasets: [
+                            {
+                              data: [totalLegalCases, totalCreditCases],
+                              backgroundColor: ['#8B5CF6', '#F59E0B'],
+                              borderColor: ['#8B5CF6', '#F59E0B'],
+                              borderWidth: 2,
+                            },
+                          ],
+                        }}
+                        options={{
+                          responsive: true,
+                          maintainAspectRatio: false,
+                          plugins: {
+                            legend: {
+                              position: 'bottom',
+                              labels: {
+                                color: '#cbd5e1',
+                                font: {
+                                  size: 12,
+                                },
+                              },
+                            },
+                            tooltip: {
+                              callbacks: {
+                                label: function(context) {
+                                  const value = context.parsed;
+                                  const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                  const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                  return `${context.label}: ${value} cases (${percentage}%)`;
+                                },
+                              },
+                            },
+                          },
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    <div className="h-80 flex items-center justify-center">
+                      <div className="text-center">
+                        <FaChartPie className="w-16 h-16 text-slate-500 mx-auto mb-4" />
+                        <p className="text-slate-400">No cases available</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Monthly Legal Performance Trends */}
+              <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl border border-slate-600/50 shadow-xl">
+                <div className="p-6 border-b border-slate-600/50">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xl font-semibold text-white flex items-center gap-2">
+                      <FaChartLine className="text-green-400" />
+                      Performance Trends
+                    </h3>
+                    <div className="bg-green-500/20 px-3 py-1 rounded-full border border-green-500/30">
+                      <span className="text-green-400 text-sm font-medium">2025</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="p-6">
+                  <div className="h-80">
+                    <Line
+                      data={{
+                        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                        datasets: [
+                          {
+                            label: 'Cases Resolved',
+                            data: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, resolvedCases],
+                            borderColor: '#10B981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4,
+                            pointBackgroundColor: '#10B981',
+                            pointBorderColor: '#ffffff',
+                            pointBorderWidth: 2,
+                            pointRadius: 6,
+                          },
+                          {
+                            label: 'Revenue Generated',
+                            data: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, totalRevenue],
+                            borderColor: '#8B5CF6',
+                            backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                            borderWidth: 3,
+                            fill: false,
+                            tension: 0.4,
+                            pointBackgroundColor: '#8B5CF6',
+                            pointBorderColor: '#ffffff',
+                            pointBorderWidth: 2,
+                            pointRadius: 6,
+                            yAxisID: 'y1',
+                          },
+                        ],
+                      }}
+                      options={{
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                          legend: {
+                            labels: {
+                              color: '#cbd5e1',
+                              font: {
+                                size: 12,
+                              },
+                            },
+                          },
+                          tooltip: {
+                            callbacks: {
+                              label: function(context) {
+                                if (context.datasetIndex === 0) {
+                                  return `${context.dataset.label}: ${context.parsed.y} cases`;
+                                } else {
+                                  return `${context.dataset.label}: KES ${context.parsed.y.toLocaleString()}`;
+                                }
+                              },
+                            },
+                          },
+                        },
+                        scales: {
+                          x: {
+                            ticks: {
+                              color: '#94a3b8',
+                            },
+                            grid: {
+                              color: '#475569',
+                            },
+                          },
+                          y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            ticks: {
+                              color: '#94a3b8',
+                            },
+                            grid: {
+                              color: '#475569',
+                            },
+                          },
+                          y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            ticks: {
+                              color: '#94a3b8',
+                            },
+                            grid: {
+                              drawOnChartArea: false,
+                            },
+                          },
+                        },
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Performance Metrics Table */}
+            <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl border border-slate-600/50 shadow-xl">
+              <div className="p-6 border-b border-slate-600/50">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xl font-semibold text-white flex items-center gap-2">
+                    <FaChartBar className="text-blue-400" />
+                    Legal Performance Metrics
+                  </h3>
+                  <div className="bg-blue-500/20 px-3 py-1 rounded-full border border-blue-500/30">
+                    <span className="text-blue-400 text-sm font-medium">Key Indicators</span>
+                  </div>
+                </div>
+              </div>
+              <div className="p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <div className="text-center">
+                    <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
+                      <FaCheckCircle className="w-8 h-8 text-green-400 mx-auto mb-2" />
+                      <p className="text-green-400 font-bold text-2xl">{resolutionRate}%</p>
+                      <p className="text-slate-300 text-sm">Resolution Rate</p>
+                    </div>
+                  </div>
+                  
+                  <div className="text-center">
+                    <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
+                      <FaMoneyBillWave className="w-8 h-8 text-blue-400 mx-auto mb-2" />
+                      <p className="text-blue-400 font-bold text-2xl">KES {avgRevenuePerCase.toLocaleString()}</p>
+                      <p className="text-slate-300 text-sm">Avg Revenue per Case</p>
+                    </div>
+                  </div>
+                  
+                  <div className="text-center">
+                    <div className="bg-purple-500/10 border border-purple-500/20 rounded-lg p-4">
+                      <FaFileContract className="w-8 h-8 text-purple-400 mx-auto mb-2" />
+                      <p className="text-purple-400 font-bold text-2xl">KES {avgFilingFeePerCase.toLocaleString()}</p>
+                      <p className="text-slate-300 text-sm">Avg Filing Fee</p>
+                    </div>
+                  </div>
+                  
+                  <div className="text-center">
+                    <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-4">
+                      <FaExclamationTriangle className="w-8 h-8 text-orange-400 mx-auto mb-2" />
+                      <p className="text-orange-400 font-bold text-2xl">{escalationRate}%</p>
+                      <p className="text-slate-300 text-sm">Escalation Rate</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Revenue Breakdown */}
+            <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl border border-slate-600/50 shadow-xl">
+              <div className="p-6 border-b border-slate-600/50">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xl font-semibold text-white flex items-center gap-2">
+                    <FaChartBar className="text-green-400" />
+                    Revenue Breakdown
+                  </h3>
+                  <div className="bg-green-500/20 px-3 py-1 rounded-full border border-green-500/30">
+                    <span className="text-green-400 text-sm font-medium">Financial</span>
+                  </div>
+                </div>
+              </div>
+              <div className="p-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="text-center">
+                    <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-6">
+                      <FaFileContract className="w-12 h-12 text-blue-400 mx-auto mb-3" />
+                      <p className="text-blue-400 font-bold text-3xl">KES {filingFees.toLocaleString()}</p>
+                      <p className="text-slate-300 text-sm">Filing Fees</p>
+                      <p className="text-slate-400 text-xs mt-1">Legal case fees</p>
+                    </div>
+                  </div>
+                  
+                  <div className="text-center">
+                    <div className="bg-purple-500/10 border border-purple-500/20 rounded-lg p-6">
+                      <FaExclamationTriangle className="w-12 h-12 text-purple-400 mx-auto mb-3" />
+                      <p className="text-purple-400 font-bold text-3xl">KES {escalationRevenue.toLocaleString()}</p>
+                      <p className="text-slate-300 text-sm">Escalation Fees</p>
+                      <p className="text-slate-400 text-xs mt-1">Credit case escalations</p>
+                    </div>
+                  </div>
+                  
+                  <div className="text-center">
+                    <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-6">
+                      <FaMoneyBillWave className="w-12 h-12 text-green-400 mx-auto mb-3" />
+                      <p className="text-green-400 font-bold text-3xl">KES {totalRevenue.toLocaleString()}</p>
+                      <p className="text-slate-300 text-sm">Total Revenue</p>
+                      <p className="text-slate-400 text-xs mt-1">Law firm income</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    );
+  };
+
+  const renderDebtCollectionTab = () => {
+    // Calculate debt collection data from dashboard data
+    const totalCreditCases = dashboardData?.totalCreditCases || 0;
+    const escalatedCases = dashboardData?.escalationRate ? Math.round((dashboardData.escalationRate / 100) * totalCreditCases) : 0;
+    const resolvedCases = Math.max(0, totalCreditCases - escalatedCases); // Assuming non-escalated cases are resolved
+    const moneyRecovered = dashboardData?.totalMoneyRecovered || 0;
+    const escalationRevenue = dashboardData?.escalationRevenue || 0;
+    
+    // Calculate performance metrics
+    const resolutionRate = totalCreditCases > 0 ? Math.round((resolvedCases / totalCreditCases) * 100) : 0;
+    const escalationRate = dashboardData?.escalationRate || 0;
+    const avgRecoveryPerCase = resolvedCases > 0 ? Math.round(moneyRecovered / resolvedCases) : 0;
+    
+    // Create sample monthly data for debt collection trends
+    const monthlyCollectionData = [
+      { month: 'Jan', cases: 0, recovered: 0, escalated: 0 },
+      { month: 'Feb', cases: 0, recovered: 0, escalated: 0 },
+      { month: 'Mar', cases: 0, recovered: 0, escalated: 0 },
+      { month: 'Apr', cases: 0, recovered: 0, escalated: 0 },
+      { month: 'May', cases: 0, recovered: 0, escalated: 0 },
+      { month: 'Jun', cases: 0, recovered: 0, escalated: 0 },
+      { month: 'Jul', cases: 0, recovered: 0, escalated: 0 },
+      { month: 'Aug', cases: 0, recovered: 0, escalated: 0 },
+      { month: 'Sep', cases: 0, recovered: 0, escalated: 0 },
+      { month: 'Oct', cases: 0, recovered: 0, escalated: 0 },
+      { month: 'Nov', cases: 0, recovered: 0, escalated: 0 },
+      { month: 'Dec', cases: totalCreditCases, recovered: moneyRecovered, escalated: escalatedCases },
+    ];
+
+    return (
+      <div className="space-y-6">
+        {loadingReports ? (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
+            <p className="text-slate-400 text-lg">Loading debt collection data...</p>
+          </div>
+        ) : (
+          <>
+            {/* Debt Collection Summary Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl p-6 border border-slate-600/50 shadow-xl">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="bg-gradient-to-r from-orange-500 to-orange-600 p-3 rounded-xl">
+                    <FaMoneyBillWave className="text-xl text-white" />
+                  </div>
+                  <div className="text-right">
+                    <FaArrowUp className="w-4 h-4 text-orange-500" />
+                  </div>
+                </div>
+                <div>
+                  <p className="text-slate-400 text-sm font-medium mb-1">Total Credit Cases</p>
+                  <p className="text-2xl font-bold text-white mb-2">
+                    {totalCreditCases}
+                  </p>
+                  <p className="text-slate-400 text-sm">Active debt collection</p>
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl p-6 border border-slate-600/50 shadow-xl">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="bg-gradient-to-r from-green-500 to-green-600 p-3 rounded-xl">
+                    <FaCheckCircle className="text-xl text-white" />
+                  </div>
+                  <div className="text-right">
+                    <FaArrowUp className="w-4 h-4 text-green-500" />
+                  </div>
+                </div>
+                <div>
+                  <p className="text-slate-400 text-sm font-medium mb-1">Resolved Cases</p>
+                  <p className="text-2xl font-bold text-white mb-2">
+                    {resolvedCases}
+                  </p>
+                  <p className="text-slate-400 text-sm">{resolutionRate}% success rate</p>
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl p-6 border border-slate-600/50 shadow-xl">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-3 rounded-xl">
+                    <FaHandshake className="text-xl text-white" />
+                  </div>
+                  <div className="text-right">
+                    <FaArrowUp className="w-4 h-4 text-blue-500" />
+                  </div>
+                </div>
+                <div>
+                  <p className="text-slate-400 text-sm font-medium mb-1">Money Recovered</p>
+                  <p className="text-2xl font-bold text-white mb-2">
+                    KES {moneyRecovered.toLocaleString()}
+                  </p>
+                  <p className="text-slate-400 text-sm">For clients</p>
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl p-6 border border-slate-600/50 shadow-xl">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="bg-gradient-to-r from-purple-500 to-purple-600 p-3 rounded-xl">
+                    <FaExclamationTriangle className="text-xl text-white" />
+                  </div>
+                  <div className="text-right">
+                    <FaArrowUp className="w-4 h-4 text-purple-500" />
+                  </div>
+                </div>
+                <div>
+                  <p className="text-slate-400 text-sm font-medium mb-1">Escalated Cases</p>
+                  <p className="text-2xl font-bold text-white mb-2">
+                    {escalatedCases}
+                  </p>
+                  <p className="text-slate-400 text-sm">{escalationRate}% escalation rate</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Charts Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Case Status Distribution */}
+              <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl border border-slate-600/50 shadow-xl">
+                <div className="p-6 border-b border-slate-600/50">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xl font-semibold text-white flex items-center gap-2">
+                      <FaChartPie className="text-orange-400" />
+                      Case Status Distribution
+                    </h3>
+                    <div className="bg-orange-500/20 px-3 py-1 rounded-full border border-orange-500/30">
+                      <span className="text-orange-400 text-sm font-medium">Overview</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="p-6">
+                  {totalCreditCases > 0 ? (
+                    <div className="h-80">
+                      <Doughnut
+                        data={{
+                          labels: ['Resolved Cases', 'Escalated Cases'],
+                          datasets: [
+                            {
+                              data: [resolvedCases, escalatedCases],
+                              backgroundColor: ['#10B981', '#8B5CF6'],
+                              borderColor: ['#10B981', '#8B5CF6'],
+                              borderWidth: 2,
+                            },
+                          ],
+                        }}
+                        options={{
+                          responsive: true,
+                          maintainAspectRatio: false,
+                          plugins: {
+                            legend: {
+                              position: 'bottom',
+                              labels: {
+                                color: '#cbd5e1',
+                                font: {
+                                  size: 12,
+                                },
+                              },
+                            },
+                            tooltip: {
+                              callbacks: {
+                                label: function(context) {
+                                  const value = context.parsed;
+                                  const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                  const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                  return `${context.label}: ${value} cases (${percentage}%)`;
+                                },
+                              },
+                            },
+                          },
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    <div className="h-80 flex items-center justify-center">
+                      <div className="text-center">
+                        <FaChartPie className="w-16 h-16 text-slate-500 mx-auto mb-4" />
+                        <p className="text-slate-400">No credit cases available</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Monthly Collection Trends */}
+              <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl border border-slate-600/50 shadow-xl">
+                <div className="p-6 border-b border-slate-600/50">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xl font-semibold text-white flex items-center gap-2">
+                      <FaChartLine className="text-green-400" />
+                      Collection Trends
+                    </h3>
+                    <div className="bg-green-500/20 px-3 py-1 rounded-full border border-green-500/30">
+                      <span className="text-green-400 text-sm font-medium">2025</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="p-6">
+                  <div className="h-80">
+                    <Line
+                      data={{
+                        labels: monthlyCollectionData.map(item => item.month),
+                        datasets: [
+                          {
+                            label: 'Cases Resolved',
+                            data: monthlyCollectionData.map(item => item.resolved),
+                            borderColor: '#10B981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4,
+                            pointBackgroundColor: '#10B981',
+                            pointBorderColor: '#ffffff',
+                            pointBorderWidth: 2,
+                            pointRadius: 6,
+                          },
+                          {
+                            label: 'Cases Escalated',
+                            data: monthlyCollectionData.map(item => item.escalated),
+                            borderColor: '#8B5CF6',
+                            backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                            borderWidth: 3,
+                            fill: false,
+                            tension: 0.4,
+                            pointBackgroundColor: '#8B5CF6',
+                            pointBorderColor: '#ffffff',
+                            pointBorderWidth: 2,
+                            pointRadius: 6,
+                          },
+                        ],
+                      }}
+                      options={{
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                          legend: {
+                            labels: {
+                              color: '#cbd5e1',
+                              font: {
+                                size: 12,
+                              },
+                            },
+                          },
+                          tooltip: {
+                            callbacks: {
+                              label: function(context) {
+                                return `${context.dataset.label}: ${context.parsed.y} cases`;
+                              },
+                            },
+                          },
+                        },
+                        scales: {
+                          x: {
+                            ticks: {
+                              color: '#94a3b8',
+                            },
+                            grid: {
+                              color: '#475569',
+                            },
+                          },
+                          y: {
+                            ticks: {
+                              color: '#94a3b8',
+                            },
+                            grid: {
+                              color: '#475569',
+                            },
+                          },
+                        },
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Performance Metrics Table */}
+            <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl border border-slate-600/50 shadow-xl">
+              <div className="p-6 border-b border-slate-600/50">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xl font-semibold text-white flex items-center gap-2">
+                    <FaChartBar className="text-blue-400" />
+                    Performance Metrics
+                  </h3>
+                  <div className="bg-blue-500/20 px-3 py-1 rounded-full border border-blue-500/30">
+                    <span className="text-blue-400 text-sm font-medium">Key Indicators</span>
+                  </div>
+                </div>
+              </div>
+              <div className="p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <div className="text-center">
+                    <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
+                      <FaCheckCircle className="w-8 h-8 text-green-400 mx-auto mb-2" />
+                      <p className="text-green-400 font-bold text-2xl">{resolutionRate}%</p>
+                      <p className="text-slate-300 text-sm">Resolution Rate</p>
+                    </div>
+                  </div>
+                  
+                  <div className="text-center">
+                    <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
+                      <FaHandshake className="w-8 h-8 text-blue-400 mx-auto mb-2" />
+                      <p className="text-blue-400 font-bold text-2xl">KES {avgRecoveryPerCase.toLocaleString()}</p>
+                      <p className="text-slate-300 text-sm">Avg Recovery per Case</p>
+                    </div>
+                  </div>
+                  
+                  <div className="text-center">
+                    <div className="bg-purple-500/10 border border-purple-500/20 rounded-lg p-4">
+                      <FaExclamationTriangle className="w-8 h-8 text-purple-400 mx-auto mb-2" />
+                      <p className="text-purple-400 font-bold text-2xl">{escalationRate}%</p>
+                      <p className="text-slate-300 text-sm">Escalation Rate</p>
+                    </div>
+                  </div>
+                  
+                  <div className="text-center">
+                    <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-4">
+                      <FaMoneyBillWave className="w-8 h-8 text-orange-400 mx-auto mb-2" />
+                      <p className="text-orange-400 font-bold text-2xl">{totalCreditCases}</p>
+                      <p className="text-slate-300 text-sm">Total Cases</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    );
+  };
+
+  const renderEnhancedRevenueTab = () => {
+    // Calculate revenue data from dashboard data
+    const totalRevenue = dashboardData?.totalRevenue || 0; // Law firm revenue only
+    const escalationRevenue = dashboardData?.escalationRevenue || 0;
+    const filingFeesRevenue = dashboardData?.totalFilingFees || 0;
+    const otherPaymentsRevenue = dashboardData?.totalOtherPayments || 0;
+    const moneyRecovered = dashboardData?.totalMoneyRecovered || 0; // Client money (not law firm revenue)
+    
+    // Create sample monthly data for demonstration
+    const monthlyRevenueData = [
+      { month: 'Jan', revenue: 0 },
+      { month: 'Feb', revenue: 0 },
+      { month: 'Mar', revenue: 0 },
+      { month: 'Apr', revenue: 0 },
+      { month: 'May', revenue: 0 },
+      { month: 'Jun', revenue: 0 },
+      { month: 'Jul', revenue: 0 },
+      { month: 'Aug', revenue: 0 },
+      { month: 'Sep', revenue: 0 },
+      { month: 'Oct', revenue: 0 },
+      { month: 'Nov', revenue: 0 },
+      { month: 'Dec', revenue: totalRevenue }, // Current month has all revenue
+    ];
+
+    // Revenue by source data (Law firm revenue only)
+    const revenueBySource = [
+      { source: 'Filing Fees', amount: filingFeesRevenue, color: '#3B82F6' },
+      { source: 'Escalation Fees', amount: escalationRevenue, color: '#F59E0B' },
+      { source: 'Other Payments', amount: otherPaymentsRevenue, color: '#10B981' },
+    ].filter(item => item.amount > 0);
+
+    return (
+      <div className="space-y-6">
+        {loadingReports ? (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mx-auto mb-4"></div>
+            <p className="text-slate-400 text-lg">Loading revenue analytics data...</p>
+          </div>
+        ) : (
+          <>
+            {/* Revenue Summary Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl p-6 border border-slate-600/50 shadow-xl">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="bg-gradient-to-r from-green-500 to-green-600 p-3 rounded-xl">
+                    <FaDollarSign className="text-xl text-white" />
+                  </div>
+                  <div className="text-right">
+                    <FaArrowUp className="w-4 h-4 text-green-500" />
+                  </div>
+                </div>
+                <div>
+                  <p className="text-slate-400 text-sm font-medium mb-1">Total Revenue</p>
+                  <p className="text-2xl font-bold text-white mb-2">
+                    KES {totalRevenue.toLocaleString()}
+                  </p>
+                  <p className="text-slate-400 text-sm">All time</p>
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl p-6 border border-slate-600/50 shadow-xl">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-3 rounded-xl">
+                    <FaFileContract className="text-xl text-white" />
+                  </div>
+                  <div className="text-right">
+                    <FaArrowUp className="w-4 h-4 text-blue-500" />
+                  </div>
+                </div>
+                <div>
+                  <p className="text-slate-400 text-sm font-medium mb-1">Filing Fees</p>
+                  <p className="text-2xl font-bold text-white mb-2">
+                    KES {filingFeesRevenue.toLocaleString()}
+                  </p>
+                  <p className="text-slate-400 text-sm">Legal cases</p>
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl p-6 border border-slate-600/50 shadow-xl">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="bg-gradient-to-r from-orange-500 to-orange-600 p-3 rounded-xl">
+                    <FaExclamationTriangle className="text-xl text-white" />
+                  </div>
+                  <div className="text-right">
+                    <FaMinus className="w-4 h-4 text-orange-500" />
+                  </div>
+                </div>
+                <div>
+                  <p className="text-slate-400 text-sm font-medium mb-1">Escalation Fees</p>
+                  <p className="text-2xl font-bold text-white mb-2">
+                    KES {escalationRevenue.toLocaleString()}
+                  </p>
+                  <p className="text-slate-400 text-sm">Additional fees</p>
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl p-6 border border-slate-600/50 shadow-xl">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="bg-gradient-to-r from-purple-500 to-purple-600 p-3 rounded-xl">
+                    <FaChartLine className="text-xl text-white" />
+                  </div>
+                  <div className="text-right">
+                    <FaArrowUp className="w-4 h-4 text-purple-500" />
+                  </div>
+                </div>
+                <div>
+                  <p className="text-slate-400 text-sm font-medium mb-1">Avg per Case</p>
+                  <p className="text-2xl font-bold text-white mb-2">
+                    KES {dashboardData?.totalLegalCases > 0 ? Math.round(totalRevenue / dashboardData.totalLegalCases).toLocaleString() : '0'}
+                  </p>
+                  <p className="text-slate-400 text-sm">Per legal case</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Charts Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Revenue by Source Pie Chart */}
+              <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl border border-slate-600/50 shadow-xl">
+                <div className="p-6 border-b border-slate-600/50">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xl font-semibold text-white flex items-center gap-2">
+                      <FaChartPie className="text-blue-400" />
+                      Revenue by Source
+                    </h3>
+                    <div className="bg-blue-500/20 px-3 py-1 rounded-full border border-blue-500/30">
+                      <span className="text-blue-400 text-sm font-medium">Breakdown</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="p-6">
+                  {revenueBySource.length > 0 ? (
+                    <div className="h-80">
+                      <Doughnut
+                        data={{
+                          labels: revenueBySource.map(item => item.source),
+                          datasets: [
+                            {
+                              data: revenueBySource.map(item => item.amount),
+                              backgroundColor: revenueBySource.map(item => item.color),
+                              borderColor: revenueBySource.map(item => item.color),
+                              borderWidth: 2,
+                            },
+                          ],
+                        }}
+                        options={{
+                          responsive: true,
+                          maintainAspectRatio: false,
+                          plugins: {
+                            legend: {
+                              position: 'bottom',
+                              labels: {
+                                color: '#cbd5e1',
+                                font: {
+                                  size: 12,
+                                },
+                              },
+                            },
+                            tooltip: {
+                              callbacks: {
+                                label: function(context) {
+                                  const value = context.parsed;
+                                  const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                  const percentage = ((value / total) * 100).toFixed(1);
+                                  return `${context.label}: KES ${value.toLocaleString()} (${percentage}%)`;
+                                },
+                              },
+                            },
+                          },
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    <div className="h-80 flex items-center justify-center">
+                      <div className="text-center">
+                        <FaChartPie className="w-16 h-16 text-slate-500 mx-auto mb-4" />
+                        <p className="text-slate-400">No revenue data available</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Monthly Revenue Trends */}
+              <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl border border-slate-600/50 shadow-xl">
+                <div className="p-6 border-b border-slate-600/50">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xl font-semibold text-white flex items-center gap-2">
+                      <FaChartLine className="text-green-400" />
+                      Monthly Revenue Trends
+                    </h3>
+                    <div className="bg-green-500/20 px-3 py-1 rounded-full border border-green-500/30">
+                      <span className="text-green-400 text-sm font-medium">2025</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="p-6">
+                  <div className="h-80">
+                    <Line
+                      data={{
+                        labels: monthlyRevenueData.map(item => item.month),
+                        datasets: [
+                          {
+                            label: 'Revenue (KES)',
+                            data: monthlyRevenueData.map(item => item.revenue),
+                            borderColor: '#10B981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4,
+                            pointBackgroundColor: '#10B981',
+                            pointBorderColor: '#ffffff',
+                            pointBorderWidth: 2,
+                            pointRadius: 6,
+                          },
+                        ],
+                      }}
+                      options={{
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                          legend: {
+                            labels: {
+                              color: '#cbd5e1',
+                              font: {
+                                size: 12,
+                              },
+                            },
+                          },
+                          tooltip: {
+                            callbacks: {
+                              label: function(context) {
+                                return `Revenue: KES ${context.parsed.y.toLocaleString()}`;
+                              },
+                            },
+                          },
+                        },
+                        scales: {
+                          x: {
+                            ticks: {
+                              color: '#94a3b8',
+                            },
+                            grid: {
+                              color: '#475569',
+                            },
+                          },
+                          y: {
+                            ticks: {
+                              color: '#94a3b8',
+                              callback: function(value) {
+                                return 'KES ' + value.toLocaleString();
+                              },
+                            },
+                            grid: {
+                              color: '#475569',
+                            },
+                          },
+                        },
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Revenue Breakdown Table */}
+            <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl border border-slate-600/50 shadow-xl">
+              <div className="p-6 border-b border-slate-600/50">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xl font-semibold text-white flex items-center gap-2">
+                    <FaFileInvoiceDollar className="text-purple-400" />
+                    Revenue Breakdown
+                  </h3>
+                  <div className="bg-purple-500/20 px-3 py-1 rounded-full border border-purple-500/30">
+                    <span className="text-purple-400 text-sm font-medium">Detailed View</span>
+                  </div>
+                </div>
+              </div>
+              <div className="p-6">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-slate-600/50">
+                        <th className="text-left py-3 px-4 text-slate-300 font-medium">Revenue Source</th>
+                        <th className="text-right py-3 px-4 text-slate-300 font-medium">Amount</th>
+                        <th className="text-right py-3 px-4 text-slate-300 font-medium">Percentage</th>
+                        <th className="text-center py-3 px-4 text-slate-300 font-medium">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {revenueBySource.map((item, index) => (
+                        <tr key={index} className="border-b border-slate-700/50 hover:bg-slate-700/30 transition-colors">
+                          <td className="py-4 px-4">
+                            <div className="flex items-center gap-3">
+                              <div 
+                                className="w-3 h-3 rounded-full" 
+                                style={{ backgroundColor: item.color }}
+                              ></div>
+                              <span className="text-white font-medium">{item.source}</span>
+                            </div>
+                          </td>
+                          <td className="py-4 px-4 text-right text-white font-semibold">
+                            KES {item.amount.toLocaleString()}
+                          </td>
+                          <td className="py-4 px-4 text-right text-slate-300">
+                            {totalRevenue > 0 ? ((item.amount / totalRevenue) * 100).toFixed(1) : 0}%
+                          </td>
+                          <td className="py-4 px-4 text-center">
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-400 border border-green-500/30">
+                              <FaCheckCircle className="w-3 h-3 mr-1" />
+                              Active
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                      {revenueBySource.length === 0 && (
+                        <tr>
+                          <td colSpan="4" className="py-8 text-center text-slate-400">
+                            No revenue data available
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            {/* Money Recovered for Clients (Not Law Firm Revenue) */}
+            {moneyRecovered > 0 && (
+              <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl border border-slate-600/50 shadow-xl">
+                <div className="p-6 border-b border-slate-600/50">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xl font-semibold text-white flex items-center gap-2">
+                      <FaHandshake className="text-blue-400" />
+                      Money Recovered for Clients
+                    </h3>
+                    <div className="bg-blue-500/20 px-3 py-1 rounded-full border border-blue-500/30">
+                      <span className="text-blue-400 text-sm font-medium">Client Success</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="p-6">
+                  <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                      <span className="text-blue-400 font-medium">Important Note</span>
+                    </div>
+                    <p className="text-slate-300 text-sm mb-4">
+                      This money belongs to your clients, not the law firm. It represents successful debt recovery 
+                      and case resolution for your clients.
+                    </p>
+                    <div className="text-center">
+                      <p className="text-3xl font-bold text-blue-400 mb-2">
+                        KES {moneyRecovered.toLocaleString()}
+                      </p>
+                      <p className="text-slate-400 text-sm">Total recovered for clients</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    );
+  };
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -955,6 +2028,13 @@ const Reports = () => {
             >
                               <FaSyncAlt className="w-4 h-4" />
               Refresh
+            </button>
+            <button
+              onClick={handleDebugRevenue}
+              className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-4 py-2 rounded-xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl flex items-center gap-2 justify-center"
+            >
+              <FaSyncAlt className="w-4 h-4" />
+              Debug Revenue
             </button>
           </div>
         </div>

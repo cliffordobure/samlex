@@ -1617,32 +1617,58 @@ export const getLawFirmAdminDashboard = async (req, res) => {
     // Escalation rate
     const escalationRate =
       totalCreditCases > 0 ? (escalatedCases / totalCreditCases) * 100 : 0;
-    // Revenue (sum of filing fees and escalation fees)
-    const filingFees = await LegalCase.aggregate([
-      { $match: { lawFirm: lawFirmId } },
-      { 
-        $group: { 
-          _id: null, 
-          total: { 
-            $sum: {
-              $cond: ["$filingFee.paid", "$filingFee.amount", 0]
-            }
-          } 
-        } 
-      },
-    ]);
-    const escalationFees = await Payment.aggregate([
-      {
-        $match: {
-          lawFirm: lawFirmId,
-          purpose: "escalation_fee",
-          status: "completed", // Only count completed payments
-        },
-      },
-      { $group: { _id: null, total: { $sum: "$amount" } } },
-    ]);
-    const escalationRevenue = escalationFees[0]?.total || 0;
-    const totalRevenue = (filingFees[0]?.total || 0) + escalationRevenue;
+    // Comprehensive Revenue Calculation - LAW FIRM REVENUE ONLY
+    // Note: Recovered money belongs to clients, not the law firm
+    
+    // 1. Filing Fees - from paid legal cases (LAW FIRM REVENUE)
+    const allLegalCases = await LegalCase.find({ lawFirm: lawFirmId }).lean();
+    const casesWithFilingFees = allLegalCases.filter(c => c.filingFee);
+    const paidFilingFeeCases = casesWithFilingFees.filter(c => c.filingFee.paid === true);
+    const totalFilingFees = paidFilingFeeCases.reduce((sum, c) => sum + (c.filingFee.amount || 0), 0);
+    
+    // 2. Escalation Fees - from payments (LAW FIRM REVENUE)
+    const allPayments = await Payment.find({ lawFirm: lawFirmId }).lean();
+    const escalationPayments = allPayments.filter(p => p.purpose === 'escalation_fee' && p.status === 'completed');
+    const escalationRevenue = escalationPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
+    
+    // 3. Other Law Firm Payments - service charges, consultation, subscription (LAW FIRM REVENUE)
+    const otherPayments = allPayments.filter(p => 
+      ['service_charge', 'consultation', 'subscription'].includes(p.purpose) && 
+      p.status === 'completed'
+    );
+    const totalOtherPayments = otherPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
+    
+    // TOTAL LAW FIRM REVENUE (excludes recovered money which belongs to clients)
+    const totalRevenue = totalFilingFees + escalationRevenue + totalOtherPayments;
+    
+    // Additional metrics for reporting (not included in law firm revenue)
+    const allCreditCases = await CreditCase.find({ lawFirm: lawFirmId }).lean();
+    const resolvedCreditCases = allCreditCases.filter(c => c.status === 'resolved');
+    const totalMoneyRecovered = resolvedCreditCases.reduce((sum, c) => sum + (c.debtAmount || 0), 0);
+
+    // Debug logging
+    console.log("=== REVENUE CALCULATION DEBUG ===");
+    console.log("Law Firm ID:", lawFirmId);
+    console.log("Total Legal Cases:", allLegalCases.length);
+    console.log("Cases with Filing Fees:", casesWithFilingFees.length);
+    console.log("Cases with Paid Filing Fees:", paidFilingFeeCases.length);
+    
+    paidFilingFeeCases.forEach((caseItem, index) => {
+      console.log(`Case ${index + 1}:`, {
+        title: caseItem.title,
+        caseNumber: caseItem.caseNumber,
+        filingFeeAmount: caseItem.filingFee.amount,
+        filingFeePaid: caseItem.filingFee.paid,
+        filingFeePaidAt: caseItem.filingFee.paidAt
+      });
+    });
+    
+    console.log("Filing Fees (Law Firm Revenue):", totalFilingFees);
+    console.log("Escalation Revenue (Law Firm Revenue):", escalationRevenue);
+    console.log("Other Payments (Law Firm Revenue):", totalOtherPayments);
+    console.log("Total Law Firm Revenue:", totalRevenue);
+    console.log("Money Recovered (Client Money - NOT Law Firm Revenue):", totalMoneyRecovered);
+    console.log("================================");
 
     res.json({
       success: true,
@@ -1651,9 +1677,13 @@ export const getLawFirmAdminDashboard = async (req, res) => {
         totalLegalCases,
         totalUsers,
         activeUsers,
-        totalRevenue,
+        totalRevenue, // Law firm revenue only (filing fees + escalation fees + other payments)
         escalationRevenue,
         escalationRate: Math.round(escalationRate),
+        // Additional metrics (not law firm revenue)
+        totalMoneyRecovered, // Money recovered for clients
+        totalFilingFees, // Breakdown of law firm revenue
+        totalOtherPayments, // Other law firm payments
       },
     });
   } catch (error) {

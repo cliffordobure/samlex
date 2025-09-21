@@ -352,19 +352,34 @@ const LegalOverview = () => {
 
   const handleExportPDF = async () => {
     try {
-      const response = await reportsApi.downloadPDF(user.lawFirm._id, "legal-performance");
-      const blob = new Blob([response.data], { type: 'application/pdf' });
+      // Use the specialized my cases report for legal overview
+      const response = await reportsApi.downloadSpecializedReport(user.lawFirm._id, "mycases");
+      const blob = new Blob([response.data], { type: 'text/html' });
       const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${user.lawFirm.firmName.replace(/\s+/g, "_")}_legal_dashboard_report.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      
+      // Open in new tab for printing
+      const newWindow = window.open(url, '_blank');
+      if (newWindow) {
+        newWindow.onload = () => {
+          newWindow.print();
+        };
+      } else {
+        // Fallback: download as HTML file
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${user.lawFirm.firmName.replace(/\s+/g, "_")}_Simple_Legal_Dashboard_Report.html`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
+      
+      // Clean up after a delay
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+      }, 1000);
     } catch (error) {
-      console.error("Error downloading PDF:", error);
-      alert("Failed to download PDF. Please try again.");
+      console.error("Error downloading simple legal dashboard report:", error);
+      alert("Failed to download simple legal dashboard report. Please try again.");
     }
   };
 

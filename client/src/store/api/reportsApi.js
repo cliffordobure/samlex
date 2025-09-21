@@ -60,6 +60,57 @@ const reportsApi = {
       responseType: "blob",
     }),
 
+  // NEW PROFESSIONAL PDF REPORTS
+  downloadProfessionalPDF: (lawFirmId, reportType = "overview") =>
+    api.get(`/reports/professional-pdf/${lawFirmId}`, {
+      params: { reportType },
+      responseType: "blob",
+    }),
+
+  downloadProfessionalDepartmentPDF: (lawFirmId, departmentId) =>
+    api.get(`/reports/professional-pdf/${lawFirmId}/department/${departmentId}`, {
+      responseType: "blob",
+    }),
+
+  // MODERN PROFESSIONAL PDF REPORTS - ULTIMATE QUALITY
+  downloadModernPDF: (lawFirmId, reportType = "overview") =>
+    api.get(`/reports/modern-pdf/${lawFirmId}`, {
+      params: { reportType },
+      responseType: "blob",
+    }),
+
+  downloadModernDepartmentPDF: (lawFirmId, departmentId) =>
+    api.get(`/reports/modern-pdf/${lawFirmId}/department/${departmentId}`, {
+      responseType: "blob",
+    }),
+
+  downloadExecutiveSummaryPDF: (lawFirmId) =>
+    api.get(`/reports/modern-pdf/${lawFirmId}/executive`, {
+      responseType: "blob",
+    }),
+
+  // CLEAN PROFESSIONAL PDF REPORTS - NO ENCODING ISSUES
+  downloadCleanPDF: (lawFirmId) =>
+    api.get(`/reports/clean-pdf/${lawFirmId}`, {
+      responseType: "blob",
+    }),
+
+  // SIMPLE PROFESSIONAL HTML REPORTS - ABSOLUTELY NO ENCODING ISSUES
+  downloadSimplePDF: (lawFirmId) =>
+    api.get(`/reports/simple-pdf/${lawFirmId}`, {
+      responseType: "blob",
+    }),
+
+  // SPECIALIZED PROFESSIONAL HTML REPORTS - DIFFERENT REPORTS FOR DIFFERENT SECTIONS
+  downloadSpecializedReport: (lawFirmId, reportType) =>
+    api.get(`/reports/specialized/${lawFirmId}/${reportType}`, {
+      responseType: "blob",
+    }),
+
+  // DEBUG: Check revenue calculation
+  debugRevenue: (lawFirmId) =>
+    api.get(`/reports/debug-revenue/${lawFirmId}`),
+
   getCreditCollectionSummary: () =>
     api.get("/reports/credit-collection/summary"),
   downloadCreditCasesCSV: () =>
@@ -82,7 +133,9 @@ const reportsApi = {
   getCreditCollectionTrends: (lawFirmId, params = {}) =>
     api.get(`/reports/credit-collection/trends/${lawFirmId}`, { params }),
   getLawFirmAdminDashboard: (lawFirmId) =>
-    api.get(`/reports/law-firm-admin-dashboard/${lawFirmId}`),
+    api.get(`/reports/law-firm-admin-dashboard/${lawFirmId}`, {
+      params: { _t: Date.now() } // Cache busting
+    }),
 
   getComprehensiveCreditCollectionSummary: (params = {}) =>
     api.get("/reports/credit-collection/comprehensive-summary", { params }),
