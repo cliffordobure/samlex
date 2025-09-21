@@ -1642,7 +1642,8 @@ export const getDebtCollectorStatsById = async (req, res) => {
           pendingCount: trend.pendingCount,
           overdueCount: trend.overdueCount,
           paymentRate: trend.promisedCount > 0 ? Math.round((trend.paidCount / trend.promisedCount) * 100) : 0
-        }))
+        })),
+        assignedCases: assignedCases // Include individual cases for frontend charts
       },
     });
   } catch (error) {
@@ -5240,7 +5241,8 @@ export const getEnhancedCreditCollectionPerformance = async (req, res) => {
               fill: true
             }
           ]
-        }
+        },
+        assignedCases: await CreditCase.find(caseQuery).populate('assignedTo', 'firstName lastName email').lean() // Include individual cases for frontend charts
       }
     });
   } catch (error) {

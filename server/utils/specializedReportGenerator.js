@@ -7,7 +7,7 @@ export class SpecializedReportGenerator {
   /**
    * Generate specialized HTML template based on report type
    */
-  generateSpecializedHTML(lawFirm, reportData, reportType) {
+  generateSpecializedHTML(lawFirm, reportData, reportType, user = null) {
     const now = new Date();
     const dateStr = now.toLocaleDateString('en-US', { 
       year: 'numeric', 
@@ -172,7 +172,7 @@ export class SpecializedReportGenerator {
             <div class="date">Generated on: ${dateStr}</div>
         </div>
 
-        ${this.generateReportContent(reportData, reportType)}
+        ${this.generateReportContent(reportData, reportType, user)}
 
         <div class="footer">
             <div>Professional Law Firm Management Report</div>
@@ -222,6 +222,21 @@ export class SpecializedReportGenerator {
         title: 'Financial Reports',
         headerColor: '#16a085',
         accentColor: '#1abc9c'
+      },
+      'performance-metrics': {
+        title: 'Performance Metrics Report',
+        headerColor: '#1abc9c',
+        accentColor: '#16a085'
+      },
+      'monthly-trends': {
+        title: 'Monthly Trends Report',
+        headerColor: '#e67e22',
+        accentColor: '#d35400'
+      },
+      'promised-payments': {
+        title: 'Promised Payments Report',
+        headerColor: '#8e44ad',
+        accentColor: '#7d3c98'
       }
     };
 
@@ -231,22 +246,28 @@ export class SpecializedReportGenerator {
   /**
    * Generate report content based on type
    */
-  generateReportContent(reportData, reportType) {
+  generateReportContent(reportData, reportType, user = null) {
     switch (reportType) {
       case 'overview':
         return this.generateOverviewContent(reportData);
       case 'mycases':
         return this.generateMyCasesContent(reportData);
       case 'legal-performance':
-        return this.generateLegalPerformanceContent(reportData);
+        return this.generateLegalPerformanceContent(reportData, user);
       case 'debt-collection':
-        return this.generateDebtCollectionContent(reportData);
+        return this.generateDebtCollectionContent(reportData, user);
       case 'revenue-analytics':
         return this.generateRevenueAnalyticsContent(reportData);
       case 'case-analysis':
         return this.generateCaseAnalysisContent(reportData);
       case 'financial':
         return this.generateFinancialContent(reportData);
+      case 'performance-metrics':
+        return this.generatePerformanceMetricsContent(reportData, user);
+      case 'monthly-trends':
+        return this.generateMonthlyTrendsContent(reportData, user);
+      case 'promised-payments':
+        return this.generatePromisedPaymentsContent(reportData, user);
       default:
         return this.generateOverviewContent(reportData);
     }
@@ -356,10 +377,14 @@ export class SpecializedReportGenerator {
   /**
    * Generate Legal Performance Report Content
    */
-  generateLegalPerformanceContent(reportData) {
+  generateLegalPerformanceContent(reportData, user = null) {
+    const title = user && user.role === 'advocate' 
+      ? `Legal Performance Metrics - ${user.firstName} ${user.lastName}`
+      : 'Legal Performance Metrics';
+      
     return `
     <div class="section">
-      <h2 class="section-title">Legal Performance Metrics</h2>
+      <h2 class="section-title">${title}</h2>
       
       <div class="stats-grid">
         <div class="stat-card">
@@ -407,42 +432,54 @@ export class SpecializedReportGenerator {
   /**
    * Generate Debt Collection Report Content
    */
-  generateDebtCollectionContent(reportData) {
+  generateDebtCollectionContent(reportData, user = null) {
+    const title = user && user.role === 'debt_collector' 
+      ? `Debt Collection Performance - ${user.firstName} ${user.lastName}`
+      : 'Debt Collection Performance';
+    
+    // Ensure we have valid data
+    const safeData = {
+      totalCreditCases: reportData?.totalCreditCases || 0,
+      collectedCases: reportData?.collectedCases || 0,
+      collectionRate: reportData?.collectionRate || 0,
+      totalAmountCollected: reportData?.totalAmountCollected || 0,
+      outstandingAmount: reportData?.outstandingAmount || 0,
+      escalatedToLegal: reportData?.escalatedToLegal || 0
+    };
+      
     return `
     <div class="section">
-      <h2 class="section-title">Debt Collection Performance</h2>
+      <h2 class="section-title">${title}</h2>
       
       <div class="stats-grid">
         <div class="stat-card">
           <div class="label">Total Credit Cases</div>
-          <div class="value">${reportData.totalCreditCases || 0}</div>
+          <div class="value">${safeData.totalCreditCases}</div>
         </div>
         <div class="stat-card">
           <div class="label">Cases Collected</div>
-          <div class="value">${reportData.collectedCases || 0}</div>
+          <div class="value">${safeData.collectedCases}</div>
         </div>
         <div class="stat-card">
           <div class="label">Collection Rate</div>
-          <div class="value">${reportData.collectionRate || 0}%</div>
+          <div class="value">${safeData.collectionRate}%</div>
         </div>
         <div class="stat-card">
           <div class="label">Total Amount Collected</div>
-          <div class="value">KES ${reportData.totalAmountCollected || 0}</div>
+          <div class="value">Ksh ${safeData.totalAmountCollected.toLocaleString()}</div>
         </div>
         <div class="stat-card">
           <div class="label">Outstanding Amount</div>
-          <div class="value">KES ${reportData.outstandingAmount || 0}</div>
+          <div class="value">Ksh ${safeData.outstandingAmount.toLocaleString()}</div>
         </div>
         <div class="stat-card">
           <div class="label">Escalated to Legal</div>
-          <div class="value">${reportData.escalatedToLegal || 0}</div>
+          <div class="value">${safeData.escalatedToLegal}</div>
         </div>
       </div>
     </div>
 
-    ${this.generateDebtCollectorPerformance(reportData.debtCollectorPerformance)}
-    ${this.generateCollectionTrends(reportData.collectionTrends)}
-    ${this.generatePaymentAnalysis(reportData.paymentAnalysis)}
+    <!-- Placeholder sections removed - now handled by separate reports -->
 
     <div class="summary">
       <h3>Summary</h3>
@@ -450,6 +487,168 @@ export class SpecializedReportGenerator {
         This debt collection report shows collection efficiency, payment trends, 
         and collector performance. Monitor collection rates and identify 
         opportunities for improvement in debt recovery processes.
+      </p>
+    </div>
+    `;
+  }
+
+  /**
+   * Generate Performance Metrics Report Content
+   */
+  generatePerformanceMetricsContent(reportData, user = null) {
+    const title = user && user.role === 'debt_collector' 
+      ? `Performance Metrics - ${user.firstName} ${user.lastName}`
+      : 'Performance Metrics Overview';
+    
+    return `
+    <div class="section">
+      <h2 class="section-title">${title}</h2>
+      
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="label">Success Rate</div>
+          <div class="value">${reportData.successRate || 0}%</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Average Resolution Time</div>
+          <div class="value">${reportData.avgResolutionTime || 0} days</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Cases Per Month</div>
+          <div class="value">${reportData.casesPerMonth || 0}</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Client Satisfaction</div>
+          <div class="value">${reportData.clientSatisfaction || 0}%</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Efficiency Score</div>
+          <div class="value">${reportData.efficiencyScore || 0}/100</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Productivity Index</div>
+          <div class="value">${reportData.productivityIndex || 0}</div>
+        </div>
+      </div>
+    </div>
+
+    ${this.generatePerformanceBreakdown(reportData.performanceBreakdown)}
+    ${this.generateEfficiencyTrends(reportData.efficiencyTrends)}
+
+    <div class="summary">
+      <h3>Summary</h3>
+      <p>
+        This performance metrics report provides detailed insights into individual and team 
+        performance indicators. Use this data to identify top performers, areas for improvement, 
+        and set realistic performance targets.
+      </p>
+    </div>
+    `;
+  }
+
+  /**
+   * Generate Monthly Trends Report Content
+   */
+  generateMonthlyTrendsContent(reportData, user = null) {
+    const title = user && user.role === 'debt_collector' 
+      ? `Monthly Trends - ${user.firstName} ${user.lastName}`
+      : 'Monthly Trends Analysis';
+    
+    return `
+    <div class="section">
+      <h2 class="section-title">${title}</h2>
+      
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="label">This Month Cases</div>
+          <div class="value">${reportData.thisMonthCases || 0}</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Last Month Cases</div>
+          <div class="value">${reportData.lastMonthCases || 0}</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Growth Rate</div>
+          <div class="value">${reportData.growthRate || 0}%</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Peak Month</div>
+          <div class="value">${reportData.peakMonth || 'N/A'}</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Average Monthly</div>
+          <div class="value">${reportData.avgMonthly || 0}</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Trend Direction</div>
+          <div class="value">${reportData.trendDirection || 'Stable'}</div>
+        </div>
+      </div>
+    </div>
+
+    ${this.generateTrendChart(reportData.monthlyData)}
+    ${this.generateSeasonalAnalysis(reportData.seasonalAnalysis)}
+
+    <div class="summary">
+      <h3>Summary</h3>
+      <p>
+        This monthly trends report shows patterns and seasonal variations in case volume, 
+        resolution rates, and performance metrics. Use this data to forecast future trends 
+        and plan resource allocation.
+      </p>
+    </div>
+    `;
+  }
+
+  /**
+   * Generate Promised Payments Report Content
+   */
+  generatePromisedPaymentsContent(reportData, user = null) {
+    const title = user && user.role === 'debt_collector' 
+      ? `Promised Payments - ${user.firstName} ${user.lastName}`
+      : 'Promised Payments Overview';
+    
+    return `
+    <div class="section">
+      <h2 class="section-title">${title}</h2>
+      
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="label">Total Promised</div>
+          <div class="value">Ksh ${(reportData.totalPromisedAmount || 0).toLocaleString()}</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Amount Paid</div>
+          <div class="value">Ksh ${(reportData.totalPaidAmount || 0).toLocaleString()}</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Pending Amount</div>
+          <div class="value">Ksh ${(reportData.totalPendingAmount || 0).toLocaleString()}</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Overdue Amount</div>
+          <div class="value">Ksh ${(reportData.totalOverdueAmount || 0).toLocaleString()}</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Payment Rate</div>
+          <div class="value">${reportData.paymentRate || 0}%</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Overdue Rate</div>
+          <div class="value">${reportData.overdueRate || 0}%</div>
+        </div>
+      </div>
+    </div>
+
+    ${this.generatePaymentBreakdown(reportData.paymentBreakdown)}
+    ${this.generatePaymentTrends(reportData.paymentTrends)}
+
+    <div class="summary">
+      <h3>Summary</h3>
+      <p>
+        This promised payments report tracks payment commitments, actual collections, 
+        and overdue amounts. Use this data to improve payment follow-up processes 
+        and reduce outstanding receivables.
       </p>
     </div>
     `;
@@ -754,13 +953,44 @@ export class SpecializedReportGenerator {
     return '<div class="section"><h2 class="section-title">Payment Analysis</h2><p>Payment analysis will be displayed here.</p></div>';
   }
 
+  // Helper methods for new report sections
+  generatePerformanceBreakdown(performanceBreakdown) {
+    if (!performanceBreakdown) return '';
+    return '<div class="section"><h2 class="section-title">Performance Breakdown</h2><p>Performance breakdown will be displayed here.</p></div>';
+  }
+
+  generateEfficiencyTrends(efficiencyTrends) {
+    if (!efficiencyTrends) return '';
+    return '<div class="section"><h2 class="section-title">Efficiency Trends</h2><p>Efficiency trends will be displayed here.</p></div>';
+  }
+
+  generateTrendChart(monthlyData) {
+    if (!monthlyData) return '';
+    return '<div class="section"><h2 class="section-title">Trend Chart</h2><p>Monthly trend chart will be displayed here.</p></div>';
+  }
+
+  generateSeasonalAnalysis(seasonalAnalysis) {
+    if (!seasonalAnalysis) return '';
+    return '<div class="section"><h2 class="section-title">Seasonal Analysis</h2><p>Seasonal analysis will be displayed here.</p></div>';
+  }
+
+  generatePaymentBreakdown(paymentBreakdown) {
+    if (!paymentBreakdown) return '';
+    return '<div class="section"><h2 class="section-title">Payment Breakdown</h2><p>Payment breakdown will be displayed here.</p></div>';
+  }
+
+  generatePaymentTrends(paymentTrends) {
+    if (!paymentTrends) return '';
+    return '<div class="section"><h2 class="section-title">Payment Trends</h2><p>Payment trends will be displayed here.</p></div>';
+  }
+
   generateRevenueBreakdown(revenueBreakdown) {
     if (!revenueBreakdown) return '';
     
     const breakdownRows = Object.entries(revenueBreakdown).map(([source, amount]) => `
       <tr>
         <td>${source.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}</td>
-        <td>KES ${amount || 0}</td>
+        <td>Ksh ${amount || 0}</td>
         <td><span class="status ${amount > 0 ? 'active' : 'closed'}">${amount > 0 ? 'Active' : 'None'}</span></td>
       </tr>
     `).join('');
@@ -828,8 +1058,8 @@ export class SpecializedReportGenerator {
   /**
    * Generate specialized law firm report
    */
-  async generateSpecializedReport(lawFirm, reportData, reportType) {
-    const html = this.generateSpecializedHTML(lawFirm, reportData, reportType);
+  async generateSpecializedReport(lawFirm, reportData, reportType, user = null) {
+    const html = this.generateSpecializedHTML(lawFirm, reportData, reportType, user);
     return html;
   }
 }

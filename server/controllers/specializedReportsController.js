@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import LegalCase from "../models/LegalCase.js";
 import CreditCase from "../models/CreditCase.js";
 import User from "../models/User.js";
@@ -57,12 +58,14 @@ export const generateSpecializedReport = async (req, res) => {
     // Get specialized data based on report type
     const reportData = await getSpecializedReportData(lawFirmId, reportType, req.user);
     console.log("Specialized report data compiled for type:", reportType);
+    console.log("Report data:", JSON.stringify(reportData, null, 2));
 
     // Generate specialized professional HTML report
     const htmlContent = await specializedReportGenerator.generateSpecializedReport(
       lawFirm, 
       reportData, 
-      reportType
+      reportType,
+      req.user
     );
 
     console.log("Specialized HTML report generated successfully, length:", htmlContent.length, "characters");
@@ -91,10 +94,10 @@ const getAllowedRoles = (reportType) => {
   const roleMap = {
     'overview': ['law_firm_admin', 'system_owner'],
     'mycases': ['advocate', 'debt_collector', 'legal_head', 'credit_head', 'law_firm_admin', 'system_owner'],
-    'legal-performance': ['legal_head', 'law_firm_admin', 'system_owner'],
+    'legal-performance': ['advocate', 'legal_head', 'law_firm_admin', 'system_owner'],
     'debt-collection': ['credit_head', 'debt_collector', 'law_firm_admin', 'system_owner'],
     'revenue-analytics': ['law_firm_admin', 'system_owner'],
-    'case-analysis': ['legal_head', 'credit_head', 'law_firm_admin', 'system_owner'],
+    'case-analysis': ['advocate', 'legal_head', 'credit_head', 'law_firm_admin', 'system_owner'],
     'financial': ['law_firm_admin', 'system_owner']
   };
 
@@ -114,15 +117,21 @@ const getSpecializedReportData = async (lawFirmId, reportType, user) => {
       case 'mycases':
         return await getMyCasesData(lawFirmId, user);
       case 'legal-performance':
-        return await getLegalPerformanceData(lawFirmId);
+        return await getLegalPerformanceData(lawFirmId, user);
       case 'debt-collection':
-        return await getDebtCollectionData(lawFirmId);
+        return await getDebtCollectionData(lawFirmId, user);
       case 'revenue-analytics':
         return await getRevenueAnalyticsData(lawFirmId);
       case 'case-analysis':
         return await getCaseAnalysisData(lawFirmId);
       case 'financial':
         return await getFinancialData(lawFirmId);
+      case 'performance-metrics':
+        return await getPerformanceMetricsData(lawFirmId, user);
+      case 'monthly-trends':
+        return await getMonthlyTrendsData(lawFirmId, user);
+      case 'promised-payments':
+        return await getPromisedPaymentsData(lawFirmId, user);
       default:
         return await getOverviewData(lawFirmId);
     }
@@ -292,13 +301,25 @@ const getMyCasesData = async (lawFirmId, user) => {
 };
 
 /**
- * Get legal performance data
+ * Get legal performance data with actual filing fees
+ * For advocates, only show their assigned cases
  */
-const getLegalPerformanceData = async (lawFirmId) => {
+const getLegalPerformanceData = async (lawFirmId, user = null) => {
+  // Build match condition based on user role
+  let matchCondition = { lawFirm: lawFirmId };
+  
+  // If user is an advocate, only show their assigned cases
+  if (user && user.role === "advocate") {
+    matchCondition.assignedTo = user._id;
+    console.log(`🔍 Filtering cases for advocate: ${user.firstName} ${user.lastName} (${user._id})`);
+  }
+
   const [legalCases, users] = await Promise.all([
-    LegalCase.find({ lawFirm: lawFirmId }).lean(),
+    LegalCase.find(matchCondition).lean(),
     User.find({ lawFirm: lawFirmId, role: { $in: ['legal_head', 'advocate'] } }).lean()
   ]);
+
+  console.log(`📋 Found ${legalCases.length} legal cases for ${user?.role === 'advocate' ? 'advocate' : 'law firm'}`);
 
   const resolvedCases = legalCases.filter(c => ['resolved', 'closed'].includes(c.status));
   const resolutionRate = legalCases.length > 0 ? 
@@ -312,18 +333,31 @@ const getLegalPerformanceData = async (lawFirmId) => {
       return sum + (resolved - created) / (1000 * 60 * 60 * 24);
     }, 0) / resolvedCases.length) : 0;
 
+  // Calculate actual revenue from filing fees (only for assigned cases)
+  const totalFilingFees = legalCases.reduce((sum, c) => sum + (c.filingFee?.amount || 0), 0);
+  const paidFilingFees = legalCases.reduce((sum, c) => 
+    sum + (c.filingFee?.paid ? (c.filingFee?.amount || 0) : 0), 0
+  );
+
+  console.log(`💰 Revenue calculation: Total KES ${totalFilingFees.toLocaleString()}, Paid KES ${paidFilingFees.toLocaleString()}`);
+
   return {
     totalLegalCases: legalCases.length,
     resolvedCases: resolvedCases.length,
     resolutionRate,
     avgResolutionTime,
     clientSatisfaction: 85, // Placeholder
-    revenueGenerated: resolvedCases.length * 1500, // Placeholder calculation
+    revenueGenerated: totalFilingFees, // Use actual filing fees for assigned cases only
+    paidRevenue: paidFilingFees,
+    pendingRevenue: totalFilingFees - paidFilingFees,
     legalTeamPerformance: users.map(user => ({
       name: `${user.firstName} ${user.lastName}`,
       role: user.role,
       casesAssigned: legalCases.filter(c => c.assignedTo && c.assignedTo.toString() === user._id.toString()).length,
-      casesResolved: legalCases.filter(c => c.assignedTo && c.assignedTo.toString() === user._id.toString() && ['resolved', 'closed'].includes(c.status)).length
+      casesResolved: legalCases.filter(c => c.assignedTo && c.assignedTo.toString() === user._id.toString() && ['resolved', 'closed'].includes(c.status)).length,
+      revenueGenerated: legalCases
+        .filter(c => c.assignedTo && c.assignedTo.toString() === user._id.toString())
+        .reduce((sum, c) => sum + (c.filingFee?.amount || 0), 0)
     })),
     caseTypeAnalysis: {
       civil: legalCases.filter(c => c.caseType === 'civil').length,
@@ -339,46 +373,329 @@ const getLegalPerformanceData = async (lawFirmId) => {
 };
 
 /**
- * Get debt collection data
+ * Get debt collection data with user-specific filtering and optimized queries
+ * For debt collectors, only show their assigned cases
  */
-const getDebtCollectionData = async (lawFirmId) => {
-  const [creditCases, users] = await Promise.all([
-    CreditCase.find({ lawFirm: lawFirmId }).lean(),
-    User.find({ lawFirm: lawFirmId, role: { $in: ['credit_head', 'debt_collector'] } }).lean()
+const getDebtCollectionData = async (lawFirmId, user = null) => {
+  // Build match condition based on user role
+  let matchCondition = { lawFirm: lawFirmId };
+  
+  // If user is a debt collector, only show their assigned cases
+  if (user && user.role === "debt_collector") {
+    matchCondition.assignedTo = user._id;
+  }
+
+  // Convert string IDs to ObjectIds for aggregation
+  const matchConditionForAggregation = {
+    lawFirm: new mongoose.Types.ObjectId(lawFirmId)
+  };
+  
+  if (user && user.role === "debt_collector") {
+    matchConditionForAggregation.assignedTo = new mongoose.Types.ObjectId(user._id);
+  }
+
+  // Use aggregation for better performance
+  const [creditCasesAggregation, users] = await Promise.all([
+    CreditCase.aggregate([
+      { $match: matchConditionForAggregation },
+      {
+        $group: {
+          _id: null,
+          totalCases: { $sum: 1 },
+          collectedCases: {
+            $sum: { $cond: [{ $eq: ["$status", "resolved"] }, 1, 0] }
+          },
+          totalAmountCollected: {
+            $sum: { $cond: [{ $eq: ["$status", "resolved"] }, "$debtAmount", 0] }
+          },
+          outstandingAmount: {
+            $sum: { 
+              $cond: [
+                { $not: { $in: ["$status", ["resolved", "closed"]] } }, 
+                "$debtAmount", 
+                0
+              ] 
+            }
+          },
+          escalatedToLegal: {
+            $sum: { $cond: [{ $eq: ["$status", "escalated_to_legal"] }, 1, 0] }
+          }
+        }
+      }
+    ]),
+    User.find({ lawFirm: lawFirmId, role: { $in: ['credit_head', 'debt_collector'] } })
+      .select('firstName lastName role')
+      .lean()
   ]);
 
-  const collectedCases = creditCases.filter(c => c.status === 'resolved');
-  const collectionRate = creditCases.length > 0 ? 
-    Math.round((collectedCases.length / creditCases.length) * 100) : 0;
+  const stats = creditCasesAggregation[0] || {
+    totalCases: 0,
+    collectedCases: 0,
+    totalAmountCollected: 0,
+    outstandingAmount: 0,
+    escalatedToLegal: 0
+  };
 
-  const totalAmountCollected = collectedCases.reduce((sum, c) => sum + (c.debtAmount || 0), 0);
-  const outstandingAmount = creditCases
-    .filter(c => !['resolved', 'closed'].includes(c.status))
-    .reduce((sum, c) => sum + (c.debtAmount || 0), 0);
+  const collectionRate = stats.totalCases > 0 ? 
+    Math.round((stats.collectedCases / stats.totalCases) * 100) : 0;
 
-  const escalatedToLegal = creditCases.filter(c => c.status === 'escalated_to_legal').length;
+  console.log('🔍 Debt collection stats:', JSON.stringify(stats, null, 2));
+  console.log('👤 User info:', user ? `${user.firstName} ${user.lastName} (${user.role})` : 'No user');
+  console.log('🏢 Law firm ID:', lawFirmId);
+  console.log('🔍 Match condition:', JSON.stringify(matchCondition, null, 2));
+  console.log('🔍 Match condition for aggregation:', JSON.stringify(matchConditionForAggregation, null, 2));
+  console.log('🔍 Credit cases aggregation result:', JSON.stringify(creditCasesAggregation, null, 2));
 
-  return {
-    totalCreditCases: creditCases.length,
-    collectedCases: collectedCases.length,
+  // Get individual cases for more detailed analysis
+  const individualCases = await CreditCase.find(matchCondition)
+    .populate('assignedTo', 'firstName lastName email')
+    .lean();
+
+  console.log('🔍 Individual cases found:', individualCases.length);
+  console.log('🔍 Individual cases:', JSON.stringify(individualCases.map(c => ({
+    title: c.title,
+    status: c.status,
+    debtAmount: c.debtAmount,
+    assignedTo: c.assignedTo ? `${c.assignedTo.firstName} ${c.assignedTo.lastName}` : 'None'
+  })), null, 2));
+
+  const result = {
+    totalCreditCases: stats.totalCases,
+    collectedCases: stats.collectedCases,
     collectionRate,
-    totalAmountCollected,
-    outstandingAmount,
-    escalatedToLegal,
+    totalAmountCollected: stats.totalAmountCollected,
+    outstandingAmount: stats.outstandingAmount,
+    escalatedToLegal: stats.escalatedToLegal,
+    assignedCases: individualCases, // Include individual cases for frontend
     debtCollectorPerformance: users.map(user => ({
       name: `${user.firstName} ${user.lastName}`,
       role: user.role,
-      casesAssigned: creditCases.filter(c => c.assignedTo && c.assignedTo.toString() === user._id.toString()).length,
-      casesCollected: creditCases.filter(c => c.assignedTo && c.assignedTo.toString() === user._id.toString() && c.status === 'resolved').length
+      casesAssigned: individualCases.filter(c => c.assignedTo && c.assignedTo._id.toString() === user._id.toString()).length,
+      casesCollected: individualCases.filter(c => c.assignedTo && c.assignedTo._id.toString() === user._id.toString() && ['resolved', 'closed'].includes(c.status)).length,
+      amountCollected: individualCases
+        .filter(c => c.assignedTo && c.assignedTo._id.toString() === user._id.toString() && ['resolved', 'closed'].includes(c.status))
+        .reduce((sum, c) => sum + (c.debtAmount || 0), 0)
     })),
     collectionTrends: {
       monthlyCollections: [10, 12, 8, 15, 11, 13], // Placeholder
       collectionRate: [60, 65, 70, 68, 72, 75] // Placeholder
     },
     paymentAnalysis: {
-      onTime: creditCases.filter(c => c.paymentStatus === 'on_time').length,
-      overdue: creditCases.filter(c => c.paymentStatus === 'overdue').length,
-      partial: creditCases.filter(c => c.paymentStatus === 'partial').length
+      onTime: 0, // Placeholder - can be calculated separately if needed
+      overdue: 0, // Placeholder - can be calculated separately if needed
+      partial: 0 // Placeholder - can be calculated separately if needed
+    }
+  };
+
+  console.log('📊 Final debt collection result:', JSON.stringify(result, null, 2));
+  return result;
+};
+
+/**
+ * Get Performance Metrics Data
+ */
+const getPerformanceMetricsData = async (lawFirmId, user = null) => {
+  // Build match condition based on user role
+  let matchCondition = { lawFirm: lawFirmId };
+  
+  if (user && user.role === "debt_collector") {
+    matchCondition.assignedTo = user._id;
+  }
+
+  // Get performance metrics
+  const [creditCases, legalCases] = await Promise.all([
+    CreditCase.find(matchCondition).lean(),
+    LegalCase.find(matchCondition).lean()
+  ]);
+
+  const totalCases = creditCases.length + legalCases.length;
+  const resolvedCases = creditCases.filter(c => c.status === 'resolved').length + 
+                       legalCases.filter(c => c.status === 'resolved').length;
+  
+  const successRate = totalCases > 0 ? Math.round((resolvedCases / totalCases) * 100) : 0;
+  
+  // Calculate average resolution time
+  const resolvedCreditCases = creditCases.filter(c => c.status === 'resolved');
+  const resolvedLegalCases = legalCases.filter(c => c.status === 'resolved');
+  
+  const avgResolutionTime = [...resolvedCreditCases, ...resolvedLegalCases]
+    .reduce((sum, c) => {
+      const resolutionTime = (new Date(c.updatedAt) - new Date(c.createdAt)) / (1000 * 60 * 60 * 24);
+      return sum + resolutionTime;
+    }, 0) / Math.max(resolvedCases, 1);
+
+  return {
+    successRate,
+    avgResolutionTime: Math.round(avgResolutionTime),
+    casesPerMonth: Math.round(totalCases / 12), // Assuming 12 months of data
+    clientSatisfaction: 85, // Placeholder - can be calculated from feedback
+    efficiencyScore: Math.min(100, Math.round(successRate * 1.2)), // Placeholder calculation
+    productivityIndex: Math.round(totalCases / Math.max(1, avgResolutionTime)),
+    performanceBreakdown: {
+      creditCollection: {
+        cases: creditCases.length,
+        resolved: creditCases.filter(c => c.status === 'resolved').length,
+        successRate: creditCases.length > 0 ? Math.round((creditCases.filter(c => c.status === 'resolved').length / creditCases.length) * 100) : 0
+      },
+      legalServices: {
+        cases: legalCases.length,
+        resolved: legalCases.filter(c => c.status === 'resolved').length,
+        successRate: legalCases.length > 0 ? Math.round((legalCases.filter(c => c.status === 'resolved').length / legalCases.length) * 100) : 0
+      }
+    },
+    efficiencyTrends: {
+      monthly: [70, 75, 80, 78, 82, 85, 88, 90, 87, 92, 89, 95], // Placeholder data
+      quarterly: [75, 82, 90, 95] // Placeholder data
+    }
+  };
+};
+
+/**
+ * Get Monthly Trends Data
+ */
+const getMonthlyTrendsData = async (lawFirmId, user = null) => {
+  // Build match condition based on user role
+  let matchCondition = { lawFirm: lawFirmId };
+  
+  if (user && user.role === "debt_collector") {
+    matchCondition.assignedTo = user._id;
+  }
+
+  // Get monthly trends for the last 12 months
+  const twelveMonthsAgo = new Date();
+  twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
+
+  const monthlyTrends = await CreditCase.aggregate([
+    { 
+      $match: { 
+        ...matchCondition,
+        createdAt: { $gte: twelveMonthsAgo }
+      } 
+    },
+    {
+      $group: {
+        _id: {
+          year: { $year: "$createdAt" },
+          month: { $month: "$createdAt" }
+        },
+        cases: { $sum: 1 },
+        resolved: {
+          $sum: { $cond: [{ $eq: ["$status", "resolved"] }, 1, 0] }
+        }
+      }
+    },
+    { $sort: { "_id.year": 1, "_id.month": 1 } }
+  ]);
+
+  const currentMonth = new Date().getMonth() + 1;
+  const currentYear = new Date().getFullYear();
+  const lastMonth = currentMonth === 1 ? 12 : currentMonth - 1;
+  const lastYear = currentMonth === 1 ? currentYear - 1 : currentYear;
+
+  const thisMonthData = monthlyTrends.find(t => t._id.month === currentMonth && t._id.year === currentYear);
+  const lastMonthData = monthlyTrends.find(t => t._id.month === lastMonth && t._id.year === lastYear);
+
+  const thisMonthCases = thisMonthData?.cases || 0;
+  const lastMonthCases = lastMonthData?.cases || 0;
+  const growthRate = lastMonthCases > 0 ? Math.round(((thisMonthCases - lastMonthCases) / lastMonthCases) * 100) : 0;
+
+  // Find peak month
+  const peakMonthData = monthlyTrends.reduce((peak, current) => 
+    current.cases > peak.cases ? current : peak, { cases: 0 }
+  );
+  const peakMonth = peakMonthData.cases > 0 ? 
+    `${peakMonthData._id.year}-${peakMonthData._id.month.toString().padStart(2, '0')}` : 'N/A';
+
+  const avgMonthly = monthlyTrends.length > 0 ? 
+    Math.round(monthlyTrends.reduce((sum, t) => sum + t.cases, 0) / monthlyTrends.length) : 0;
+
+  return {
+    thisMonthCases,
+    lastMonthCases,
+    growthRate,
+    peakMonth,
+    avgMonthly,
+    trendDirection: growthRate > 5 ? 'Growing' : growthRate < -5 ? 'Declining' : 'Stable',
+    monthlyData: monthlyTrends.map(t => ({
+      month: `${t._id.year}-${t._id.month.toString().padStart(2, '0')}`,
+      cases: t.cases,
+      resolved: t.resolved
+    })),
+    seasonalAnalysis: {
+      q1: monthlyTrends.filter(t => [1, 2, 3].includes(t._id.month)).reduce((sum, t) => sum + t.cases, 0),
+      q2: monthlyTrends.filter(t => [4, 5, 6].includes(t._id.month)).reduce((sum, t) => sum + t.cases, 0),
+      q3: monthlyTrends.filter(t => [7, 8, 9].includes(t._id.month)).reduce((sum, t) => sum + t.cases, 0),
+      q4: monthlyTrends.filter(t => [10, 11, 12].includes(t._id.month)).reduce((sum, t) => sum + t.cases, 0)
+    }
+  };
+};
+
+/**
+ * Get Promised Payments Data
+ */
+const getPromisedPaymentsData = async (lawFirmId, user = null) => {
+  // Build match condition based on user role
+  let matchCondition = { lawFirm: lawFirmId };
+  
+  if (user && user.role === "debt_collector") {
+    matchCondition.assignedTo = user._id;
+  }
+
+  // Get credit cases with promised payments
+  const creditCases = await CreditCase.find(matchCondition).lean();
+
+  let totalPromisedAmount = 0;
+  let totalPaidAmount = 0;
+  let totalPendingAmount = 0;
+  let totalOverdueAmount = 0;
+  let totalPromisedCount = 0;
+  let totalPaidCount = 0;
+  let totalPendingCount = 0;
+  let totalOverdueCount = 0;
+
+  creditCases.forEach(case_ => {
+    if (case_.promisedPayments && case_.promisedPayments.length > 0) {
+      case_.promisedPayments.forEach(payment => {
+        totalPromisedAmount += payment.amount || 0;
+        totalPromisedCount++;
+
+        if (payment.status === 'paid') {
+          totalPaidAmount += payment.amount || 0;
+          totalPaidCount++;
+        } else if (payment.status === 'pending') {
+          totalPendingAmount += payment.amount || 0;
+          totalPendingCount++;
+          
+          // Check if overdue
+          if (payment.promisedDate && new Date(payment.promisedDate) < new Date()) {
+            totalOverdueAmount += payment.amount || 0;
+            totalOverdueCount++;
+          }
+        }
+      });
+    }
+  });
+
+  const paymentRate = totalPromisedCount > 0 ? Math.round((totalPaidCount / totalPromisedCount) * 100) : 0;
+  const overdueRate = totalPromisedCount > 0 ? Math.round((totalOverdueCount / totalPromisedCount) * 100) : 0;
+
+  return {
+    totalPromisedAmount,
+    totalPaidAmount,
+    totalPendingAmount,
+    totalOverdueAmount,
+    paymentRate,
+    overdueRate,
+    paymentBreakdown: {
+      byStatus: {
+        paid: { amount: totalPaidAmount, count: totalPaidCount },
+        pending: { amount: totalPendingAmount, count: totalPendingCount },
+        overdue: { amount: totalOverdueAmount, count: totalOverdueCount }
+      }
+    },
+    paymentTrends: {
+      monthly: [10, 12, 8, 15, 11, 13, 9, 14, 12, 16, 10, 18], // Placeholder data
+      amounts: [50000, 60000, 40000, 75000, 55000, 65000, 45000, 70000, 60000, 80000, 50000, 90000] // Placeholder data
     }
   };
 };
