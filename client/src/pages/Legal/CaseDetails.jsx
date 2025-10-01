@@ -2,10 +2,11 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { getLegalCase } from "../../store/slices/legalCaseSlice";
+import { getLegalCase, setCurrentCase } from "../../store/slices/legalCaseSlice";
 import legalCaseApi from "../../store/api/legalCaseApi";
 import socket from "../../utils/socket";
 import toast from "react-hot-toast";
+import { API_URL } from "../../config/api.js";
 import {
   FaArrowLeft,
   FaEye,
@@ -39,7 +40,7 @@ import {
   FaUserCircle,
 } from "react-icons/fa";
 
-const API_BASE = import.meta.env.VITE_API_URL || "/api";
+const API_BASE = API_URL;
 const FILE_BASE = API_BASE.replace(/\/api$/, "");
 
 const statusColors = {
@@ -682,17 +683,25 @@ const CaseDetails = () => {
   // Handle payment status update
   const handlePaymentStatusUpdate = async (paid) => {
     try {
+      console.log("=== FRONTEND: Updating filing fee payment ===");
+      console.log("Case ID:", id);
+      console.log("Paid status:", paid);
+      console.log("User:", user);
+      console.log("Current case assigned to:", currentCase.assignedTo?._id);
+      
       const response = await legalCaseApi.updateFilingFeePayment(id, {
         paid: paid,
         paymentId: paid ? `PAY-${Date.now()}` : null, // Generate a simple payment ID
       });
 
+      console.log("API Response:", response);
+
       if (response.data.success) {
-        // Update the current case state
-        setCurrentCase(prev => ({
-          ...prev,
+        // Update the current case state in Redux
+        dispatch(setCurrentCase({
+          ...currentCase,
           filingFee: {
-            ...prev.filingFee,
+            ...currentCase.filingFee,
             paid: paid,
             paidAt: paid ? new Date().toISOString() : null,
             paymentId: paid ? `PAY-${Date.now()}` : null,
@@ -700,10 +709,18 @@ const CaseDetails = () => {
         }));
 
         toast.success(`Filing fee ${paid ? 'marked as paid' : 'marked as unpaid'} successfully`);
+      } else {
+        console.error("API returned error:", response.data);
+        toast.error(response.data.message || "Failed to update payment status");
       }
     } catch (error) {
-      console.error("Error updating payment status:", error);
-      toast.error(error.response?.data?.message || "Failed to update payment status");
+      console.error("=== FRONTEND: Error updating payment status ===");
+      console.error("Error object:", error);
+      console.error("Error response:", error.response?.data);
+      console.error("Error status:", error.response?.status);
+      
+      const errorMessage = error.response?.data?.message || error.message || "Failed to update payment status";
+      toast.error(errorMessage);
     }
   };
 

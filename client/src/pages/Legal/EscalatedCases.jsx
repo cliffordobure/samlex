@@ -172,40 +172,54 @@ const EscalatedCases = () => {
       console.log("Assignment Data:", assignmentData);
       console.log("Additional Info:", additionalInfo);
 
-      // Prepare legal case data
+      // Prepare comprehensive legal case data with all escalated case information
       const legalCaseData = {
-        title: `Legal Case for ${selectedCase.caseNumber}`,
+        title: `Legal Case - ${selectedCase.title || selectedCase.caseNumber}`,
         caseType: "debt_collection",
-        description: `Legal proceedings for credit case ${
-          selectedCase.caseNumber
-        }. ${
-          selectedCase.client
-            ? `Client: ${selectedCase.client.firstName} ${selectedCase.client.lastName}`
-            : `Debtor: ${selectedCase.debtorName}`
-        }`,
-        priority: selectedCase.priority,
+        description: `Escalated from credit collection case ${selectedCase.caseNumber}: ${selectedCase.description || 'Payment default requiring legal action'}`,
+        priority: selectedCase.priority || "medium",
         status: "assigned",
         lawFirm: user.lawFirm._id,
-        client: selectedCase.client?._id || null, // Handle cases without client
+        client: selectedCase.client?._id || null,
+        caseReference: selectedCase.caseNumber,
         filingFee: {
-          amount: selectedCase.escalationPayment?.amount || 5000,
-          currency: "KES",
-          paid: selectedCase.escalationPayment?.status === "confirmed",
+          amount: selectedCase.escalationPayment?.amount || selectedCase.debtAmount || 5000,
+          currency: selectedCase.currency || "KES",
+          paid: selectedCase.escalationPayment?.status === "confirmed" || false,
+          paidAt: selectedCase.escalationPayment?.confirmedAt || null,
+        },
+        // Note: Client will be handled by backend if not provided
+        // Transfer creditor information as opposing party
+        opposingParty: {
+          name: selectedCase.creditorName || '',
+          contact: {
+            email: selectedCase.creditorEmail || '',
+            phone: selectedCase.creditorContact || '',
+          },
         },
         escalatedFrom: {
           creditCaseId: selectedCase._id,
           escalationDate: selectedCase.escalationDate,
+          escalationFee: selectedCase.escalationPayment?.amount,
           escalationReason: "Payment default - requires legal action",
         },
         assignedTo: assignmentData.assignedTo,
         assignedBy: user._id,
         assignedAt: new Date(),
         createdBy: user._id,
+        // Transfer all documents from credit case
+        documents: selectedCase.documents || [],
         // Add any additional information provided
         ...additionalInfo,
       };
 
+      console.log("=== FRONTEND DEBUG: Legal Case Data ===");
+      console.log("Selected Case:", selectedCase);
       console.log("Legal Case Data:", legalCaseData);
+      console.log("Client:", legalCaseData.client);
+      console.log("Opposing Party:", legalCaseData.opposingParty);
+      console.log("Filing Fee:", legalCaseData.filingFee);
+      console.log("Documents:", legalCaseData.documents);
 
       // Create the legal case and assign it
       const result = await dispatch(

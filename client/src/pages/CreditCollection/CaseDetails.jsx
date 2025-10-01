@@ -7,6 +7,7 @@ import socket from "../../utils/socket";
 import creditCaseApi from "../../store/api/creditCaseApi";
 import userApi from "../../store/api/userApi";
 import toast from "react-hot-toast";
+import { API_URL } from "../../config/api.js";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import PromisedPaymentsList from "../../components/credit-collection/PromisedPaymentsList";
@@ -33,8 +34,7 @@ import {
   FaChartLine
 } from "react-icons/fa";
 
-const API_BASE =
-  import.meta.env.VITE_API_URL || "https://lawfirm-saas.onrender.com/api";
+const API_BASE = API_URL;
 const FILE_BASE = API_BASE.replace(/\/api$/, ""); // Remove /api if present
 
 const statusColors = {

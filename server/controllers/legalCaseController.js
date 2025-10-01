@@ -223,6 +223,21 @@ export const createLegalCase = async (req, res) => {
           
           // Transfer all relevant information from credit case to legal case
           console.log("=== DEBUG: Transferring Credit Case Data ===");
+          console.log("Credit Case Data:", {
+            caseNumber: creditCase.caseNumber,
+            title: creditCase.title,
+            debtorName: creditCase.debtorName,
+            debtorEmail: creditCase.debtorEmail,
+            debtorContact: creditCase.debtorContact,
+            creditorName: creditCase.creditorName,
+            creditorEmail: creditCase.creditorEmail,
+            creditorContact: creditCase.creditorContact,
+            debtAmount: creditCase.debtAmount,
+            currency: creditCase.currency,
+            documents: creditCase.documents?.length || 0,
+            notes: creditCase.notes?.length || 0,
+            promisedPayments: creditCase.promisedPayments?.length || 0
+          });
           
           // Transfer documents from credit case
           if (creditCase.documents && creditCase.documents.length > 0) {
@@ -243,20 +258,24 @@ export const createLegalCase = async (req, res) => {
           
           // Transfer case details if not already provided
           if (!newCase.title && creditCase.title) {
-            newCase.title = `Escalated: ${creditCase.title}`;
+            newCase.title = `Legal Case - ${creditCase.title}`;
           }
           
           if (!newCase.description && creditCase.description) {
-            newCase.description = `Escalated from credit collection: ${creditCase.description}`;
+            newCase.description = `Escalated from credit collection case ${creditCase.caseNumber}: ${creditCase.description}`;
           }
           
           // Transfer debtor information as client if not already provided
-          if (!newCase.client && creditCase.debtor) {
-            // Create client from debtor information
+          if (!newCase.client && creditCase.client) {
+            // Use existing client from credit case
+            newCase.client = creditCase.client;
+            console.log("Transferred existing client from credit case");
+          } else if (!newCase.client && (creditCase.debtorName || creditCase.debtorEmail)) {
+            // Create client from debtor information if no client exists
             const debtorClient = {
-              name: `${creditCase.debtor.firstName || ''} ${creditCase.debtor.lastName || ''}`.trim(),
-              email: creditCase.debtor.email || '',
-              phone: creditCase.debtor.phoneNumber || '',
+              name: creditCase.debtorName || '',
+              email: creditCase.debtorEmail || '',
+              phone: creditCase.debtorContact || '',
             };
             
             // Check if client already exists
@@ -268,6 +287,7 @@ export const createLegalCase = async (req, res) => {
             
             if (existingClient) {
               newCase.client = existingClient._id;
+              console.log("Found existing client for debtor");
             } else if (debtorClient.email) {
               // Create new client user from debtor
               const [firstName, ...lastNameParts] = debtorClient.name.trim().split(" ");
@@ -291,34 +311,72 @@ export const createLegalCase = async (req, res) => {
           }
           
           // Transfer creditor information as opposing party if not already provided
-          if (!newCase.opposingParty && creditCase.creditor) {
+          if (!newCase.opposingParty && (creditCase.creditorName || creditCase.creditorEmail)) {
             newCase.opposingParty = {
-              name: `${creditCase.creditor.firstName || ''} ${creditCase.creditor.lastName || ''}`.trim(),
-              email: creditCase.creditor.email || '',
-              phone: creditCase.creditor.phoneNumber || '',
-              address: creditCase.creditor.address || '',
+              name: creditCase.creditorName || '',
+              contact: {
+                email: creditCase.creditorEmail || '',
+                phone: creditCase.creditorContact || '',
+              },
             };
             console.log("Transferred creditor information as opposing party");
           }
           
-          // Transfer debt amount as filing fee if not already provided
-          if (!newCase.filingFee && creditCase.debtAmount) {
+          // Transfer debt amount and escalation fee information
+          if (!newCase.filingFee) {
+            const filingFeeAmount = creditCase.escalationPayment?.amount || creditCase.debtAmount || 5000;
             newCase.filingFee = {
-              amount: creditCase.debtAmount,
-              currency: "KSH",
-              description: "Debt amount from credit collection case",
+              amount: filingFeeAmount,
+              currency: creditCase.currency || "KES",
+              paid: creditCase.escalationPayment?.status === "confirmed" || false,
+              paidAt: creditCase.escalationPayment?.confirmedAt || null,
             };
-            console.log("Transferred debt amount as filing fee");
+            console.log(`Transferred filing fee: ${filingFeeAmount} ${creditCase.currency || 'KES'}`);
           }
           
           // Transfer case reference
           if (!newCase.caseReference && creditCase.caseNumber) {
-            newCase.caseReference = `ESC-${creditCase.caseNumber}`;
+            newCase.caseReference = creditCase.caseNumber;
           }
           
-          // Transfer case type
+          // Transfer case type and priority
           if (!newCase.caseType) {
             newCase.caseType = "debt_collection";
+          }
+          
+          if (!newCase.priority && creditCase.priority) {
+            newCase.priority = creditCase.priority;
+          }
+          
+          // Transfer notes from credit case as internal notes
+          if (creditCase.notes && creditCase.notes.length > 0) {
+            const transferredNotes = creditCase.notes.map(note => ({
+              content: `[Transferred from Credit Collection] ${note.content}`,
+              createdBy: note.createdBy,
+              isInternal: true,
+              createdAt: note.createdAt || new Date(),
+            }));
+            
+            newCase.notes = [...(newCase.notes || []), ...transferredNotes];
+            console.log(`Transferred ${transferredNotes.length} notes from credit case`);
+          }
+          
+          // Transfer promised payments information as case notes
+          if (creditCase.promisedPayments && creditCase.promisedPayments.length > 0) {
+            const paymentNotes = creditCase.promisedPayments.map(payment => ({
+              content: `Promised Payment: ${payment.amount} ${payment.currency} on ${new Date(payment.promisedDate).toLocaleDateString()}. Status: ${payment.status}${payment.notes ? `. Notes: ${payment.notes}` : ''}`,
+              createdBy: payment.createdBy,
+              isInternal: true,
+              createdAt: payment.createdAt || new Date(),
+            }));
+            
+            newCase.notes = [...(newCase.notes || []), ...paymentNotes];
+            console.log(`Transferred ${paymentNotes.length} payment records as notes`);
+          }
+          
+          // Set escalation fee in escalatedFrom
+          if (creditCase.escalationPayment?.amount) {
+            newCase.escalatedFrom.escalationFee = creditCase.escalationPayment.amount;
           }
           
           console.log("=== DEBUG: Data Transfer Complete ===");
@@ -326,7 +384,26 @@ export const createLegalCase = async (req, res) => {
       }
     }
 
+    console.log("=== DEBUG: About to save legal case ===");
+    console.log("New case data before save:");
+    console.log("- Title:", newCase.title);
+    console.log("- Description:", newCase.description);
+    console.log("- Client:", newCase.client);
+    console.log("- Opposing Party:", newCase.opposingParty);
+    console.log("- Filing Fee:", newCase.filingFee);
+    console.log("- Documents:", newCase.documents?.length || 0);
+    console.log("- Notes:", newCase.notes?.length || 0);
+    console.log("- Escalated From:", newCase.escalatedFrom);
+    
     const savedCase = await newCase.save();
+    
+    console.log("=== DEBUG: Legal case saved ===");
+    console.log("Saved case ID:", savedCase._id);
+    console.log("Client:", savedCase.client);
+    console.log("Opposing party:", savedCase.opposingParty);
+    console.log("Filing fee:", savedCase.filingFee);
+    console.log("Documents count:", savedCase.documents?.length || 0);
+    console.log("Notes count:", savedCase.notes?.length || 0);
 
     // Update credit case with legal case ID after saving
     if (escalatedFromCreditCase) {
@@ -539,7 +616,10 @@ export const getLegalCaseById = async (req, res) => {
       .populate("assignedBy", "firstName lastName email")
       .populate("createdBy", "firstName lastName email")
       .populate("department", "name code")
-      .populate("escalatedFrom.creditCaseId", "caseNumber title description")
+      .populate({
+        path: "escalatedFrom.creditCaseId",
+        select: "caseNumber title description debtorName debtorEmail debtorContact creditorName creditorEmail creditorContact debtAmount currency documents notes promisedPayments escalationPayment"
+      })
       .populate("documents.uploadedBy", "firstName lastName");
 
     if (!legalCase) {
@@ -547,6 +627,18 @@ export const getLegalCaseById = async (req, res) => {
         success: false,
         message: "Legal case not found",
       });
+    }
+
+    // Debug logging for escalated cases
+    if (legalCase.escalatedFrom && legalCase.escalatedFrom.creditCaseId) {
+      console.log("=== DEBUG: Escalated Case Data ===");
+      console.log("Legal Case ID:", legalCase._id);
+      console.log("Escalated From:", legalCase.escalatedFrom);
+      console.log("Credit Case Data:", legalCase.escalatedFrom.creditCaseId);
+      console.log("Client Data:", legalCase.client);
+      console.log("Opposing Party:", legalCase.opposingParty);
+      console.log("Documents Count:", legalCase.documents?.length || 0);
+      console.log("Notes Count:", legalCase.notes?.length || 0);
     }
 
     // Check if user has access to this case
@@ -1463,8 +1555,14 @@ export const completeCaseInfo = async (req, res) => {
  */
 export const updateFilingFeePayment = async (req, res) => {
   try {
+    console.log("=== BACKEND: updateFilingFeePayment called ===");
     const { id } = req.params;
     const { paid, paymentId } = req.body;
+    
+    console.log("Case ID:", id);
+    console.log("Paid:", paid);
+    console.log("Payment ID:", paymentId);
+    console.log("User:", req.user._id, req.user.role);
 
     const legalCase = await LegalCase.findById(id);
     if (!legalCase) {
@@ -1475,10 +1573,17 @@ export const updateFilingFeePayment = async (req, res) => {
     }
 
     // Check permissions - advocates can only update cases assigned to them
+    console.log("Permission check:");
+    console.log("- User role:", req.user.role);
+    console.log("- Case assigned to:", legalCase.assignedTo?.toString());
+    console.log("- User ID:", req.user._id.toString());
+    console.log("- IDs match:", legalCase.assignedTo?.toString() === req.user._id.toString());
+    
     if (
       req.user.role === "advocate" &&
       legalCase.assignedTo?.toString() !== req.user._id.toString()
     ) {
+      console.log("Permission denied - advocate trying to update case not assigned to them");
       return res.status(403).json({
         success: false,
         message: "You can only update payment status for cases assigned to you",
@@ -1500,6 +1605,8 @@ export const updateFilingFeePayment = async (req, res) => {
       updateData["filingFee.paymentId"] = null;
     }
 
+    console.log("Update data:", updateData);
+    
     const updatedCase = await LegalCase.findByIdAndUpdate(
       id,
       { $set: updateData },
@@ -1510,6 +1617,8 @@ export const updateFilingFeePayment = async (req, res) => {
       .populate("client", "firstName lastName email phoneNumber")
       .populate("createdBy", "firstName lastName email")
       .populate("department", "name code");
+      
+    console.log("Updated case filing fee:", updatedCase?.filingFee);
 
     // Create notification for legal head/admin
     await createNotification({

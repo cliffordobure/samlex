@@ -95,7 +95,7 @@ const getAllowedRoles = (reportType) => {
     'overview': ['law_firm_admin', 'system_owner'],
     'mycases': ['advocate', 'debt_collector', 'legal_head', 'credit_head', 'law_firm_admin', 'system_owner'],
     'legal-performance': ['advocate', 'legal_head', 'law_firm_admin', 'system_owner'],
-    'debt-collection': ['credit_head', 'debt_collector', 'law_firm_admin', 'system_owner'],
+    'debt-collection': ['credit_head', 'debt_collector', 'advocate', 'legal_head', 'law_firm_admin', 'system_owner'], // Added advocate and legal_head
     'revenue-analytics': ['law_firm_admin', 'system_owner'],
     'case-analysis': ['advocate', 'legal_head', 'credit_head', 'law_firm_admin', 'system_owner'],
     'financial': ['law_firm_admin', 'system_owner']
@@ -384,6 +384,12 @@ const getDebtCollectionData = async (lawFirmId, user = null) => {
   if (user && user.role === "debt_collector") {
     matchCondition.assignedTo = user._id;
   }
+  
+  // If user is an advocate, show escalated cases that are now legal cases assigned to them
+  let legalCaseMatchCondition = { lawFirm: lawFirmId };
+  if (user && user.role === "advocate") {
+    legalCaseMatchCondition.assignedTo = user._id;
+  }
 
   // Convert string IDs to ObjectIds for aggregation
   const matchConditionForAggregation = {
@@ -393,9 +399,19 @@ const getDebtCollectionData = async (lawFirmId, user = null) => {
   if (user && user.role === "debt_collector") {
     matchConditionForAggregation.assignedTo = new mongoose.Types.ObjectId(user._id);
   }
+  
+  // For advocates, we need to get legal cases that were escalated from credit cases
+  const legalCaseMatchConditionForAggregation = {
+    lawFirm: new mongoose.Types.ObjectId(lawFirmId)
+  };
+  
+  if (user && user.role === "advocate") {
+    legalCaseMatchConditionForAggregation.assignedTo = new mongoose.Types.ObjectId(user._id);
+    legalCaseMatchConditionForAggregation["escalatedFrom.creditCaseId"] = { $exists: true };
+  }
 
   // Use aggregation for better performance
-  const [creditCasesAggregation, users] = await Promise.all([
+  const [creditCasesAggregation, legalCasesAggregation, users] = await Promise.all([
     CreditCase.aggregate([
       { $match: matchConditionForAggregation },
       {
@@ -423,18 +439,51 @@ const getDebtCollectionData = async (lawFirmId, user = null) => {
         }
       }
     ]),
-    User.find({ lawFirm: lawFirmId, role: { $in: ['credit_head', 'debt_collector'] } })
+    // For advocates, get legal cases that were escalated from credit cases
+    user && user.role === "advocate" ? LegalCase.aggregate([
+      { $match: legalCaseMatchConditionForAggregation },
+      {
+        $group: {
+          _id: null,
+          totalLegalCases: { $sum: 1 },
+          resolvedLegalCases: {
+            $sum: { $cond: [{ $eq: ["$status", "resolved"] }, 1, 0] }
+          },
+          totalLegalAmount: {
+            $sum: "$filingFee.amount"
+          }
+        }
+      }
+    ]) : Promise.resolve([]),
+    User.find({ lawFirm: lawFirmId, role: { $in: ['credit_head', 'debt_collector', 'advocate', 'legal_head'] } })
       .select('firstName lastName role')
       .lean()
   ]);
 
-  const stats = creditCasesAggregation[0] || {
+  const creditStats = creditCasesAggregation[0] || {
     totalCases: 0,
     collectedCases: 0,
     totalAmountCollected: 0,
     outstandingAmount: 0,
     escalatedToLegal: 0
   };
+  
+  const legalStats = legalCasesAggregation[0] || {
+    totalLegalCases: 0,
+    resolvedLegalCases: 0,
+    totalLegalAmount: 0
+  };
+  
+  // Combine stats for advocates
+  const stats = user && user.role === "advocate" ? {
+    ...creditStats,
+    totalLegalCases: legalStats.totalLegalCases,
+    resolvedLegalCases: legalStats.resolvedLegalCases,
+    totalLegalAmount: legalStats.totalLegalAmount,
+    totalCases: creditStats.totalCases + legalStats.totalLegalCases,
+    collectedCases: creditStats.collectedCases + legalStats.resolvedLegalCases,
+    totalAmountCollected: creditStats.totalAmountCollected + legalStats.totalLegalAmount
+  } : creditStats;
 
   const collectionRate = stats.totalCases > 0 ? 
     Math.round((stats.collectedCases / stats.totalCases) * 100) : 0;

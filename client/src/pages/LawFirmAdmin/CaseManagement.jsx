@@ -199,34 +199,42 @@ const AdminCaseManagement = () => {
 
     setAssignLoading(true);
     try {
-      // Create legal case from escalated case
+      // Create comprehensive legal case from escalated case
       const legalCaseData = {
-        title: `Legal Case for ${selectedEscalatedCase.caseNumber}`,
+        title: `Legal Case - ${selectedEscalatedCase.title || selectedEscalatedCase.caseNumber}`,
         caseType: "debt_collection",
-        description: `Legal proceedings for credit case ${
-          selectedEscalatedCase.caseNumber
-        }. ${
-          selectedEscalatedCase.client
-            ? `Client: ${selectedEscalatedCase.client.firstName} ${selectedEscalatedCase.client.lastName}`
-            : `Debtor: ${selectedEscalatedCase.debtorName}`
-        }`,
-        priority: selectedEscalatedCase.priority,
+        description: `Escalated from credit collection case ${selectedEscalatedCase.caseNumber}: ${selectedEscalatedCase.description || 'Payment default requiring legal action'}`,
+        priority: selectedEscalatedCase.priority || "medium",
         status: "assigned",
         lawFirm: user.lawFirm._id,
         client: selectedEscalatedCase.client?._id || null,
+        caseReference: selectedEscalatedCase.caseNumber,
         filingFee: {
-          amount: selectedEscalatedCase.escalationPayment?.amount || 5000,
-          currency: "KES",
-          paid: selectedEscalatedCase.escalationPayment?.status === "confirmed",
+          amount: selectedEscalatedCase.escalationPayment?.amount || selectedEscalatedCase.debtAmount || 5000,
+          currency: selectedEscalatedCase.currency || "KES",
+          paid: selectedEscalatedCase.escalationPayment?.status === "confirmed" || false,
+          paidAt: selectedEscalatedCase.escalationPayment?.confirmedAt || null,
+        },
+        // Note: Client will be handled by backend if not provided
+        // Transfer creditor information as opposing party
+        opposingParty: {
+          name: selectedEscalatedCase.creditorName || '',
+          contact: {
+            email: selectedEscalatedCase.creditorEmail || '',
+            phone: selectedEscalatedCase.creditorContact || '',
+          },
         },
         escalatedFrom: {
           creditCaseId: selectedEscalatedCase._id,
           escalationDate: selectedEscalatedCase.escalationDate,
+          escalationFee: selectedEscalatedCase.escalationPayment?.amount,
           escalationReason: "Payment default - requires legal action",
         },
         escalatedFromCreditCase: selectedEscalatedCase._id, // Add this for backend compatibility
         assignedTo: assignmentData.assignedTo,
         assignedBy: user._id,
+        // Transfer all documents from credit case
+        documents: selectedEscalatedCase.documents || [],
         assignedAt: new Date(),
         createdBy: user._id,
       };
