@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import axios from "axios";
 import toast from "react-hot-toast";
+import { API_URL } from "../../config/api";
 import {
   FaUpload,
   FaFileExcel,
@@ -66,7 +67,7 @@ const BulkImport = () => {
 
       const token = localStorage.getItem("token");
       const response = await axios.post(
-        `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/credit-cases/bulk-import`,
+        `${API_URL}/credit-cases/bulk-import`,
         formData,
         {
           headers: {
