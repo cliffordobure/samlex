@@ -250,10 +250,17 @@ export const sendBulkCaseSMS = async (req, res) => {
     }
 
     // Get all cases from this import batch
+    console.log("🔍 Debug: Looking for cases with:");
+    console.log("  importBatchId:", importBatchId);
+    console.log("  userLawFirmId:", userLawFirmId);
+    
     const cases = await CreditCase.find({
-      importBatchId,
+      importBatchId: importBatchId,
       lawFirm: userLawFirmId,
     });
+    
+    console.log("🔍 Found cases:", cases.length);
+    console.log("🔍 Cases:", cases.map(c => ({ id: c._id, debtorName: c.debtorName, debtorContact: c.debtorContact })));
 
     if (cases.length === 0) {
       return res.status(404).json({
