@@ -116,6 +116,8 @@ export const sendBulkSMS = async (recipients) => {
     if (isTestMode) {
       console.log('🧪 SMS Test Mode: Using sandbox credentials - SMS will not be delivered');
       console.log('📱 Test recipients:', recipients.map(r => r.phoneNumber));
+      console.log('⚠️  IMPORTANT: Sandbox only works with whitelisted numbers');
+      console.log('💡 To send to real numbers, use production credentials');
     }
 
     const results = {
@@ -240,8 +242,13 @@ export const generateDebtCollectionMessage = (debtorName, debtAmount, bankName, 
  * @returns {string} - User-friendly error message
  */
 const getErrorMessage = (status) => {
+  const isTestMode = process.env.AFRICASTALKING_USERNAME === 'sandbox' || 
+                    process.env.AFRICASTALKING_USERNAME === 'clifford';
+  
   const errorMessages = {
-    'UserInBlacklist': 'Phone number is blacklisted or opted out of SMS',
+    'UserInBlacklist': isTestMode 
+      ? 'Phone number not whitelisted for sandbox testing. Use production credentials or add number to sandbox whitelist.'
+      : 'Phone number is blacklisted or opted out of SMS',
     'InvalidPhoneNumber': 'Invalid phone number format',
     'InsufficientBalance': 'Insufficient account balance',
     'InvalidSenderId': 'Invalid sender ID',
