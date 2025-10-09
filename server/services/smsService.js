@@ -42,6 +42,13 @@ export const sendSMS = async (phoneNumber, message) => {
     // Validate phone number format
     const cleanedPhone = phoneNumber.replace(/\s+/g, '');
     
+    // Debug: Log phone number validation
+    console.log('📞 Phone number validation:', {
+      original: phoneNumber,
+      cleaned: cleanedPhone,
+      isValid: validatePhoneNumber(cleanedPhone)
+    });
+    
     const options = {
       to: [cleanedPhone],
       message: message.substring(0, 160), // SMS character limit
@@ -49,11 +56,34 @@ export const sendSMS = async (phoneNumber, message) => {
 
     const result = await smsClient.send(options);
     
-    return {
-      success: true,
-      data: result,
-      phone: cleanedPhone,
-    };
+    // Debug: Log the full response from Africa's Talking
+    console.log('📱 Single SMS Response for', cleanedPhone, ':', JSON.stringify(result, null, 2));
+    
+    // Check if the SMS was actually accepted by Africa's Talking
+    if (result && result.SMSMessageData && result.SMSMessageData.Recipients) {
+      const recipient = result.SMSMessageData.Recipients[0];
+      if (recipient && recipient.status === 'Success') {
+        return {
+          success: true,
+          data: result,
+          phone: cleanedPhone,
+        };
+      } else {
+        return {
+          success: false,
+          error: recipient.status || 'SMS rejected by provider',
+          phone: cleanedPhone,
+          data: result,
+        };
+      }
+    } else {
+      return {
+        success: false,
+        error: 'Invalid response from SMS provider',
+        phone: cleanedPhone,
+        data: result,
+      };
+    }
   } catch (error) {
     console.error('❌ Error sending SMS:', error);
     return {
@@ -104,14 +134,42 @@ export const sendBulkSMS = async (recipients) => {
 
           const result = await smsClient.send(options);
           
-          results.sent++;
-          results.details.push({
-            phone: cleanedPhone,
-            status: 'sent',
-            result: result,
-          });
+          // Debug: Log the full response from Africa's Talking
+          console.log('📱 SMS Response for', cleanedPhone, ':', JSON.stringify(result, null, 2));
           
-          return { success: true, phone: cleanedPhone };
+          // Check if the SMS was actually accepted by Africa's Talking
+          if (result && result.SMSMessageData && result.SMSMessageData.Recipients) {
+            const recipient = result.SMSMessageData.Recipients[0];
+            if (recipient && recipient.status === 'Success') {
+              results.sent++;
+              results.details.push({
+                phone: cleanedPhone,
+                status: 'sent',
+                result: result,
+              });
+              return { success: true, phone: cleanedPhone };
+            } else {
+              // SMS was rejected by Africa's Talking
+              results.failed++;
+              results.details.push({
+                phone: cleanedPhone,
+                status: 'failed',
+                error: recipient.status || 'SMS rejected by provider',
+                result: result,
+              });
+              return { success: false, phone: cleanedPhone, error: recipient.status || 'SMS rejected by provider' };
+            }
+          } else {
+            // Invalid response format
+            results.failed++;
+            results.details.push({
+              phone: cleanedPhone,
+              status: 'failed',
+              error: 'Invalid response from SMS provider',
+              result: result,
+            });
+            return { success: false, phone: cleanedPhone, error: 'Invalid response from SMS provider' };
+          }
         } catch (error) {
           results.failed++;
           results.details.push({
@@ -173,9 +231,20 @@ export const generateDebtCollectionMessage = (debtorName, debtAmount, bankName, 
 export const validatePhoneNumber = (phoneNumber) => {
   // Kenya phone number validation (supports +254 and 07/01 formats)
   const cleanedPhone = phoneNumber.replace(/\s+/g, '');
+  // Updated pattern: +254/254/0 + 1 or 7 + 8 digits (total 12 digits for +254, 11 for 254, 10 for 0)
   const kenyanPattern = /^(\+254|254|0)[17]\d{8}$/;
   
-  return kenyanPattern.test(cleanedPhone);
+  const isValid = kenyanPattern.test(cleanedPhone);
+  
+  // Debug: Log validation details
+  console.log('📞 Phone validation:', {
+    phone: cleanedPhone,
+    pattern: kenyanPattern.toString(),
+    isValid: isValid,
+    length: cleanedPhone.length
+  });
+  
+  return isValid;
 };
 
 /**
