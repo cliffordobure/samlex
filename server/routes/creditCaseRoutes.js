@@ -1,4 +1,5 @@
 import express from "express";
+import multer from "multer";
 import {
   createCreditCase,
   moveCreditCase,
@@ -20,8 +21,33 @@ import {
   addDocumentToCreditCase,
   updateEscalatedCaseStatus,
 } from "../controllers/creditCaseController.js";
+import {
+  bulkImportCases,
+  sendBulkCaseSMS,
+  sendSingleCaseSMS,
+  getImportBatches,
+  getCasesByBatchId,
+} from "../controllers/bulkImportController.js";
 import { protect } from "../middleware/auth.js";
-// (Optional) import authentication/authorization middleware if needed
+
+// Configure multer for Excel file upload (memory storage)
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = [
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "application/vnd.ms-excel",
+    ];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only Excel files are allowed (.xlsx, .xls)"));
+    }
+  },
+});
 
 const router = express.Router();
 
@@ -82,5 +108,12 @@ router.post("/:id/documents", protect, addDocumentToCreditCase);
 
 // Escalated case status update
 router.patch("/:id/escalated-status", protect, updateEscalatedCaseStatus);
+
+// Bulk import and SMS routes
+router.post("/bulk-import", protect, upload.single("file"), bulkImportCases);
+router.post("/bulk-sms", protect, sendBulkCaseSMS);
+router.post("/:id/send-sms", protect, sendSingleCaseSMS);
+router.get("/import-batches", protect, getImportBatches);
+router.get("/import-batch/:batchId", protect, getCasesByBatchId);
 
 export default router;

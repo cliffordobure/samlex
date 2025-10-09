@@ -43,6 +43,8 @@ import UnifiedCaseDetails from "./pages/LawFirmAdmin/UnifiedCaseDetails";
 import CreateCase from "./pages/CreditCollection/CreateCase";
 import CreditCollectionReports from "./pages/CreditCollection/Reports";
 import CreditCollectionCalendar from "./pages/CreditCollection/Calendar";
+import BulkImport from "./pages/CreditCollection/BulkImport";
+import BulkSMS from "./pages/CreditCollection/BulkSMS";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Notifications from "./pages/Notifications";
@@ -230,6 +232,8 @@ function App() {
           <Route path="settings" element={<FirmSettings />} />
           <Route path="reports" element={<Reports />} />
           <Route path="profile" element={<Profile />} />
+          <Route path="bulk-import" element={<BulkImport />} />
+          <Route path="bulk-sms" element={<BulkSMS />} />
         </Route>
 
         <Route
@@ -283,6 +287,7 @@ function App() {
             </ProtectedRoute>
           }
         />
+
 
         <Route
           path="/legal/*"

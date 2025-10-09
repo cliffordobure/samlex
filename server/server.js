@@ -65,7 +65,7 @@ io.on("connection", (socket) => {
       socket
         .to(`user-${notification.recipient}`)
         .emit("new-notification", notification);
-    } else if (notification.lawFirm) {
+    } else if (notification.lawFirm) { 
       socket
         .to(`lawfirm-${notification.lawFirm}`)
         .emit("new-notification", notification);

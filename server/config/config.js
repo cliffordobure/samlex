@@ -46,6 +46,10 @@ const config = {
 
   // Session
   SESSION_SECRET: process.env.SESSION_SECRET || "your-session-secret",
+
+  // Africa's Talking SMS
+  AFRICASTALKING_USERNAME: process.env.AFRICASTALKING_USERNAME,
+  AFRICASTALKING_API_KEY: process.env.AFRICASTALKING_API_KEY,
 };
 
 // Validate required environment variables

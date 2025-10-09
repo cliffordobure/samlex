@@ -18,6 +18,8 @@ import {
   FaUserCircle,
   FaShieldAlt,
   FaGavel,
+  FaFileExcel,
+  FaSms,
 } from "react-icons/fa";
 
 const LawFirmAdminLayout = ({ children }) => {
@@ -62,6 +64,18 @@ const LawFirmAdminLayout = ({ children }) => {
       href: "/admin/reports",
       icon: <FaChartBar className="w-5 h-5" />,
       description: "Performance insights"
+    },
+    {
+      name: "Bulk Import",
+      href: "/admin/bulk-import",
+      icon: <FaFileExcel className="w-5 h-5" />,
+      description: "Import cases from Excel"
+    },
+    {
+      name: "Bulk SMS",
+      href: "/admin/bulk-sms",
+      icon: <FaSms className="w-5 h-5" />,
+      description: "Send SMS to debtors"
     },
     {
       name: "Firm Settings",

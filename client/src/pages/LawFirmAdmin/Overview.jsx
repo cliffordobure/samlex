@@ -31,6 +31,7 @@ import {
   FaBars,
   FaFilePdf,
   FaFileCsv,
+  FaFileExcel,
 } from "react-icons/fa";
 
 const AdminOverview = () => {
@@ -330,6 +331,10 @@ const AdminOverview = () => {
 
   const handleGenerateReport = () => {
     navigate('/admin/reports');
+  };
+
+  const handleBulkImport = () => {
+    navigate('/admin/bulk-import');
   };
 
   const handleExportData = () => {
@@ -801,6 +806,21 @@ const AdminOverview = () => {
                 <div>
                   <p className="font-semibold text-white text-sm sm:text-base">Generate Report</p>
                   <p className="text-xs sm:text-sm text-slate-400">View analytics</p>
+              </div>
+            </div>
+            </button>
+
+            <button 
+              onClick={handleBulkImport}
+              className="w-full p-3 sm:p-4 bg-gradient-to-r from-cyan-600/20 to-teal-600/20 hover:from-cyan-600/30 hover:to-teal-600/30 border border-cyan-500/30 rounded-xl sm:rounded-2xl text-left transition-all duration-300 hover:scale-105 group"
+            >
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-cyan-500/20 rounded-lg sm:rounded-xl flex items-center justify-center group-hover:bg-cyan-500/30 transition-colors">
+                  <FaFileExcel className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-400" />
+              </div>
+                <div>
+                  <p className="font-semibold text-white text-sm sm:text-base">Bulk Import</p>
+                  <p className="text-xs sm:text-sm text-slate-400">Import cases from Excel</p>
               </div>
             </div>
             </button>

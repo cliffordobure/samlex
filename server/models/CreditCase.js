@@ -268,6 +268,22 @@ const creditCaseSchema = new mongoose.Schema(
       type: [String],
       default: [],
     },
+    // Bulk import fields
+    bankName: {
+      type: String,
+      trim: true,
+    },
+    importBatchId: {
+      type: String,
+      trim: true,
+    },
+    importedAt: {
+      type: Date,
+    },
+    importedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
   },
   {
     timestamps: true,
