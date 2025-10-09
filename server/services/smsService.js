@@ -69,9 +69,10 @@ export const sendSMS = async (phoneNumber, message) => {
           phone: cleanedPhone,
         };
       } else {
+        const errorMessage = getErrorMessage(recipient.status);
         return {
           success: false,
-          error: recipient.status || 'SMS rejected by provider',
+          error: errorMessage,
           phone: cleanedPhone,
           data: result,
         };
@@ -106,6 +107,15 @@ export const sendBulkSMS = async (recipients) => {
       if (!smsClient) {
         throw new Error('SMS service is not configured');
       }
+    }
+
+    // Check if we're in test mode (sandbox credentials)
+    const isTestMode = process.env.AFRICASTALKING_USERNAME === 'sandbox' || 
+                      process.env.AFRICASTALKING_USERNAME === 'clifford';
+    
+    if (isTestMode) {
+      console.log('🧪 SMS Test Mode: Using sandbox credentials - SMS will not be delivered');
+      console.log('📱 Test recipients:', recipients.map(r => r.phoneNumber));
     }
 
     const results = {
@@ -150,14 +160,15 @@ export const sendBulkSMS = async (recipients) => {
               return { success: true, phone: cleanedPhone };
             } else {
               // SMS was rejected by Africa's Talking
+              const errorMessage = getErrorMessage(recipient.status);
               results.failed++;
               results.details.push({
                 phone: cleanedPhone,
                 status: 'failed',
-                error: recipient.status || 'SMS rejected by provider',
+                error: errorMessage,
                 result: result,
               });
-              return { success: false, phone: cleanedPhone, error: recipient.status || 'SMS rejected by provider' };
+              return { success: false, phone: cleanedPhone, error: errorMessage };
             }
           } else {
             // Invalid response format
@@ -221,6 +232,28 @@ export const generateDebtCollectionMessage = (debtorName, debtAmount, bankName, 
   }).format(debtAmount);
 
   return `Dear ${debtorName}, this is a reminder that you have an outstanding debt of ${formattedAmount} with ${bankName}. Please contact us to arrange payment. Thank you.`;
+};
+
+/**
+ * Get user-friendly error message for Africa's Talking status codes
+ * @param {string} status - Africa's Talking status code
+ * @returns {string} - User-friendly error message
+ */
+const getErrorMessage = (status) => {
+  const errorMessages = {
+    'UserInBlacklist': 'Phone number is blacklisted or opted out of SMS',
+    'InvalidPhoneNumber': 'Invalid phone number format',
+    'InsufficientBalance': 'Insufficient account balance',
+    'InvalidSenderId': 'Invalid sender ID',
+    'InvalidMessage': 'Invalid message content',
+    'InvalidRecipient': 'Invalid recipient number',
+    'MessageTooLong': 'Message exceeds character limit',
+    'RateLimitExceeded': 'Rate limit exceeded, please try again later',
+    'ServiceUnavailable': 'SMS service temporarily unavailable',
+    'NetworkError': 'Network error, please try again',
+  };
+  
+  return errorMessages[status] || `SMS failed: ${status}`;
 };
 
 /**
