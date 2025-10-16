@@ -5,13 +5,57 @@ import { uploadToCloud } from "../utils/cloudinary.js";
 
 const router = express.Router();
 
+// CORS middleware specifically for upload routes
+const uploadCors = (req, res, next) => {
+  const origin = req.headers.origin;
+  const allowedOrigins = [
+    'https://samlex-client.vercel.app',
+    'https://lawfirm-saas-client.vercel.app',
+    'http://localhost:5001',
+    'http://localhost:5002'
+  ];
+  
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  } else if (!origin) {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  }
+  
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  res.setHeader('Access-Control-Max-Age', '86400');
+  
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+  
+  next();
+};
+
+// Apply CORS middleware to all upload routes
+router.use(uploadCors);
+
 // Handle preflight OPTIONS requests for upload (no auth required)
 router.options("/", (req, res) => {
   console.log('🔄 Handling OPTIONS preflight request for upload');
-  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
-  res.header('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-  res.header('Access-Control-Allow-Credentials', 'true');
+  console.log('🔄 Request origin:', req.headers.origin);
+  console.log('🔄 Request headers:', req.headers);
+  
+  // Set CORS headers explicitly
+  res.setHeader('Access-Control-Allow-Origin', req.headers.origin || 'https://samlex-client.vercel.app');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
+  
+  console.log('🔄 CORS headers set:', {
+    'Access-Control-Allow-Origin': res.getHeader('Access-Control-Allow-Origin'),
+    'Access-Control-Allow-Methods': res.getHeader('Access-Control-Allow-Methods'),
+    'Access-Control-Allow-Headers': res.getHeader('Access-Control-Allow-Headers')
+  });
+  
   res.status(200).end();
 });
 
