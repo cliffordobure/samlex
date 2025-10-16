@@ -71,22 +71,52 @@ const CreateCase = () => {
     e.preventDefault();
     setLoading(true);
     setError("");
+    let documentUrls = [];
     
     try {
-      // TEMPORARY FIX: Create case without file uploads to bypass CORS
-      // Files will be uploaded separately once Cloudinary is configured
-      console.log("📋 Creating case (files will be uploaded separately)...");
-      
+      // 1. Upload files directly to Cloudinary if present
+      if (files.length > 0) {
+        console.log("📁 Uploading", files.length, "files directly to Cloudinary...");
+        setUploadingFiles(true);
+        setUploadProgress({});
+
+        try {
+          const uploadResults = await uploadMultipleToCloudinary(
+            files,
+            (progress) => {
+              setUploadProgress(prev => ({
+                ...prev,
+                [progress.fileName]: progress.percent
+              }));
+            }
+          );
+
+          documentUrls = uploadResults.map(result => result.url);
+          console.log("✅ All files uploaded successfully:", documentUrls);
+        } catch (uploadError) {
+          console.error("❌ Cloudinary upload error:", uploadError);
+          setError("Failed to upload files. Please check your Cloudinary configuration and try again.");
+          setUploadingFiles(false);
+          setLoading(false);
+          return;
+        } finally {
+          setUploadingFiles(false);
+          setUploadProgress({});
+        }
+      }
+
+      // 2. Create the case with Cloudinary URLs
+      console.log("📋 Creating case with document URLs:", documentUrls);
       await creditCaseApi.createCreditCase({
         ...form,
         debtAmount: Number(form.debtAmount),
         assignedTo: form.assignedTo || undefined,
-        documents: [], // Empty for now - files will be added later
+        documents: documentUrls, // Send Cloudinary URLs instead of files
       });
 
       // Show success message
       if (files.length > 0) {
-        alert(`Case created successfully! Note: ${files.length} file(s) were not uploaded due to server configuration. Files can be uploaded later from the case details page.`);
+        alert(`Case created successfully with ${documentUrls.length} files uploaded!`);
       } else {
         alert("Case created successfully!");
       }
@@ -352,15 +382,8 @@ const CreateCase = () => {
                     accept="application/pdf,image/*,.doc,.docx"
                     multiple
                     onChange={handleFileChange}
-                    disabled={true}
-                    className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all duration-200 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-yellow-500 file:text-white hover:file:bg-yellow-600 opacity-50 cursor-not-allowed"
+                    className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all duration-200 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-yellow-500 file:text-white hover:file:bg-yellow-600"
                   />
-                  <div className="mt-2 p-3 bg-yellow-900/20 border border-yellow-500/30 rounded-lg">
-                    <p className="text-sm text-yellow-300">
-                      <span className="font-semibold">⚠️ File uploads temporarily disabled</span><br/>
-                      Files can be uploaded later from the case details page. Case creation will work without files.
-                    </p>
-                  </div>
                   {files.length > 0 && (
                     <div className="mt-3 p-3 bg-slate-700/30 rounded-lg border border-slate-600/50">
                       <p className="text-sm font-medium text-slate-300 mb-2">Selected Files:</p>
