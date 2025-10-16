@@ -39,6 +39,18 @@ router.post(
           .json({ success: false, message: "No file uploaded" });
       }
 
+      // Check if Cloudinary is configured
+      if (!process.env.CLOUDINARY_CLOUD_NAME || 
+          !process.env.CLOUDINARY_API_KEY || 
+          !process.env.CLOUDINARY_API_SECRET) {
+        console.error("❌ Cloudinary not configured");
+        return res.status(500).json({
+          success: false,
+          message: "File upload service not configured. Please contact administrator.",
+          error: "Cloudinary credentials missing"
+        });
+      }
+
       console.log("Uploading file to Cloudinary...");
       console.log("File buffer size:", req.file.buffer.length);
       console.log("File mimetype:", req.file.mimetype);
@@ -62,9 +74,20 @@ router.post(
       });
     } catch (error) {
       console.error("Upload error:", error);
+      
+      // Provide more specific error messages
+      let errorMessage = "Upload failed";
+      if (error.message.includes("Unknown API key")) {
+        errorMessage = "File upload service not configured. Please contact administrator.";
+      } else if (error.message.includes("Invalid cloud name")) {
+        errorMessage = "File upload service configuration error. Please contact administrator.";
+      } else if (error.message.includes("Failed to upload file to Cloudinary")) {
+        errorMessage = "File upload service temporarily unavailable. Please try again later.";
+      }
+      
       res.status(500).json({
         success: false,
-        message: "Upload failed",
+        message: errorMessage,
         error: error.message,
       });
     }
@@ -73,10 +96,18 @@ router.post(
 
 // GET /api/upload/health - health check for upload service
 router.get("/health", (req, res) => {
+  const cloudinaryConfigured = !!(process.env.CLOUDINARY_CLOUD_NAME && 
+                                 process.env.CLOUDINARY_API_KEY && 
+                                 process.env.CLOUDINARY_API_SECRET);
+  
   res.json({
     success: true,
     message: "Upload service is running",
+    cloudinaryConfigured: cloudinaryConfigured,
     timestamp: new Date().toISOString(),
+    ...(cloudinaryConfigured ? {} : { 
+      warning: "Cloudinary not configured - file uploads will fail" 
+    })
   });
 });
 
