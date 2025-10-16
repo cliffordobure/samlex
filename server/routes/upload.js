@@ -5,6 +5,16 @@ import { uploadToCloud } from "../utils/cloudinary.js";
 
 const router = express.Router();
 
+// Handle preflight OPTIONS requests for upload (no auth required)
+router.options("/", (req, res) => {
+  console.log('🔄 Handling OPTIONS preflight request for upload');
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.header('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.status(200).end();
+});
+
 // GET /api/upload/test - simple test endpoint
 router.get("/test", (req, res) => {
   res.json({
@@ -63,6 +73,10 @@ router.post(
       console.log("Cloudinary URL:", uploadResult.secure_url);
       console.log("Cloudinary public_id:", uploadResult.public_id);
 
+      // Set CORS headers for successful upload
+      res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+      res.header('Access-Control-Allow-Credentials', 'true');
+      
       // Return Cloudinary URL and public_id
       res.json({
         success: true,
@@ -84,6 +98,10 @@ router.post(
       } else if (error.message.includes("Failed to upload file to Cloudinary")) {
         errorMessage = "File upload service temporarily unavailable. Please try again later.";
       }
+      
+      // Set CORS headers for error response
+      res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+      res.header('Access-Control-Allow-Credentials', 'true');
       
       res.status(500).json({
         success: false,
