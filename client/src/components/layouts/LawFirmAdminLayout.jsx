@@ -36,18 +36,6 @@ const LawFirmAdminLayout = ({ children }) => {
       description: "Overview and analytics"
     },
     {
-      name: "Case Management",
-      href: "/admin/cases",
-      icon: <FaFolderOpen className="w-5 h-5" />,
-      description: "Manage all cases"
-    },
-    {
-      name: "Calendar",
-      href: "/admin/calendar",
-      icon: <FaCalendarAlt className="w-5 h-5" />,
-      description: "Court dates and meetings"
-    },
-    {
       name: "Departments",
       href: "/admin/departments",
       icon: <FaBuilding className="w-5 h-5" />,
@@ -58,6 +46,18 @@ const LawFirmAdminLayout = ({ children }) => {
       href: "/admin/users",
       icon: <FaUsers className="w-5 h-5" />,
       description: "Team members and roles"
+    },
+    {
+      name: "Case Management",
+      href: "/admin/cases",
+      icon: <FaFolderOpen className="w-5 h-5" />,
+      description: "Manage all cases"
+    },
+    {
+      name: "Calendar",
+      href: "/admin/calendar",
+      icon: <FaCalendarAlt className="w-5 h-5" />,
+      description: "Court dates and meetings"
     },
     {
       name: "Reports & Analytics",
