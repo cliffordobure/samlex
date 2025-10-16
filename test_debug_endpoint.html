@@ -275,6 +275,38 @@
                         </div>
                         
                         <div class="data-section">
+                            <h3>✅ Assigned to Departments</h3>
+                            <div class="stat-item">
+                                <span class="stat-label">Users with departments:</span>
+                                <span class="stat-value">${data.data.assignedCounts?.usersWithDepartments || 'N/A'}</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Credit cases with departments:</span>
+                                <span class="stat-value">${data.data.assignedCounts?.creditCasesWithDepartments || 'N/A'}</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Legal cases with departments:</span>
+                                <span class="stat-value">${data.data.assignedCounts?.legalCasesWithDepartments || 'N/A'}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="data-section">
+                            <h3>❌ Not Assigned to Departments</h3>
+                            <div class="stat-item">
+                                <span class="stat-label">Users without departments:</span>
+                                <span class="stat-value">${data.data.unassignedCounts?.usersWithoutDepartments || 'N/A'}</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Credit cases without departments:</span>
+                                <span class="stat-value">${data.data.unassignedCounts?.creditCasesWithoutDepartments || 'N/A'}</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Legal cases without departments:</span>
+                                <span class="stat-value">${data.data.unassignedCounts?.legalCasesWithoutDepartments || 'N/A'}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="data-section">
                             <h3>📈 Credit Case Statuses</h3>
                             ${data.data.creditCaseStatuses.map(status => `
                                 <div class="stat-item">
