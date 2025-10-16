@@ -114,7 +114,37 @@ app.use("/api/departments", departmentRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/reports", reportsRoutes);
 app.use("/api/credit-cases", creditCaseRoutes);
-app.use("/api/upload", uploadRoutes);
+
+// Special CORS handling for upload routes
+app.use("/api/upload", (req, res, next) => {
+  const origin = req.headers.origin;
+  const allowedOrigins = [
+    'https://samlex-client.vercel.app',
+    'https://lawfirm-saas-client.vercel.app',
+    'http://localhost:5001',
+    'http://localhost:5002'
+  ];
+  
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  } else if (!origin) {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  }
+  
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  res.setHeader('Access-Control-Max-Age', '86400');
+  
+  if (req.method === 'OPTIONS') {
+    console.log('🔄 OPTIONS request handled at app level');
+    res.status(200).end();
+    return;
+  }
+  
+  next();
+}, uploadRoutes);
+
 app.use("/api/legal-cases", legalCaseRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/ai", aiRoutes);

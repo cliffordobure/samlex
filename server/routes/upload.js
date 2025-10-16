@@ -65,6 +65,10 @@ router.get("/test", (req, res) => {
     success: true,
     message: "Upload route is accessible",
     timestamp: new Date().toISOString(),
+    corsHeaders: {
+      origin: req.headers.origin,
+      'access-control-allow-origin': res.getHeader('Access-Control-Allow-Origin')
+    }
   });
 });
 
