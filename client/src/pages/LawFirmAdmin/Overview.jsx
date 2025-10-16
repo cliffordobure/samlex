@@ -125,15 +125,8 @@ const AdminOverview = () => {
       legalCases: legalCases.length
     });
     
-    // Debug the actual data structure using utility
-    debugDataStructure(users, 'Users');
-    debugDataStructure(departments, 'Departments');
-    debugDataStructure(creditCases, 'Credit Cases');
-    debugDataStructure(legalCases, 'Legal Cases');
-    
-    // Debug department assignments
+    // Process data when available
     if (users.length > 0 || departments.length > 0 || creditCases.length > 0 || legalCases.length > 0) {
-      debugDepartmentAssignments(users, { creditCases, legalCases }, departments);
       
       calculateStats();
       generateRecentActivity();
@@ -950,33 +943,6 @@ const AdminOverview = () => {
           </div>
       </div>
 
-        {/* Debug Information */}
-        <div className="mb-6 p-4 bg-yellow-500/20 border border-yellow-500/30 rounded-xl">
-          <h4 className="text-yellow-300 font-semibold mb-2">Debug Information</h4>
-          <div className="text-sm text-yellow-200 space-y-1">
-            <p>Users: {users.length} | Departments: {departments.length} | Credit Cases: {creditCases.length} | Legal Cases: {legalCases.length}</p>
-            <p>Law Firm ID: {user?.lawFirm?._id || 'Not found'}</p>
-            <p>Loading: {isLoading ? 'Yes' : 'No'}</p>
-            
-            {/* Enhanced debug info */}
-            <div className="mt-2 pt-2 border-t border-yellow-500/30">
-              <p className="text-xs text-yellow-300/80">Users with departments: {users.filter(u => u.department).length}</p>
-              <p className="text-xs text-yellow-300/80">Credit cases with departments: {creditCases.filter(c => c.department).length}</p>
-              <p className="text-xs text-yellow-300/80">Legal cases with departments: {legalCases.filter(c => c.department).length}</p>
-              
-              {departments.length > 0 && (
-                <div className="mt-1">
-                  <p className="text-xs text-yellow-300/80">Department IDs:</p>
-                  {departments.map(dept => (
-                    <p key={dept._id} className="text-xs text-yellow-200/60 ml-2">
-                      • {dept.name}: {dept._id}
-                    </p>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {isLoading ? (
@@ -1004,41 +970,11 @@ const AdminOverview = () => {
                   >
                     Create Department
                   </button>
-                  <button
-                    onClick={() => {
-                      console.log("🧪 Testing data structure...");
-                      console.log("Current Redux state:", {
-                        users: users,
-                        departments: departments,
-                        creditCases: creditCases,
-                        legalCases: legalCases
-                      });
-                      
-                      // Test individual API calls
-                      console.log("🔄 Testing individual API calls...");
-                      if (user?.lawFirm?._id) {
-                        Promise.all([
-                          dispatch(getUsers({ lawFirm: user.lawFirm._id, limit: 50 })),
-                          dispatch(getDepartments({ lawFirm: user.lawFirm._id })),
-                          dispatch(getCreditCases({ lawFirm: user.lawFirm._id, limit: 100 })),
-                          dispatch(getLegalCases({ lawFirm: user.lawFirm._id, limit: 100 })),
-                        ]).then((results) => {
-                          console.log("🔄 Manual API test results:", results);
-                        }).catch((error) => {
-                          console.error("❌ Manual API test error:", error);
-                        });
-                      }
-                    }}
-                    className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-xl font-semibold transition-all duration-300 hover:scale-105"
-                  >
-                    Debug Data
-                  </button>
                 </div>
               </div>
             </div>
           ) : (
             departments.map((dept) => {
-              console.log("🏢 Processing department:", dept.name, "ID:", dept._id);
               
               // Fix filtering logic - handle both string and ObjectId comparisons
               const deptUsers = users.filter(u => {
