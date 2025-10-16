@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import creditCaseApi from "../../store/api/creditCaseApi";
 import { getUsers } from "../../store/slices/userSlice";
-import axios from "axios";
+import { uploadMultipleToCloudinary, validateFile } from "../../utils/cloudinary";
 
 const CreateCase = () => {
   const dispatch = useDispatch();
@@ -27,6 +27,8 @@ const CreateCase = () => {
   });
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [uploadingFiles, setUploadingFiles] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState({});
   const [error, setError] = useState("");
 
   // Load users for assignment
@@ -41,75 +43,90 @@ const CreateCase = () => {
   };
 
   const handleFileChange = (e) => {
-    setFiles(Array.from(e.target.files));
+    const selectedFiles = Array.from(e.target.files);
+    
+    // Validate each file
+    const validFiles = [];
+    const errors = [];
+    
+    selectedFiles.forEach(file => {
+      const validation = validateFile(file);
+      if (validation.valid) {
+        validFiles.push(file);
+      } else {
+        errors.push(`${file.name}: ${validation.error}`);
+      }
+    });
+    
+    if (errors.length > 0) {
+      setError(errors.join(', '));
+      return;
+    }
+    
+    setFiles(validFiles);
+    setError("");
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError("");
-    let documentPaths = [];
+    let documentUrls = [];
+    
     try {
-      // 1. Upload all files if present
+      // 1. Upload files directly to Cloudinary if present
       if (files.length > 0) {
-        console.log("📁 Uploading", files.length, "files...");
+        console.log("📁 Uploading", files.length, "files directly to Cloudinary...");
+        setUploadingFiles(true);
+        setUploadProgress({});
 
-        for (const file of files) {
-          try {
-            console.log("📤 Uploading file:", file.name, "Size:", file.size);
+        try {
+          const uploadResults = await uploadMultipleToCloudinary(
+            files,
+            (progress) => {
+              setUploadProgress(prev => ({
+                ...prev,
+                [progress.fileName]: progress.percent
+              }));
+            }
+          );
 
-            const data = new FormData();
-            data.append("file", file);
-
-            const uploadRes = await axios.post(
-              "https://lawfirm-saas.onrender.com/api/upload",
-              data,
-              {
-                headers: {
-                  "Content-Type": "multipart/form-data",
-                  Authorization: `Bearer ${localStorage.getItem("token")}`,
-                },
-              }
-            );
-
-            console.log("✅ File uploaded successfully:", uploadRes.data);
-            // Use the Cloudinary URL from the response
-            documentPaths.push(uploadRes.data.url);
-          } catch (uploadError) {
-            console.error("❌ File upload error:", uploadError);
-            console.log(
-              "⚠️ Skipping file upload, continuing with case creation..."
-            );
-            // Continue without this file instead of failing completely
-            continue;
-          }
+          documentUrls = uploadResults.map(result => result.url);
+          console.log("✅ All files uploaded successfully:", documentUrls);
+        } catch (uploadError) {
+          console.error("❌ Cloudinary upload error:", uploadError);
+          setError("Failed to upload files. Please try again.");
+          setUploadingFiles(false);
+          setLoading(false);
+          return;
+        } finally {
+          setUploadingFiles(false);
+          setUploadProgress({});
         }
       }
-      // 2. Create the case using the shared API instance
+
+      // 2. Create the case with Cloudinary URLs
+      console.log("📋 Creating case with document URLs:", documentUrls);
       await creditCaseApi.createCreditCase({
         ...form,
         debtAmount: Number(form.debtAmount),
-        assignedTo: form.assignedTo || undefined, // Ensure assignedTo is sent
-        documents: documentPaths,
+        assignedTo: form.assignedTo || undefined,
+        documents: documentUrls, // Send Cloudinary URLs instead of files
       });
 
-      // Show success message with file upload status
-      if (files.length > 0 && documentPaths.length === 0) {
-        alert(
-          "Case created successfully (files could not be uploaded - server issue)"
-        );
-      } else if (files.length > 0 && documentPaths.length < files.length) {
-        alert(
-          `Case created successfully (${documentPaths.length}/${files.length} files uploaded)`
-        );
+      // Show success message
+      if (files.length > 0) {
+        alert(`Case created successfully with ${documentUrls.length} files uploaded!`);
       } else {
-        alert("Case created successfully");
+        alert("Case created successfully!");
       }
 
       // Navigate back to admin case management if coming from admin panel
       const isFromAdmin = window.location.pathname.includes("/admin");
       navigate(isFromAdmin ? "/admin/cases" : "/credit-collection/cases");
+      
     } catch (err) {
+      console.error("❌ Case creation error:", err);
       setError(err.response?.data?.message || "Failed to create case");
     } finally {
       setLoading(false);
@@ -370,16 +387,39 @@ const CreateCase = () => {
                   {files.length > 0 && (
                     <div className="mt-3 p-3 bg-slate-700/30 rounded-lg border border-slate-600/50">
                       <p className="text-sm font-medium text-slate-300 mb-2">Selected Files:</p>
-                      <div className="space-y-1">
+                      <div className="space-y-2">
                         {files.map((f, index) => (
-                          <div key={index} className="text-xs text-slate-400 flex items-center gap-2">
-                            <svg className="w-4 h-4 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                            {f.name} ({(f.size / 1024 / 1024).toFixed(2)} MB)
+                          <div key={index} className="text-xs text-slate-400">
+                            <div className="flex items-center gap-2">
+                              <svg className="w-4 h-4 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                              </svg>
+                              <span>{f.name} ({(f.size / 1024 / 1024).toFixed(2)} MB)</span>
+                              {uploadingFiles && uploadProgress[f.name] !== undefined && (
+                                <span className="text-yellow-400">
+                                  {Math.round(uploadProgress[f.name])}%
+                                </span>
+                              )}
+                            </div>
+                            {uploadingFiles && uploadProgress[f.name] !== undefined && (
+                              <div className="mt-1 w-full bg-slate-600 rounded-full h-1.5">
+                                <div 
+                                  className="bg-yellow-500 h-1.5 rounded-full transition-all duration-300"
+                                  style={{ width: `${uploadProgress[f.name]}%` }}
+                                ></div>
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>
+                      {uploadingFiles && (
+                        <div className="mt-2 text-xs text-yellow-400 flex items-center gap-1">
+                          <svg className="w-3 h-3 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          </svg>
+                          Uploading files to Cloudinary...
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -420,7 +460,7 @@ const CreateCase = () => {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
-                      Creating...
+                      {uploadingFiles ? 'Uploading...' : 'Creating...'}
                     </>
                   ) : (
                     <>
