@@ -27,7 +27,7 @@ const departmentSchema = new mongoose.Schema(
     },
     departmentType: {
       type: String,
-      enum: ["credit_collection", "legal", "custom"],
+      enum: ["credit_collection", "legal", "real_estate", "custom"],
       required: true,
     },
     settings: {
@@ -37,6 +37,7 @@ const departmentSchema = new mongoose.Schema(
         default: new Map([
           ["credit_collection", "CC"],
           ["legal", "LG"],
+          ["real_estate", "RE"],
         ]),
       },
       workflowStages: {
@@ -62,6 +63,16 @@ const departmentSchema = new mongoose.Schema(
               "resolved",
               "closed",
             ];
+          } else if (this.departmentType === "real_estate") {
+            return [
+              "new",
+              "assigned",
+              "property_analysis",
+              "documentation",
+              "negotiation",
+              "transaction_completed",
+              "closed",
+            ];
           }
           return ["new", "in_progress", "completed"];
         },
@@ -82,7 +93,7 @@ const departmentSchema = new mongoose.Schema(
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
+      required: false, // Make optional for system-created departments
     },
   },
   {
@@ -99,6 +110,7 @@ departmentSchema.pre("save", function (next) {
     const codeMap = {
       credit_collection: "CC",
       legal: "LG",
+      real_estate: "RE",
       custom: "CU",
     };
     this.code = codeMap[this.departmentType] || "DP";

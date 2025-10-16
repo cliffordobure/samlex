@@ -5,6 +5,7 @@ import Department from "../models/Department.js";
 import Document from "../models/Document.js";
 import mongoose from "mongoose";
 import { createNotification } from "../services/notificationService.js";
+import { getDepartmentForCase } from "../utils/departmentAssignment.js";
 
 /**
  * @desc    Create a new legal case
@@ -54,25 +55,23 @@ export const createLegalCase = async (req, res) => {
       });
     }
 
-    // Get the legal department (optional for escalated cases)
-    let legalDepartment = null;
-    try {
-      legalDepartment = await Department.findOne({
-        lawFirm: req.user.lawFirm._id,
-        departmentType: "legal",
-      });
-    } catch (error) {
-      console.log("No legal department found, proceeding without department");
-    }
-
     // For escalated cases, we don't need a department
     const isEscalatedCase = escalatedFrom || escalatedFromCreditCase;
 
-    if (!legalDepartment && !escalatedFrom && !escalatedFromCreditCase) {
-      return res.status(400).json({
-        success: false,
-        message: "Legal department not found for this law firm",
-      });
+    // Get or create appropriate department for legal cases (skip for escalated cases)
+    let legalDepartment = null;
+    if (!isEscalatedCase) {
+      try {
+        legalDepartment = await getDepartmentForCase(req.user.lawFirm._id, 'legal', req.user.role);
+        console.log("✅ Assigned to legal department:", legalDepartment.name, legalDepartment._id);
+      } catch (error) {
+        console.error("❌ Failed to assign legal department:", error.message);
+        return res.status(500).json({
+          success: false,
+          message: "Failed to assign case to department. Please contact administrator.",
+          error: error.message
+        });
+      }
     }
 
     // Handle client - if it's an object, create a new client user

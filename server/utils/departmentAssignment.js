@@ -4,6 +4,7 @@
  */
 
 import Department from '../models/Department.js';
+import User from '../models/User.js';
 
 /**
  * Get or create default departments for a law firm
@@ -55,16 +56,31 @@ export const getOrCreateDefaultDepartments = async (lawFirmId) => {
     
     for (const deptConfig of defaultDepartments) {
       const deptType = deptConfig.departmentType;
-      if (!departments[deptType.replace('_', '')]) {
+      // Map department types to the correct property names
+      let deptProperty = null;
+      switch (deptType) {
+        case 'credit_collection':
+          deptProperty = 'creditCollection';
+          break;
+        case 'legal':
+          deptProperty = 'legal';
+          break;
+        case 'real_estate':
+          deptProperty = 'realEstate';
+          break;
+      }
+      
+      if (deptProperty && !departments[deptProperty]) {
         console.log(`➕ Creating missing department: ${deptConfig.name}`);
+        
         const newDepartment = new Department({
           ...deptConfig,
-          lawFirm: lawFirmId,
-          createdBy: null // System created
+          lawFirm: lawFirmId
+          // createdBy is optional for system-created departments
         });
         
         const savedDept = await newDepartment.save();
-        departments[deptType.replace('_', '')] = savedDept;
+        departments[deptProperty] = savedDept;
         console.log(`✅ Created department: ${savedDept.name} (${savedDept._id})`);
       }
     }
@@ -89,14 +105,18 @@ export const getDepartmentForCase = async (lawFirmId, caseType = null, userRole 
     const departments = await getOrCreateDefaultDepartments(lawFirmId);
     
     // Determine department based on case type or user role
-    if (caseType === 'legal' || userRole === 'advocate' || userRole === 'legal_head') {
+    // Prioritize case type over user role
+    if (caseType === 'real_estate') {
+      return departments.realEstate;
+    } else if (caseType === 'legal' || userRole === 'legal_head') {
       return departments.legal;
     } else if (caseType === 'credit' || userRole === 'debt_collector' || userRole === 'credit_head') {
       return departments.creditCollection;
-    } else if (caseType === 'real_estate') {
-      return departments.realEstate;
+    } else if (userRole === 'advocate') {
+      // Advocates default to legal department if no specific case type
+      return departments.legal;
     } else {
-      // Default to credit collection for credit cases
+      // Default to credit collection for other cases
       return departments.creditCollection;
     }
   } catch (error) {
