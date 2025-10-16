@@ -45,6 +45,7 @@ import {
 } from "../controllers/simpleReportsController.js";
 import {
   generateSpecializedReport,
+  debugDatabaseData,
 } from "../controllers/specializedReportsController.js";
 import { protect, authorize } from "../middleware/auth.js";
 
@@ -167,6 +168,13 @@ router.get(
   "/specialized/:lawFirmId/:reportType",
   protect,
   generateSpecializedReport
+);
+
+// DEBUG ENDPOINT - Show raw database data
+router.get(
+  "/debug/:lawFirmId",
+  protect,
+  debugDatabaseData
 );
 
 // DEBUG: Manual revenue check endpoint

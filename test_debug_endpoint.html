@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Report Debug Tool</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        input[type="text"], select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .results {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            border-left: 4px solid #007bff;
+        }
+        .error {
+            border-left-color: #dc3545;
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .success {
+            border-left-color: #28a745;
+            background: #d4edda;
+            color: #155724;
+        }
+        .loading {
+            text-align: center;
+            color: #666;
+        }
+        .data-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: white;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+        .data-section h3 {
+            margin-top: 0;
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 5px;
+        }
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .stat-item:last-child {
+            border-bottom: none;
+        }
+        .stat-label {
+            font-weight: bold;
+            color: #555;
+        }
+        .stat-value {
+            color: #333;
+        }
+        .comparison {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+        .comparison h4 {
+            margin-top: 0;
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Report Debug Tool</h1>
+        <p>This tool helps you debug your Executive Overview Report by showing the raw database data and comparing it with your report results.</p>
+        
+        <div class="form-group">
+            <label for="baseUrl">Server Base URL:</label>
+            <input type="text" id="baseUrl" value="https://samlex-server.vercel.app" placeholder="Enter your server URL">
+        </div>
+        
+        <div class="form-group">
+            <label for="lawFirmId">Law Firm ID:</label>
+            <input type="text" id="lawFirmId" placeholder="Enter law firm ID (or leave empty to see all law firms)">
+        </div>
+        
+        <div class="form-group">
+            <label for="authToken">Authentication Token:</label>
+            <input type="text" id="authToken" placeholder="Enter your JWT token (optional - for authenticated requests)">
+        </div>
+        
+        <button onclick="getAllLawFirms()">📋 Get All Law Firms</button>
+        <button onclick="getDebugData()">🔍 Get Debug Data</button>
+        <button onclick="generateReport()">📊 Generate Overview Report</button>
+        <button onclick="clearResults()">🗑️ Clear Results</button>
+        
+        <div id="results"></div>
+    </div>
+
+    <script>
+        let currentLawFirmId = null;
+        
+        async function makeRequest(url, options = {}) {
+            try {
+                const response = await fetch(url, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(options.headers || {})
+                    },
+                    ...options
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                return await response.json();
+            } catch (error) {
+                throw new Error(`Request failed: ${error.message}`);
+            }
+        }
+        
+        async function getAllLawFirms() {
+            const baseUrl = document.getElementById('baseUrl').value;
+            const authToken = document.getElementById('authToken').value;
+            const resultsDiv = document.getElementById('results');
+            
+            resultsDiv.innerHTML = '<div class="loading">🔄 Fetching all law firms...</div>';
+            
+            try {
+                // Try to get law firms through the debug endpoint
+                const url = `${baseUrl}/api/reports/debug/all`;
+                const headers = {};
+                if (authToken) {
+                    headers['Authorization'] = `Bearer ${authToken}`;
+                }
+                
+                const data = await makeRequest(url, { headers });
+                
+                resultsDiv.innerHTML = `
+                    <div class="results success">
+                        <h3>✅ Available Law Firms</h3>
+                        <div class="data-section">
+                            ${data.data && data.data.allLawFirms ? 
+                                data.data.allLawFirms.map(firm => `
+                                    <div class="stat-item">
+                                        <span class="stat-label">${firm.firmName}</span>
+                                        <span class="stat-value">ID: ${firm._id}</span>
+                                    </div>
+                                `).join('') :
+                                '<p>No law firms found or data structure is different.</p>'
+                            }
+                        </div>
+                        <p><strong>💡 Tip:</strong> Copy a law firm ID above and paste it in the Law Firm ID field to get detailed debug data.</p>
+                    </div>
+                `;
+                
+            } catch (error) {
+                resultsDiv.innerHTML = `
+                    <div class="results error">
+                        <h3>❌ Error Getting Law Firms</h3>
+                        <p><strong>Error:</strong> ${error.message}</p>
+                        <p><strong>Possible solutions:</strong></p>
+                        <ul>
+                            <li>Check if your server is running</li>
+                            <li>Verify the server URL is correct</li>
+                            <li>Make sure the debug endpoint is accessible</li>
+                            <li>Try with authentication token if required</li>
+                        </ul>
+                    </div>
+                `;
+            }
+        }
+        
+        async function getDebugData() {
+            const baseUrl = document.getElementById('baseUrl').value;
+            const lawFirmId = document.getElementById('lawFirmId').value;
+            const authToken = document.getElementById('authToken').value;
+            const resultsDiv = document.getElementById('results');
+            
+            if (!lawFirmId) {
+                resultsDiv.innerHTML = `
+                    <div class="results error">
+                        <h3>❌ Law Firm ID Required</h3>
+                        <p>Please enter a law firm ID or click "Get All Law Firms" first to see available law firms.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            resultsDiv.innerHTML = '<div class="loading">🔄 Fetching debug data...</div>';
+            
+            try {
+                const url = `${baseUrl}/api/reports/debug/${lawFirmId}`;
+                const headers = {};
+                if (authToken) {
+                    headers['Authorization'] = `Bearer ${authToken}`;
+                }
+                
+                const data = await makeRequest(url, { headers });
+                currentLawFirmId = lawFirmId;
+                
+                resultsDiv.innerHTML = `
+                    <div class="results success">
+                        <h3>✅ Debug Data for: ${data.data.lawFirm.firmName}</h3>
+                        
+                        <div class="data-section">
+                            <h3>📊 Raw Counts</h3>
+                            <div class="stat-item">
+                                <span class="stat-label">Users:</span>
+                                <span class="stat-value">${data.data.rawCounts.users}</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Credit Cases:</span>
+                                <span class="stat-value">${data.data.rawCounts.creditCases}</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Legal Cases:</span>
+                                <span class="stat-value">${data.data.rawCounts.legalCases}</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Departments:</span>
+                                <span class="stat-value">${data.data.rawCounts.departments}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="data-section">
+                            <h3>📈 Credit Case Statuses</h3>
+                            ${data.data.creditCaseStatuses.map(status => `
+                                <div class="stat-item">
+                                    <span class="stat-label">${status._id || 'Unknown'}:</span>
+                                    <span class="stat-value">${status.count}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                        
+                        <div class="data-section">
+                            <h3>⚖️ Legal Case Statuses</h3>
+                            ${data.data.legalCaseStatuses.map(status => `
+                                <div class="stat-item">
+                                    <span class="stat-label">${status._id || 'Unknown'}:</span>
+                                    <span class="stat-value">${status.count}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                        
+                        <div class="data-section">
+                            <h3>👥 User Roles</h3>
+                            ${data.data.userRoles.map(role => `
+                                <div class="stat-item">
+                                    <span class="stat-label">${role._id || 'Unknown'}:</span>
+                                    <span class="stat-value">${role.count}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                        
+                        <div class="data-section">
+                            <h3>🏢 Departments</h3>
+                            ${data.data.departments.map(dept => `
+                                <div class="stat-item">
+                                    <span class="stat-label">${dept.name} (${dept.departmentType}):</span>
+                                    <span class="stat-value">ID: ${dept._id}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                        
+                        <div class="comparison">
+                            <h4>🔍 Compare with Your Report</h4>
+                            <p>Compare these numbers with what you see in your Executive Overview Report:</p>
+                            <ul>
+                                <li><strong>Total Credit Cases:</strong> Should match "Total Credit Cases" in your report</li>
+                                <li><strong>Total Legal Cases:</strong> Should match "Total Legal Cases" in your report</li>
+                                <li><strong>Users:</strong> Should match "Total Users" in your report</li>
+                                <li><strong>Escalated Cases:</strong> Count cases with status "escalated_to_legal"</li>
+                                <li><strong>Pending Cases:</strong> Count cases with status "new" or "pending_assignment"</li>
+                            </ul>
+                        </div>
+                    </div>
+                `;
+                
+            } catch (error) {
+                resultsDiv.innerHTML = `
+                    <div class="results error">
+                        <h3>❌ Error Getting Debug Data</h3>
+                        <p><strong>Error:</strong> ${error.message}</p>
+                        <p><strong>Possible solutions:</strong></p>
+                        <ul>
+                            <li>Verify the law firm ID is correct</li>
+                            <li>Check if the server is running</li>
+                            <li>Make sure you have permission to access this law firm's data</li>
+                            <li>Try with authentication token if required</li>
+                        </ul>
+                    </div>
+                `;
+            }
+        }
+        
+        async function generateReport() {
+            if (!currentLawFirmId) {
+                document.getElementById('results').innerHTML = `
+                    <div class="results error">
+                        <h3>❌ No Law Firm Selected</h3>
+                        <p>Please get debug data first to select a law firm.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            const baseUrl = document.getElementById('baseUrl').value;
+            const authToken = document.getElementById('authToken').value;
+            const resultsDiv = document.getElementById('results');
+            
+            resultsDiv.innerHTML = '<div class="loading">🔄 Generating Executive Overview Report...</div>';
+            
+            try {
+                const url = `${baseUrl}/api/reports/specialized/${currentLawFirmId}/overview`;
+                const headers = {};
+                if (authToken) {
+                    headers['Authorization'] = `Bearer ${authToken}`;
+                }
+                
+                const response = await fetch(url, { headers });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const htmlContent = await response.text();
+                
+                resultsDiv.innerHTML = `
+                    <div class="results success">
+                        <h3>✅ Executive Overview Report Generated</h3>
+                        <p>The report has been generated successfully. You can now compare the data in the report with the debug data above.</p>
+                        <p><strong>Report URL:</strong> ${url}</p>
+                        <div style="margin-top: 20px;">
+                            <button onclick="window.open('${url}', '_blank')">📄 Open Report in New Tab</button>
+                        </div>
+                    </div>
+                `;
+                
+            } catch (error) {
+                resultsDiv.innerHTML = `
+                    <div class="results error">
+                        <h3>❌ Error Generating Report</h3>
+                        <p><strong>Error:</strong> ${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+        
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+            currentLawFirmId = null;
+        }
+    </script>
+</body>
+</html>

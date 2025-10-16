@@ -145,12 +145,29 @@ const getSpecializedReportData = async (lawFirmId, reportType, user) => {
  * Get overview data (existing comprehensive data)
  */
 const getOverviewData = async (lawFirmId) => {
+  console.log(`🔍 Fetching overview data for law firm: ${lawFirmId}`);
+  
+  // Validate law firm exists
+  const lawFirm = await LawFirm.findById(lawFirmId);
+  if (!lawFirm) {
+    console.error(`❌ Law firm not found: ${lawFirmId}`);
+    throw new Error(`Law firm not found: ${lawFirmId}`);
+  }
+  
+  console.log(`✅ Law firm found: ${lawFirm.firmName}`);
+  
   const [users, departments, creditCases, legalCases] = await Promise.all([
     User.find({ lawFirm: lawFirmId }).lean(),
     Department.find({ lawFirm: lawFirmId }).lean(),
     CreditCase.find({ lawFirm: lawFirmId }).lean(),
     LegalCase.find({ lawFirm: lawFirmId }).lean()
   ]);
+  
+  console.log(`📊 Raw data counts:`);
+  console.log(`- Users: ${users.length}`);
+  console.log(`- Departments: ${departments.length}`);
+  console.log(`- Credit Cases: ${creditCases.length}`);
+  console.log(`- Legal Cases: ${legalCases.length}`);
 
   // Calculate department performance
   const departmentPerformance = departments.map(dept => {
@@ -181,17 +198,19 @@ const getOverviewData = async (lawFirmId) => {
     };
   });
 
-  // Get recent activity
+  // Get recent activity - show more items and better data
   const allCases = [...creditCases, ...legalCases];
   const recentActivity = allCases
     .sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt))
-    .slice(0, 20)
+    .slice(0, 50) // Increased from 20 to 50
     .map(caseItem => ({
       date: new Date(caseItem.updatedAt || caseItem.createdAt).toLocaleDateString(),
-      type: caseItem.caseType || 'Case',
-      description: caseItem.title || 'No title',
+      type: caseItem.caseType || (creditCases.includes(caseItem) ? 'Credit Collection' : 'Legal'),
+      description: caseItem.title || caseItem.caseNumber || 'No title',
       status: caseItem.status || 'Unknown'
     }));
+  
+  console.log(`📈 Recent activity items: ${recentActivity.length}`);
 
   // Get top performers
   const userStats = {};
@@ -235,9 +254,10 @@ const getOverviewData = async (lawFirmId) => {
   
   const totalRevenue = filingFees + moneyRecovered;
 
-  return {
+  // Calculate final statistics with detailed logging
+  const finalStats = {
     totalUsers: users.length,
-    activeUsers: users.filter(u => u.isActive).length,
+    activeUsers: users.filter(u => u.isActive !== false).length, // Changed to include users without isActive field
     totalDepartments: departments.length,
     totalCreditCases: creditCases.length,
     totalLegalCases: legalCases.length,
@@ -249,6 +269,20 @@ const getOverviewData = async (lawFirmId) => {
     recentActivity,
     topPerformers
   };
+  
+  console.log(`📊 Final statistics:`);
+  console.log(`- Total Users: ${finalStats.totalUsers}`);
+  console.log(`- Active Users: ${finalStats.activeUsers}`);
+  console.log(`- Total Credit Cases: ${finalStats.totalCreditCases}`);
+  console.log(`- Total Legal Cases: ${finalStats.totalLegalCases}`);
+  console.log(`- Escalated Cases: ${finalStats.escalatedCases}`);
+  console.log(`- Pending Cases: ${finalStats.pendingCases}`);
+  console.log(`- Resolved Cases: ${finalStats.resolvedCases}`);
+  console.log(`- Total Revenue: ${finalStats.totalRevenue}`);
+  console.log(`- Departments: ${finalStats.departments.length}`);
+  console.log(`- Top Performers: ${finalStats.topPerformers.length}`);
+  
+  return finalStats;
 };
 
 /**
@@ -942,6 +976,132 @@ const getFinancialData = async (lawFirmId) => {
       netProfitMargin: profitMargin
     }
   };
+};
+
+/**
+ * Debug endpoint to show raw database data
+ */
+export const debugDatabaseData = async (req, res) => {
+  try {
+    const { lawFirmId } = req.params;
+
+    console.log("🔍 Debug: Fetching raw database data for law firm:", lawFirmId);
+
+    // Get all law firms first
+    const allLawFirms = await LawFirm.find({}).select('_id firmName').lean();
+    console.log("All law firms in database:", allLawFirms);
+
+    // Validate law firm ID
+    if (!validateObjectId(lawFirmId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid law firm ID format",
+        availableLawFirms: allLawFirms
+      });
+    }
+
+    // Get law firm details
+    const lawFirm = await LawFirm.findById(lawFirmId);
+    if (!lawFirm) {
+      return res.status(404).json({
+        success: false,
+        message: "Law firm not found",
+        availableLawFirms: allLawFirms
+      });
+    }
+
+    // Get all raw data
+    const [users, departments, creditCases, legalCases] = await Promise.all([
+      User.find({ lawFirm: lawFirmId }).lean(),
+      Department.find({ lawFirm: lawFirmId }).lean(),
+      CreditCase.find({ lawFirm: lawFirmId }).lean(),
+      LegalCase.find({ lawFirm: lawFirmId }).lean()
+    ]);
+
+    // Get case status breakdowns
+    const creditStatuses = await CreditCase.aggregate([
+      { $match: { lawFirm: new mongoose.Types.ObjectId(lawFirmId) } },
+      { $group: { _id: '$status', count: { $sum: 1 } } }
+    ]);
+
+    const legalStatuses = await LegalCase.aggregate([
+      { $match: { lawFirm: new mongoose.Types.ObjectId(lawFirmId) } },
+      { $group: { _id: '$status', count: { $sum: 1 } } }
+    ]);
+
+    const userRoles = await User.aggregate([
+      { $match: { lawFirm: new mongoose.Types.ObjectId(lawFirmId) } },
+      { $group: { _id: '$role', count: { $sum: 1 } } }
+    ]);
+
+    const debugData = {
+      lawFirm: {
+        _id: lawFirm._id,
+        firmName: lawFirm.firmName
+      },
+      allLawFirms,
+      rawCounts: {
+        users: users.length,
+        departments: departments.length,
+        creditCases: creditCases.length,
+        legalCases: legalCases.length
+      },
+      creditCaseStatuses: creditStatuses,
+      legalCaseStatuses: legalStatuses,
+      userRoles,
+      recentCases: {
+        credit: creditCases
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+          .slice(0, 10)
+          .map(c => ({
+            _id: c._id,
+            title: c.title,
+            status: c.status,
+            createdAt: c.createdAt,
+            assignedTo: c.assignedTo
+          })),
+        legal: legalCases
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+          .slice(0, 10)
+          .map(c => ({
+            _id: c._id,
+            title: c.title,
+            status: c.status,
+            createdAt: c.createdAt,
+            assignedTo: c.assignedTo
+          }))
+      },
+      users: users.map(u => ({
+        _id: u._id,
+        firstName: u.firstName,
+        lastName: u.lastName,
+        role: u.role,
+        isActive: u.isActive,
+        department: u.department
+      })),
+      departments: departments.map(d => ({
+        _id: d._id,
+        name: d.name,
+        departmentType: d.departmentType
+      }))
+    };
+
+    console.log("🔍 Debug data compiled successfully");
+
+    res.json({
+      success: true,
+      message: "Database debug data retrieved successfully",
+      data: debugData
+    });
+
+  } catch (error) {
+    console.error("Error in debug endpoint:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to retrieve debug data",
+      error: error.message
+    });
+  }
 };
 
 /**
