@@ -17,6 +17,11 @@ const CLOUDINARY_FOLDER = process.env.REACT_APP_CLOUDINARY_FOLDER || 'law-firm-d
 export const uploadToCloudinary = async (file, onProgress = null) => {
   try {
     console.log('📤 Uploading file directly to Cloudinary:', file.name, 'Size:', file.size);
+    console.log('🔧 Cloudinary Config:', {
+      cloudName: CLOUDINARY_CLOUD_NAME,
+      uploadPreset: CLOUDINARY_UPLOAD_PRESET,
+      folder: CLOUDINARY_FOLDER
+    });
 
     // Create FormData for upload
     const formData = new FormData();
@@ -48,8 +53,22 @@ export const uploadToCloudinary = async (file, onProgress = null) => {
             size: response.bytes
           });
         } else {
-          console.error('❌ Upload failed:', xhr.statusText);
-          reject(new Error(`Upload failed: ${xhr.statusText}`));
+          console.error('❌ Upload failed:', {
+            status: xhr.status,
+            statusText: xhr.statusText,
+            response: xhr.responseText,
+            cloudName: CLOUDINARY_CLOUD_NAME,
+            uploadPreset: CLOUDINARY_UPLOAD_PRESET
+          });
+          
+          let errorMessage = `Upload failed: ${xhr.statusText}`;
+          if (xhr.status === 401) {
+            errorMessage = 'Cloudinary configuration error. Please check your environment variables.';
+          } else if (xhr.status === 400) {
+            errorMessage = 'Invalid upload preset or cloud name.';
+          }
+          
+          reject(new Error(errorMessage));
         }
       });
 
