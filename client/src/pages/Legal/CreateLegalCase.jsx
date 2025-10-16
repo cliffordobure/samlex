@@ -4,6 +4,9 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { createLegalCase } from "../../store/slices/legalCaseSlice";
 import { getUsers } from "../../store/slices/userSlice";
 import toast from "react-hot-toast";
+import { API_URL } from "../../config/api.js";
+
+const API_BASE = API_URL;
 import {
   FaSave,
   FaUpload,
@@ -227,16 +230,13 @@ const CreateLegalCase = () => {
             const formData = new FormData();
             formData.append("file", file);
 
-            const uploadResponse = await fetch(
-              `https://lawfirm-saas.onrender.com/api/upload`,
-              {
-                method: "POST",
-                headers: {
-                  Authorization: `Bearer ${localStorage.getItem("token")}`,
-                },
-                body: formData,
-              }
-            );
+            const uploadResponse = await fetch(`${API_BASE}/upload`, {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${localStorage.getItem("token")}`,
+              },
+              body: formData,
+            });
 
             console.log("📡 Upload response status:", uploadResponse.status);
 

@@ -8,6 +8,10 @@ const CLOUDINARY_CLOUD_NAME = process.env.REACT_APP_CLOUDINARY_CLOUD_NAME || 'yo
 const CLOUDINARY_UPLOAD_PRESET = process.env.REACT_APP_CLOUDINARY_UPLOAD_PRESET || 'your_upload_preset';
 const CLOUDINARY_FOLDER = process.env.REACT_APP_CLOUDINARY_FOLDER || 'law-firm-documents';
 
+// TEMPORARY: If you want to test immediately, replace the values below with your actual Cloudinary credentials
+// const CLOUDINARY_CLOUD_NAME = 'YOUR_ACTUAL_CLOUD_NAME_HERE';
+// const CLOUDINARY_UPLOAD_PRESET = 'YOUR_ACTUAL_PRESET_NAME_HERE';
+
 /**
  * Upload file directly to Cloudinary
  * @param {File} file - The file to upload

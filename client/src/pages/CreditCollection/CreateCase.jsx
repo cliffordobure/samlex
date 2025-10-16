@@ -3,7 +3,10 @@ import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import creditCaseApi from "../../store/api/creditCaseApi";
 import { getUsers } from "../../store/slices/userSlice";
-import { uploadMultipleToCloudinary, validateFile } from "../../utils/cloudinary";
+import { validateFile } from "../../utils/cloudinary";
+import { API_URL } from "../../config/api.js";
+
+const API_BASE = API_URL;
 
 const CreateCase = () => {
   const dispatch = useDispatch();
@@ -74,28 +77,52 @@ const CreateCase = () => {
     let documentUrls = [];
     
     try {
-      // 1. Upload files directly to Cloudinary if present
+      // 1. Upload files through backend endpoint if present
       if (files.length > 0) {
-        console.log("📁 Uploading", files.length, "files directly to Cloudinary...");
+        console.log("📁 Uploading", files.length, "files through backend...");
         setUploadingFiles(true);
         setUploadProgress({});
 
         try {
-          const uploadResults = await uploadMultipleToCloudinary(
-            files,
-            (progress) => {
-              setUploadProgress(prev => ({
-                ...prev,
-                [progress.fileName]: progress.percent
-              }));
-            }
-          );
+          const uploadedUrls = [];
 
-          documentUrls = uploadResults.map(result => result.url);
-          console.log("✅ All files uploaded successfully:", documentUrls);
+          // Upload each file through backend endpoint (same as Add Document button)
+          for (const file of files) {
+            console.log("Uploading file:", file.name, "Size:", file.size);
+
+            const formData = new FormData();
+            formData.append("file", file);
+
+            const uploadResponse = await fetch(`${API_BASE}/upload`, {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${localStorage.getItem("token")}`,
+              },
+              body: formData,
+            });
+
+            console.log("Upload response status:", uploadResponse.status);
+
+            if (!uploadResponse.ok) {
+              const errorData = await uploadResponse.json().catch(() => ({}));
+              console.error("Upload failed:", errorData);
+              throw new Error(
+                `Failed to upload file: ${
+                  errorData.message || uploadResponse.statusText
+                }`
+              );
+            }
+
+            const uploadResult = await uploadResponse.json();
+            console.log("Upload result:", uploadResult);
+            uploadedUrls.push(uploadResult.url);
+          }
+
+          documentUrls = uploadedUrls;
+          console.log("✅ All files uploaded successfully through backend:", documentUrls);
         } catch (uploadError) {
-          console.error("❌ Cloudinary upload error:", uploadError);
-          setError("Failed to upload files. Please check your Cloudinary configuration and try again.");
+          console.error("❌ Backend upload error:", uploadError);
+          setError("Failed to upload files. Please try again.");
           setUploadingFiles(false);
           setLoading(false);
           return;
