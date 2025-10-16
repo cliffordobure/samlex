@@ -4,6 +4,7 @@ import mongoose from "mongoose";
 import Comment from "../models/Comment.js";
 import Payment from "../models/Payment.js";
 import { createNotification } from "../services/notificationService.js";
+import { getDepartmentForCase } from "../utils/departmentAssignment.js";
 
 // Create a new credit collection case
 export const createCreditCase = async (req, res) => {
@@ -40,6 +41,20 @@ export const createCreditCase = async (req, res) => {
     console.log("User ID:", req.user._id);
     console.log("User role:", req.user.role);
 
+    // Get or create appropriate department for credit cases
+    let department = null;
+    try {
+      department = await getDepartmentForCase(req.user.lawFirm._id, 'credit', req.user.role);
+      console.log("✅ Assigned to department:", department.name, department._id);
+    } catch (error) {
+      console.error("❌ Failed to assign department:", error.message);
+      return res.status(500).json({
+        success: false,
+        message: "Failed to assign case to department. Please contact administrator.",
+        error: error.message
+      });
+    }
+
     const newCase = new CreditCase({
       title,
       description,
@@ -52,6 +67,7 @@ export const createCreditCase = async (req, res) => {
       debtAmount,
       caseReference,
       assignedTo, // Add assignment
+      department: department._id, // Assign to appropriate department
       documents: Array.isArray(documents) ? documents : [documents],
       status: assignedTo ? "assigned" : "new", // Set status based on assignment
       lawFirm: req.user.lawFirm,

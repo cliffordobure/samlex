@@ -169,7 +169,7 @@ const getOverviewData = async (lawFirmId) => {
   console.log(`- Credit Cases: ${creditCases.length}`);
   console.log(`- Legal Cases: ${legalCases.length}`);
 
-  // Calculate department performance
+  // Calculate department performance with better handling of unassigned cases
   const departmentPerformance = departments.map(dept => {
     const deptUsers = users.filter(u => 
       u.department && u.department.toString() === dept._id.toString()
@@ -188,6 +188,13 @@ const getOverviewData = async (lawFirmId) => {
       ['resolved', 'closed'].includes(c.status)
     );
 
+    console.log(`📊 Department ${dept.name} (${dept.departmentType}):`);
+    console.log(`   - Members: ${deptUsers.length}`);
+    console.log(`   - Credit Cases: ${deptCreditCases.length}`);
+    console.log(`   - Legal Cases: ${deptLegalCases.length}`);
+    console.log(`   - Total Cases: ${allDeptCases.length}`);
+    console.log(`   - Resolved Cases: ${resolvedCases.length}`);
+
     return {
       ...dept,
       memberCount: deptUsers.length,
@@ -197,6 +204,21 @@ const getOverviewData = async (lawFirmId) => {
         Math.round((resolvedCases.length / allDeptCases.length) * 100) : 0
     };
   });
+
+  // Add summary of unassigned cases
+  const unassignedCreditCases = creditCases.filter(c => !c.department);
+  const unassignedLegalCases = legalCases.filter(c => !c.department);
+  const unassignedUsers = users.filter(u => !u.department);
+
+  console.log(`\n⚠️  Unassigned Data Summary:`);
+  console.log(`   - Credit Cases without department: ${unassignedCreditCases.length}`);
+  console.log(`   - Legal Cases without department: ${unassignedLegalCases.length}`);
+  console.log(`   - Users without department: ${unassignedUsers.length}`);
+
+  if (unassignedCreditCases.length > 0 || unassignedLegalCases.length > 0 || unassignedUsers.length > 0) {
+    console.log(`\n🔧 Recommendation: Run the department assignment fix script to assign unassigned items to departments.`);
+    console.log(`   Command: node server/fix_department_assignments.js`);
+  }
 
   // Get recent activity - show more items and better data
   const allCases = [...creditCases, ...legalCases];
@@ -1034,6 +1056,11 @@ export const debugDatabaseData = async (req, res) => {
       { $group: { _id: '$role', count: { $sum: 1 } } }
     ]);
 
+    // Calculate unassigned data
+    const unassignedCreditCases = creditCases.filter(c => !c.department);
+    const unassignedLegalCases = legalCases.filter(c => !c.department);
+    const unassignedUsers = users.filter(u => !u.department);
+
     const debugData = {
       lawFirm: {
         _id: lawFirm._id,
@@ -1045,6 +1072,16 @@ export const debugDatabaseData = async (req, res) => {
         departments: departments.length,
         creditCases: creditCases.length,
         legalCases: legalCases.length
+      },
+      assignedCounts: {
+        usersWithDepartments: users.length - unassignedUsers.length,
+        creditCasesWithDepartments: creditCases.length - unassignedCreditCases.length,
+        legalCasesWithDepartments: legalCases.length - unassignedLegalCases.length
+      },
+      unassignedCounts: {
+        usersWithoutDepartments: unassignedUsers.length,
+        creditCasesWithoutDepartments: unassignedCreditCases.length,
+        legalCasesWithoutDepartments: unassignedLegalCases.length
       },
       creditCaseStatuses: creditStatuses,
       legalCaseStatuses: legalStatuses,

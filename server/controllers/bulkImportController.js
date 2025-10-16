@@ -8,6 +8,7 @@ import {
   formatPhoneNumber,
   validatePhoneNumber,
 } from "../services/smsService.js";
+import { getDepartmentForCase } from "../utils/departmentAssignment.js";
 
 /**
  * @desc    Bulk import credit cases from Excel file
@@ -137,6 +138,20 @@ export const bulkImportCases = async (req, res) => {
           .substring(2, 7)
           .toUpperCase()}`;
 
+        // Get or create appropriate department for credit cases
+        let department = null;
+        try {
+          department = await getDepartmentForCase(req.user.lawFirm._id, 'credit', req.user.role);
+        } catch (error) {
+          console.error("❌ Failed to assign department for bulk import:", error.message);
+          errors.push({
+            row: rowNumber,
+            error: `Failed to assign department: ${error.message}`,
+          });
+          failureCount++;
+          continue;
+        }
+
         // Create credit case
         const creditCase = new CreditCase({
           title: `${bankName} - ${debtorName} Debt Collection`,
@@ -150,6 +165,7 @@ export const bulkImportCases = async (req, res) => {
           status: "new",
           priority: debtAmount > 100000 ? "high" : "medium",
           lawFirm: req.user.lawFirm,
+          department: department._id, // Assign to appropriate department
           createdBy: req.user._id,
           caseReference,
           bankName,

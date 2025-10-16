@@ -8,6 +8,7 @@ import emailService from "../utils/emailService.js";
 // import AppError from "../utils/appError.js";
 import { uploadToCloud, deleteFromCloud } from "../utils/cloudinary.js";
 import { generatePassword } from "../utils/generatePassword.js";
+import { getDepartmentForUser } from "../utils/departmentAssignment.js";
 
 /**
  * @desc    Get all users (with pagination, filtering, and sorting)
@@ -237,6 +238,23 @@ export const createUser = async (req, res) => {
 
     console.log("🏢 Creating user for law firm:", lawFirm.firmName);
 
+    // Auto-assign department if not provided
+    let finalDepartmentId = departmentId;
+    if (!finalDepartmentId) {
+      try {
+        const autoDepartment = await getDepartmentForUser(userLawFirmId, role);
+        finalDepartmentId = autoDepartment._id;
+        console.log("✅ Auto-assigned user to department:", autoDepartment.name);
+      } catch (error) {
+        console.error("❌ Failed to auto-assign department:", error.message);
+        return res.status(500).json({
+          success: false,
+          message: "Failed to assign user to department. Please contact administrator.",
+          error: error.message
+        });
+      }
+    }
+
     // Create new user
     const user = await User.create({
       firstName,
@@ -245,7 +263,7 @@ export const createUser = async (req, res) => {
       password: temporaryPassword,
       role,
       lawFirm: userLawFirmId,
-      department: departmentId,
+      department: finalDepartmentId,
       permissions,
       phoneNumber,
       address,
