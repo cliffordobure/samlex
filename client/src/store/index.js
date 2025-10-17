@@ -3,6 +3,7 @@ import authSlice from "./slices/authSlice";
 import lawFirmSlice from "./slices/lawFirmSlice";
 import departmentSlice from "./slices/departmentSlice";
 import userSlice from "./slices/userSlice";
+import clientSlice from "./slices/clientSlice";
 import creditCaseSlice from "./slices/creditCaseSlice";
 import legalCaseSlice from "./slices/legalCaseSlice";
 import notificationSlice from "./slices/notificationSlice";
@@ -14,6 +15,7 @@ export const store = configureStore({
     lawFirms: lawFirmSlice,
     departments: departmentSlice,
     users: userSlice,
+    clients: clientSlice,
     creditCases: creditCaseSlice,
     legalCases: legalCaseSlice,
     notifications: notificationSlice,

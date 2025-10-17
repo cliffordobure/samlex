@@ -207,6 +207,16 @@ const AdminOverview = () => {
     console.log("Legal cases:", legalCases.length);
     console.log("Users:", users.length);
 
+    // Filter users to only include advocates and debt collectors
+    const staffUsers = users.filter(user => 
+      user.role === "advocate" || 
+      user.role === "debt_collector" || 
+      user.role === "legal_head" || 
+      user.role === "credit_head"
+    );
+
+    console.log("Staff users:", staffUsers.length);
+
     allCases.forEach(case_ => {
       if (case_.assignedTo) {
         const userId = case_.assignedTo;
@@ -226,9 +236,9 @@ const AdminOverview = () => {
 
     const performers = Object.entries(userStats)
       .map(([userId, stats]) => {
-        const user = users.find(u => u._id === userId);
+        const user = staffUsers.find(u => u._id === userId);
         if (!user) {
-          console.log("User not found for ID:", userId);
+          console.log("Staff user not found for ID:", userId);
           return null;
         }
         
@@ -237,6 +247,7 @@ const AdminOverview = () => {
           id: userId,
           name: `${user.firstName} ${user.lastName}`,
           email: user.email,
+          role: user.role,
           resolvedCases: stats.resolved,
           totalCases: stats.total,
           resolutionRate: Math.round(resolutionRate * 100) / 100,
@@ -249,18 +260,27 @@ const AdminOverview = () => {
 
     console.log("Top performers:", performers);
     
-    // If no performers from cases, show all users as fallback
-    if (performers.length === 0 && users.length > 0) {
-      console.log("No case assignments found, showing all users as fallback");
-      const fallbackPerformers = users.slice(0, 5).map(user => ({
-        id: user._id,
-        name: `${user.firstName} ${user.lastName}`,
-        email: user.email,
-        resolvedCases: 0,
-        totalCases: 0,
-        resolutionRate: 0,
-        performance: "new",
-      }));
+    // If no performers from cases, show staff users with their actual case counts as fallback
+    if (performers.length === 0 && staffUsers.length > 0) {
+      console.log("No case assignments found, showing staff users with actual case counts");
+      const fallbackPerformers = staffUsers.slice(0, 5).map(user => {
+        // Count actual cases assigned to this user
+        const userCases = allCases.filter(c => c.assignedTo === user._id);
+        const resolvedCases = userCases.filter(c => c.status === "resolved" || c.status === "closed").length;
+        const resolutionRate = userCases.length > 0 ? (resolvedCases / userCases.length) * 100 : 0;
+        
+        return {
+          id: user._id,
+          name: `${user.firstName} ${user.lastName}`,
+          email: user.email,
+          role: user.role,
+          resolvedCases: resolvedCases,
+          totalCases: userCases.length,
+          resolutionRate: Math.round(resolutionRate * 100) / 100,
+          performance: userCases.length === 0 ? "new" : resolutionRate >= 80 ? "excellent" : resolutionRate >= 60 ? "good" : "needs_improvement",
+        };
+      }).sort((a, b) => b.totalCases - a.totalCases); // Sort by total cases if no resolution rate
+      
       console.log("Fallback performers:", fallbackPerformers);
       setTopPerformers(fallbackPerformers);
     } else {
@@ -845,6 +865,9 @@ const AdminOverview = () => {
                   <div className="flex-1 min-w-0">
                     <h4 className="font-semibold text-white group-hover:text-blue-300 transition-colors text-sm sm:text-base">{performer.name}</h4>
                     <p className="text-xs sm:text-sm text-slate-400 truncate">{performer.email}</p>
+                    {performer.role && (
+                      <p className="text-xs text-blue-300 capitalize">{performer.role.replace('_', ' ')}</p>
+                    )}
                     <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4 mt-1 sm:mt-2 gap-1">
                       <span className="text-xs sm:text-sm text-slate-300">
                         {performer.resolvedCases}/{performer.totalCases} cases

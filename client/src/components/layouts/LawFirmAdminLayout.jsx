@@ -48,6 +48,12 @@ const LawFirmAdminLayout = ({ children }) => {
       description: "Team members and roles"
     },
     {
+      name: "Client Management",
+      href: "/admin/clients",
+      icon: <FaUserCircle className="w-5 h-5" />,
+      description: "Legal and credit collection clients"
+    },
+    {
       name: "Case Management",
       href: "/admin/cases",
       icon: <FaFolderOpen className="w-5 h-5" />,

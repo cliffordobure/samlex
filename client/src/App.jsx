@@ -28,6 +28,7 @@ import AdminCaseManagement from "./pages/LawFirmAdmin/CaseManagement";
 import AdminCalendar from "./pages/LawFirmAdmin/AdminCalendar";
 import DepartmentManagement from "./pages/LawFirmAdmin/DepartmentManagement";
 import UserManagement from "./pages/LawFirmAdmin/UserManagement";
+import ClientManagement from "./pages/LawFirmAdmin/ClientManagement";
 import FirmSettings from "./pages/LawFirmAdmin/FirmSettings";
 import Reports from "./pages/LawFirmAdmin/Reports";
 import Profile from "./pages/LawFirmAdmin/Profile";
@@ -229,6 +230,7 @@ function App() {
           <Route path="create-legal-case" element={<CreateLegalCase />} />
           <Route path="departments/*" element={<DepartmentManagement />} />
           <Route path="users/*" element={<UserManagement />} />
+          <Route path="clients/*" element={<ClientManagement />} />
           <Route path="settings" element={<FirmSettings />} />
           <Route path="reports" element={<Reports />} />
           <Route path="profile" element={<Profile />} />
