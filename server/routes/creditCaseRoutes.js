@@ -57,6 +57,12 @@ router.get("/", protect, getCreditCases);
 // Get escalated credit cases for legal department
 router.get("/escalated", protect, getEscalatedCreditCases);
 
+// Bulk import and SMS routes - MUST BE BEFORE /:id routes
+router.post("/bulk-import", protect, upload.single("file"), bulkImportCases);
+router.post("/bulk-sms", protect, sendBulkCaseSMS);
+router.get("/import-batches", protect, getImportBatches);
+router.get("/import-batch/:batchId", protect, getCasesByBatchId);
+
 // Create a new credit collection case
 router.post("/", protect, createCreditCase);
 
@@ -91,9 +97,6 @@ router.patch(
 // Escalate a case
 router.patch("/:id/escalate", protect, escalateCreditCase);
 
-// Get a single credit collection case by ID
-router.get("/:id", protect, getCreditCaseById);
-
 // Comments endpoints
 router.get("/:id/comments", protect, getCaseComments);
 router.post("/:id/comments", protect, addCaseComment);
@@ -109,11 +112,10 @@ router.post("/:id/documents", protect, addDocumentToCreditCase);
 // Escalated case status update
 router.patch("/:id/escalated-status", protect, updateEscalatedCaseStatus);
 
-// Bulk import and SMS routes
-router.post("/bulk-import", protect, upload.single("file"), bulkImportCases);
-router.post("/bulk-sms", protect, sendBulkCaseSMS);
+// Send SMS for a single case
 router.post("/:id/send-sms", protect, sendSingleCaseSMS);
-router.get("/import-batches", protect, getImportBatches);
-router.get("/import-batch/:batchId", protect, getCasesByBatchId);
+
+// Get a single credit collection case by ID - MUST BE LAST
+router.get("/:id", protect, getCreditCaseById);
 
 export default router;
