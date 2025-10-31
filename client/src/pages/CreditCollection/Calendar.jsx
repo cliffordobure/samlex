@@ -846,8 +846,8 @@ const CreditCollectionCalendar = () => {
       {/* Date Events Modal */}
       {showDateEventsModal && selectedDateForEvents && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-gradient-to-br from-slate-800 to-slate-700 rounded-2xl max-w-lg w-full mx-4 border border-slate-600/50 shadow-2xl">
-            <div className="flex items-center justify-between p-6 border-b border-slate-600/50">
+          <div className="bg-gradient-to-br from-slate-800 to-slate-700 rounded-2xl max-w-lg w-full mx-4 border border-slate-600/50 shadow-2xl flex flex-col max-h-[90vh]">
+            <div className="flex items-center justify-between p-6 border-b border-slate-600/50 flex-shrink-0">
               <h3 className="text-xl font-bold text-white">
                 📅 Events for {selectedDateForEvents.toLocaleDateString()}
               </h3>
@@ -859,7 +859,7 @@ const CreditCollectionCalendar = () => {
               </button>
             </div>
 
-            <div className="p-6 space-y-4">
+            <div className="p-6 space-y-4 overflow-y-auto flex-1 min-h-0">
               {selectedDateEvents.length === 0 ? (
                 <div className="text-center py-8">
                   <FaCalendar className="text-4xl text-slate-500 mx-auto mb-3" />
@@ -895,7 +895,7 @@ const CreditCollectionCalendar = () => {
               )}
             </div>
 
-            <div className="flex justify-end p-6 border-t border-slate-600/50">
+            <div className="flex justify-end p-6 border-t border-slate-600/50 flex-shrink-0">
               <button
                 onClick={() => setShowDateEventsModal(false)}
                 className="btn btn-outline border-slate-500 text-slate-300 hover:bg-slate-600 hover:text-white rounded-xl"
