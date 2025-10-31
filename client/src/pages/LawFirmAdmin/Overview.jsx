@@ -125,14 +125,11 @@ const AdminOverview = () => {
       legalCases: legalCases.length
     });
     
-    // Process data when available
-    if (users.length > 0 || departments.length > 0 || creditCases.length > 0 || legalCases.length > 0) {
-      
-      calculateStats();
-      generateRecentActivity();
-      generateTopPerformers();
-      generateCaseTrends();
-    }
+    // Always process data and generate trends (even with empty data, trends will show months)
+    calculateStats();
+    generateRecentActivity();
+    generateTopPerformers();
+    generateCaseTrends();
   }, [users, departments, creditCases, legalCases]);
 
   const calculateStats = () => {
@@ -293,21 +290,44 @@ const AdminOverview = () => {
     const now = new Date();
     const trends = [];
 
+    console.log("📈 Generating Case Trends - Total cases:", allCases.length);
+    console.log("Credit Cases:", creditCases.length);
+    console.log("Legal Cases:", legalCases.length);
+
     for (let i = 5; i >= 0; i--) {
       const month = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
       
+      // Ensure monthEnd is at the end of the day
+      monthEnd.setHours(23, 59, 59, 999);
+      
       const monthCases = allCases.filter(c => {
+        if (!c.createdAt) {
+          // If no createdAt, try other date fields
+          const dateField = c.createdAt || c.created_at || c.createdAtDate || new Date();
+          const caseDate = new Date(dateField);
+          return !isNaN(caseDate.getTime()) && caseDate >= month && caseDate <= monthEnd;
+        }
+        
         const caseDate = new Date(c.createdAt);
+        if (isNaN(caseDate.getTime())) {
+          console.warn("Invalid date for case:", c._id, c.createdAt);
+          return false;
+        }
+        
         return caseDate >= month && caseDate <= monthEnd;
       });
 
+      const monthLabel = month.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
       trends.push({
-        month: month.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+        month: monthLabel,
         total: monthCases.length,
       });
+
+      console.log(`Month ${monthLabel}: ${monthCases.length} cases`);
     }
 
+    console.log("📊 Final Trends:", trends);
     setCaseTrends(trends);
   };
 
@@ -742,20 +762,44 @@ const AdminOverview = () => {
               </div>
           
           <div className="h-48 sm:h-64 flex items-end justify-between gap-1 sm:gap-2">
-            {caseTrends.map((trend, index) => (
-              <div key={index} className="flex-1 flex flex-col items-center">
-                <div className="w-full bg-slate-700/50 rounded-t-lg relative group cursor-pointer">
-                  <div 
-                    className="bg-gradient-to-t from-blue-500 to-indigo-500 rounded-t-lg transition-all duration-300 group-hover:from-blue-400 group-hover:to-indigo-400"
-                    style={{ height: `${Math.max((trend.total / Math.max(...caseTrends.map(t => t.total))) * 160, 20)}px` }}
-                  ></div>
-                  <div className="absolute -top-6 sm:-top-8 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white px-2 py-1 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                    {trend.total} cases
+            {caseTrends && caseTrends.length > 0 ? (
+              (() => {
+                // Calculate max value safely
+                const maxValue = Math.max(...caseTrends.map(t => t.total || 0), 1);
+                const maxHeight = 160; // Maximum height in pixels
+                
+                return caseTrends.map((trend, index) => {
+                  // Calculate height percentage, but ensure minimum height for visibility
+                  const heightPercentage = maxValue > 0 ? (trend.total || 0) / maxValue : 0;
+                  const barHeight = Math.max(heightPercentage * maxHeight, trend.total > 0 ? 8 : 4);
+                  
+                  return (
+                    <div key={index} className="flex-1 flex flex-col items-center">
+                      <div className="w-full bg-slate-700/50 rounded-t-lg relative group cursor-pointer" style={{ height: '100%' }}>
+                        <div 
+                          className="bg-gradient-to-t from-blue-500 to-indigo-500 rounded-t-lg transition-all duration-300 group-hover:from-blue-400 group-hover:to-indigo-400 w-full"
+                          style={{ 
+                            height: `${barHeight}px`,
+                            minHeight: trend.total > 0 ? '8px' : '4px'
+                          }}
+                        ></div>
+                        <div className="absolute -top-6 sm:-top-8 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white px-2 py-1 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+                          {trend.total} cases
+                        </div>
+                      </div>
+                      <span className="text-slate-400 text-xs mt-2 text-center">{trend.month}</span>
+                    </div>
+                  );
+                });
+              })()
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-slate-400">
+                <div className="text-center">
+                  <p className="text-sm">No case data available</p>
+                  <p className="text-xs mt-1">Create cases to see trends</p>
+                </div>
               </div>
-            </div>
-                <span className="text-slate-400 text-xs mt-2 text-center">{trend.month}</span>
-              </div>
-            ))}
+            )}
           </div>
         </div>
 
