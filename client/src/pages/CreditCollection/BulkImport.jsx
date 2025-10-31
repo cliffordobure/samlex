@@ -110,7 +110,7 @@ const BulkImport = () => {
         {/* Header */}
         <div className="mb-6">
           <button
-            onClick={() => navigate("/admin")}
+            onClick={() => navigate("/credit-collection")}
             className="inline-flex items-center px-4 py-2 bg-slate-700/50 hover:bg-slate-700 text-white rounded-lg transition-all duration-200 mb-4"
           >
             <FaArrowLeft className="w-4 h-4 mr-2" />
@@ -327,7 +327,7 @@ const BulkImport = () => {
                 <button
                   onClick={() => {
                   navigate(
-                    `/admin/bulk-sms?batchId=${importResult.importBatchId}`
+                    `/credit-collection/bulk-sms?batchId=${importResult.importBatchId}`
                   );
                   }}
                   className="flex-1 inline-flex items-center justify-center px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-xl font-semibold transition-all duration-200 shadow-lg hover:shadow-xl"

@@ -74,7 +74,7 @@ const BulkSMS = () => {
       if (response.data.success && response.data.data.length > 0) {
         // Redirect to the most recent batch
         const latestBatch = response.data.data[0];
-        navigate(`/admin/bulk-sms?batchId=${latestBatch._id}`);
+        navigate(`/credit-collection/bulk-sms?batchId=${latestBatch._id}`);
       } else {
         // No batches found - stay on page and show message
         console.log("No import batches found");
@@ -147,7 +147,7 @@ const BulkSMS = () => {
           {/* Header */}
           <div className="mb-6">
             <button
-              onClick={() => navigate("/admin")}
+              onClick={() => navigate("/credit-collection")}
               className="inline-flex items-center px-4 py-2 bg-slate-700/50 hover:bg-slate-700 text-white rounded-lg transition-all duration-200 mb-4"
             >
               <FaArrowLeft className="w-4 h-4 mr-2" />
@@ -183,14 +183,14 @@ const BulkSMS = () => {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <button
-                onClick={() => navigate("/admin/bulk-import")}
+                onClick={() => navigate("/credit-collection/bulk-import")}
                 className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-xl font-semibold transition-all duration-200 shadow-lg hover:shadow-xl"
               >
                 <FaFileExcel className="w-5 h-5 mr-2" />
                 Import Cases from Excel
               </button>
               <button
-                onClick={() => navigate("/admin/cases")}
+                onClick={() => navigate("/credit-collection/cases")}
                 className="inline-flex items-center px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-semibold transition-all duration-200"
               >
                 <FaUsers className="w-5 h-5 mr-2" />
@@ -209,7 +209,7 @@ const BulkSMS = () => {
         {/* Header */}
         <div className="mb-6">
           <button
-            onClick={() => navigate("/admin")}
+            onClick={() => navigate("/credit-collection")}
             className="inline-flex items-center px-4 py-2 bg-slate-700/50 hover:bg-slate-700 text-white rounded-lg transition-all duration-200 mb-4"
           >
             <FaArrowLeft className="w-4 h-4 mr-2" />
@@ -449,7 +449,7 @@ const BulkSMS = () => {
                 Send Another Batch
               </button>
               <button
-                onClick={() => navigate("/admin/cases")}
+                onClick={() => navigate("/credit-collection/cases")}
                 className="flex-1 inline-flex items-center justify-center px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-xl font-semibold transition-all duration-200"
               >
                 View All Cases

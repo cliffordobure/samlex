@@ -17,7 +17,8 @@ import {
   FaCalendarAlt,
   FaArrowRight,
   FaUsers,
-  FaSearch
+  FaSearch,
+  FaSms
 } from "react-icons/fa";
 
 const CreditOverview = () => {
@@ -314,11 +315,18 @@ const CreditOverview = () => {
                 Generate Report
               </Link>
               <Link
-                to="/admin/bulk-import"
+                to="/credit-collection/bulk-import"
                 className="block w-full text-center px-4 py-3 bg-gradient-to-r from-orange-500/20 to-red-500/20 hover:from-orange-500/30 hover:to-red-500/30 text-orange-400 rounded-xl font-medium transition-all duration-200 border border-orange-500/30 hover:border-orange-500/50"
               >
                 <FaFileAlt className="w-4 h-4 inline mr-2" />
                 Bulk Import
+              </Link>
+              <Link
+                to="/credit-collection/bulk-sms"
+                className="block w-full text-center px-4 py-3 bg-gradient-to-r from-green-500/20 to-emerald-500/20 hover:from-green-500/30 hover:to-emerald-500/30 text-green-400 rounded-xl font-medium transition-all duration-200 border border-green-500/30 hover:border-green-500/50"
+              >
+                <FaSms className="w-4 h-4 inline mr-2" />
+                Bulk SMS
               </Link>
             </div>
           </div>
