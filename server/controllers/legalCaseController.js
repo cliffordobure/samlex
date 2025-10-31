@@ -1,6 +1,7 @@
 import LegalCase from "../models/LegalCase.js";
 import CreditCase from "../models/CreditCase.js";
 import User from "../models/User.js";
+import Client from "../models/Client.js";
 import Department from "../models/Department.js";
 import Document from "../models/Document.js";
 import mongoose from "mongoose";
@@ -278,27 +279,24 @@ export const createLegalCase = async (req, res) => {
             };
             
             // Check if client already exists
-            let existingClient = await User.findOne({
+            let existingClient = await Client.findOne({
               email: debtorClient.email,
               lawFirm: req.user.lawFirm._id,
-              role: "client",
             });
             
             if (existingClient) {
               newCase.client = existingClient._id;
               console.log("Found existing client for debtor");
             } else if (debtorClient.email) {
-              // Create new client user from debtor
+              // Create new client from debtor
               const [firstName, ...lastNameParts] = debtorClient.name.trim().split(" ");
               const lastName = lastNameParts.join(" ") || "Client";
               
-              const newClient = new User({
+              const newClient = new Client({
                 firstName: firstName || "Client",
                 lastName: lastName,
                 email: debtorClient.email,
                 phoneNumber: debtorClient.phone || "",
-                password: Math.random().toString(36).slice(-8),
-                role: "client",
                 lawFirm: req.user.lawFirm._id,
                 createdBy: req.user._id,
               });
@@ -1439,7 +1437,7 @@ export const completeCaseInfo = async (req, res) => {
     // Check if case exists and user has permission
     const existingCase = await LegalCase.findById(id)
       .populate("assignedTo", "firstName lastName email")
-      .populate("client", "firstName lastName email phoneNumber");
+      .populate("client", "firstName lastName email phoneNumber clientType companyName");
 
     if (!existingCase) {
       return res.status(404).json({
@@ -1465,26 +1463,23 @@ export const completeCaseInfo = async (req, res) => {
     let clientId = existingCase.client;
     if (client && typeof client === "object" && client.name && client.email) {
       // Check if client already exists
-      let existingClient = await User.findOne({
+      let existingClient = await Client.findOne({
         email: client.email,
         lawFirm: req.user.lawFirm._id,
-        role: "client",
       });
 
       if (existingClient) {
         clientId = existingClient._id;
       } else {
-        // Create new client user
+        // Create new client
         const [firstName, ...lastNameParts] = client.name.trim().split(" ");
         const lastName = lastNameParts.join(" ") || "Client";
 
-        const newClient = new User({
+        const newClient = new Client({
           firstName: firstName || "Client",
           lastName: lastName,
           email: client.email,
           phoneNumber: client.phone || "",
-          password: Math.random().toString(36).slice(-8), // Generate random password
-          role: "client",
           lawFirm: req.user.lawFirm._id,
           createdBy: req.user._id,
         });
@@ -1509,7 +1504,7 @@ export const completeCaseInfo = async (req, res) => {
     )
       .populate("assignedTo", "firstName lastName email")
       .populate("assignedBy", "firstName lastName email")
-      .populate("client", "firstName lastName email phoneNumber")
+      .populate("client", "firstName lastName email phoneNumber clientType companyName")
       .populate("createdBy", "firstName lastName email")
       .populate("department", "name code");
 
@@ -1613,7 +1608,7 @@ export const updateFilingFeePayment = async (req, res) => {
     )
       .populate("assignedTo", "firstName lastName email")
       .populate("assignedBy", "firstName lastName email")
-      .populate("client", "firstName lastName email phoneNumber")
+      .populate("client", "firstName lastName email phoneNumber clientType companyName")
       .populate("createdBy", "firstName lastName email")
       .populate("department", "name code");
       

@@ -30,7 +30,7 @@ const legalCaseSchema = new mongoose.Schema(
     },
     client: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: "Client",
       required: false, // Made optional to handle escalated cases without clients
     },
     caseType: {

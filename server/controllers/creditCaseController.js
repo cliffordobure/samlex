@@ -1,5 +1,6 @@
 import CreditCase from "../models/CreditCase.js";
 import User from "../models/User.js";
+import Client from "../models/Client.js";
 import mongoose from "mongoose";
 import Comment from "../models/Comment.js";
 import Payment from "../models/Payment.js";
