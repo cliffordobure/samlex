@@ -488,13 +488,36 @@ export const getImportBatches = async (req, res) => {
       {
         $sort: { importedAt: -1 },
       },
+      {
+        $lookup: {
+          from: "users",
+          localField: "importedBy",
+          foreignField: "_id",
+          as: "importedByDetails",
+        },
+      },
+      {
+        $unwind: {
+          path: "$importedByDetails",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          bankName: 1,
+          importedAt: 1,
+          totalCases: 1,
+          totalDebt: 1,
+          importedBy: {
+            _id: "$importedByDetails._id",
+            firstName: "$importedByDetails.firstName",
+            lastName: "$importedByDetails.lastName",
+            email: "$importedByDetails.email",
+          },
+        },
+      },
     ]);
-
-    // Populate importedBy user details
-    await CreditCase.populate(batches, {
-      path: "importedBy",
-      select: "firstName lastName email",
-    });
 
     res.status(200).json({
       success: true,
