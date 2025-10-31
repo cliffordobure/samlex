@@ -34,6 +34,7 @@ import Reports from "./pages/LawFirmAdmin/Reports";
 import Profile from "./pages/LawFirmAdmin/Profile";
 import CreditCollectionDashboard from "./pages/CreditCollection/Dashboard";
 import LegalDashboard from "./pages/Legal/Dashboard";
+import ReceptionistDashboard from "./pages/Receptionist/Dashboard";
 import NotFound from "./pages/NotFound";
 import CaseManagement from "./pages/CreditCollection/CaseManagement";
 import CaseDetails from "./pages/CreditCollection/CaseDetails";
@@ -134,6 +135,8 @@ function App() {
       case "legal_head":
       case "advocate":
         return "/legal";
+      case "receptionist":
+        return "/receptionist";
       case "client":
         return "/dashboard";
       default:
@@ -167,6 +170,8 @@ function App() {
       case "legal_head":
       case "advocate":
         return path.startsWith("/legal");
+      case "receptionist":
+        return path.startsWith("/receptionist");
       case "client":
         return path.startsWith("/dashboard");
       default:
@@ -303,6 +308,15 @@ function App() {
         />
 
         <Route
+          path="/receptionist/*"
+          element={
+            <ProtectedRoute allowedRoles={["receptionist"]}>
+              <ReceptionistDashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
           path="/dashboard"
           element={
             <ProtectedRoute allowedRoles={["client"]}>
@@ -322,6 +336,7 @@ function App() {
                 "debt_collector",
                 "law_firm_admin",
                 "law_firm",
+                "receptionist",
                 "system_owner",
               ]}
             >

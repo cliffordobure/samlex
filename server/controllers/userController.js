@@ -522,6 +522,7 @@ export const getUsersByRole = async (req, res) => {
       "debt_collector",
       "legal_head",
       "advocate",
+      "receptionist",
       "client",
     ];
 

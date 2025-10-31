@@ -41,6 +41,8 @@ const PublicRoute = ({ children }) => {
       case "legal_head":
       case "advocate":
         return <Navigate to="/legal" replace />;
+      case "receptionist":
+        return <Navigate to="/receptionist" replace />;
       case "client":
         return <Navigate to="/dashboard" replace />;
       default:

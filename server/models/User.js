@@ -35,6 +35,7 @@ const userSchema = new mongoose.Schema(
         "debt_collector",
         "legal_head",
         "advocate",
+        "receptionist",
         "client",
       ],
       required: true,

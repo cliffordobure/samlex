@@ -195,6 +195,7 @@ const UserList = () => {
       debt_collector: <FaUserCheck className="w-4 h-4" />,
       legal_head: <FaUserShield className="w-4 h-4" />,
       advocate: <FaGavel className="w-4 h-4" />,
+      receptionist: <FaUser className="w-4 h-4" />,
       client: <FaUser className="w-4 h-4" />,
     };
     return roleIcons[role] || <FaUser className="w-4 h-4" />;
@@ -206,6 +207,7 @@ const UserList = () => {
       debt_collector: "bg-green-500/20 text-green-400 border-green-500/30",
       legal_head: "bg-purple-500/20 text-purple-400 border-purple-500/30",
       advocate: "bg-indigo-500/20 text-indigo-400 border-indigo-500/30",
+      receptionist: "bg-pink-500/20 text-pink-400 border-pink-500/30",
       client: "bg-orange-500/20 text-orange-400 border-orange-500/30",
     };
     return roleColors[role] || "bg-slate-500/20 text-slate-400 border-slate-500/30";
@@ -316,6 +318,7 @@ const UserList = () => {
                 <option value="debt_collector">Debt Collector</option>
                 <option value="legal_head">Legal Head</option>
                 <option value="advocate">Advocate</option>
+                <option value="receptionist">Receptionist</option>
                 <option value="client">Client</option>
               </select>
             </div>
@@ -805,6 +808,7 @@ const CreateUser = () => {
                     <option value="debt_collector">Debt Collector</option>
                     <option value="legal_head">Legal Head</option>
                     <option value="advocate">Advocate</option>
+                    <option value="receptionist">Receptionist</option>
                     <option value="client">Client</option>
                   </select>
                 </div>
@@ -1201,6 +1205,7 @@ const EditUser = () => {
                     <option value="debt_collector">Debt Collector</option>
                     <option value="legal_head">Legal Head</option>
                     <option value="advocate">Advocate</option>
+                    <option value="receptionist">Receptionist</option>
                     <option value="client">Client</option>
                   </select>
                 </div>

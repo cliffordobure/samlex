@@ -78,6 +78,7 @@ export const validateUser = [
       "debt_collector",
       "legal_head",
       "advocate",
+      "receptionist",
       "client",
     ])
     .withMessage("Invalid role specified"),
