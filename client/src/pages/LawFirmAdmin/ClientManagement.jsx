@@ -21,6 +21,7 @@ import {
   FaBuilding,
   FaUser,
   FaUserTie,
+  FaUserCircle,
   FaPhone,
   FaEnvelope,
   FaCalendar,
