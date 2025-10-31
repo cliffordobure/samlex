@@ -39,7 +39,11 @@ const ReceptionistOverview = () => {
         dispatch(getCreditCases({ lawFirm: user.lawFirm._id, limit: 100 })),
         dispatch(getLegalCases({ lawFirm: user.lawFirm._id, limit: 100 })),
         dispatch(getUsers({ lawFirm: user.lawFirm._id, limit: 50 })),
-      ]).finally(() => setIsLoading(false));
+      ]).catch((error) => {
+        console.error("Error loading receptionist data:", error);
+      }).finally(() => setIsLoading(false));
+    } else {
+      setIsLoading(false);
     }
   }, [dispatch, user?.lawFirm?._id]);
 
@@ -169,12 +173,9 @@ const ReceptionistOverview = () => {
                   {caseItem.status?.replace("_", " ").toUpperCase()} • {new Date(caseItem.updatedAt || caseItem.createdAt).toLocaleDateString()}
                 </div>
               </div>
-              <Link
-                to={`/receptionist/cases/${caseItem._id}`}
-                className="text-pink-400 hover:text-pink-300"
-              >
+              <div className="text-pink-400 hover:text-pink-300 cursor-pointer">
                 <FaArrowRight />
-              </Link>
+              </div>
             </div>
           ))}
           {stats.totalCases === 0 && (

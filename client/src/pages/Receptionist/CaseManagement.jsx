@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Link } from "react-router-dom";
 import { getCreditCases } from "../../store/slices/creditCaseSlice";
 import { getLegalCases } from "../../store/slices/legalCaseSlice";
 import {
@@ -116,9 +115,8 @@ const CaseManagement = () => {
         <div className="space-y-4">
           {filteredCases.length > 0 ? (
             filteredCases.map((caseItem) => (
-              <Link
+              <div
                 key={caseItem._id}
-                to={`/receptionist/cases/${caseItem._id}`}
                 className="block p-4 bg-slate-700/30 rounded-lg hover:bg-slate-700/50 transition-all duration-200 border border-slate-600/50"
               >
                 <div className="flex items-center justify-between">
@@ -143,7 +141,7 @@ const CaseManagement = () => {
                     </span>
                   </div>
                 </div>
-              </Link>
+              </div>
             ))
           ) : (
             <div className="text-center py-12 text-slate-400">

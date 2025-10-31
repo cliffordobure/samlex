@@ -6,13 +6,15 @@ import ClientManagement from "./ClientManagement";
 import Calendar from "./Calendar";
 
 const ReceptionistDashboard = () => {
+  console.log("📍 ReceptionistDashboard component rendering");
+  
   return (
     <ReceptionistLayout>
       <Routes>
-        <Route path="/" element={<ReceptionistOverview />} />
-        <Route path="/cases" element={<CaseManagement />} />
-        <Route path="/clients" element={<ClientManagement />} />
-        <Route path="/calendar" element={<Calendar />} />
+        <Route index element={<ReceptionistOverview />} />
+        <Route path="cases" element={<CaseManagement />} />
+        <Route path="clients" element={<ClientManagement />} />
+        <Route path="calendar" element={<Calendar />} />
       </Routes>
     </ReceptionistLayout>
   );
