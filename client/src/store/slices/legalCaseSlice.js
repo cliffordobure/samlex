@@ -291,11 +291,21 @@ const legalCaseSlice = createSlice({
         }
       })
       .addCase(addLegalCaseDocument.fulfilled, (state, action) => {
+        // Handle response structure: { success: true, data: case, message: "..." }
+        const updatedCase = action.payload.data || action.payload;
+        const caseId = updatedCase._id || updatedCase.id;
+        
+        // Update in cases array
         const index = state.cases.findIndex(
-          (case_) => case_._id === action.payload._id
+          (case_) => case_._id === caseId
         );
         if (index !== -1) {
-          state.cases[index] = action.payload;
+          state.cases[index] = updatedCase;
+        }
+        
+        // Update currentCase if it's the same case being viewed
+        if (state.currentCase && state.currentCase._id === caseId) {
+          state.currentCase = updatedCase;
         }
       })
       .addCase(getLegalCase.pending, (state) => {

@@ -975,9 +975,13 @@ export const addDocumentToCase = async (req, res) => {
 
     const updatedCase = await legalCase.save();
 
+    // Populate uploadedBy for the documents before sending response
+    const populatedCase = await LegalCase.findById(updatedCase._id)
+      .populate("documents.uploadedBy", "firstName lastName email");
+
     res.json({
       success: true,
-      data: updatedCase,
+      data: populatedCase,
       message: "Documents added successfully",
     });
   } catch (error) {

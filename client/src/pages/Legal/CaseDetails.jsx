@@ -583,9 +583,16 @@ const CaseDetails = () => {
 
       // Add documents to case
       console.log("Sending to API:", { documents: uploadedUrls });
-      await legalCaseApi.addDocument(id, { documents: uploadedUrls });
+      const response = await legalCaseApi.addDocument(id, { documents: uploadedUrls });
+      
+      if (response.data.success && response.data.data) {
+        // Update currentCase immediately with the response
+        dispatch(setCurrentCase(response.data.data));
+      }
+      
       toast.success("Documents uploaded successfully");
-      dispatch(getLegalCase(id)); // Refresh case details
+      // Refresh case details to get fully populated data
+      dispatch(getLegalCase(id));
     } catch (error) {
       console.error("Document upload error:", error);
       toast.error(
@@ -1204,38 +1211,47 @@ const CaseDetails = () => {
                 </div>
               </div>
               <div className="p-8">
-                {currentCase.documents && currentCase.documents.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {currentCase.documents.map((doc, index) => (
-                      <div
-                        key={index}
-                        className="bg-dark-900/30 border border-dark-600 rounded-lg p-4 hover:bg-dark-900/50 transition-all duration-200 cursor-pointer"
-                        onClick={() => handleDocumentClick(doc)}
-                      >
-                        <div className="flex items-center gap-3">
-                          <FaFileAlt className="w-5 h-5 text-primary-400" />
-                          <div className="flex-1">
-                            <div className="font-medium text-white truncate">
-                              {doc.originalName ||
-                                doc.name ||
-                                `Document ${index + 1}`}
+                {(() => {
+                  // Handle different document formats and ensure we have valid documents
+                  const documents = currentCase.documents || [];
+                  const validDocuments = documents.filter(doc => {
+                    // Document must be an object with at least a path or name
+                    if (!doc || typeof doc !== 'object') return false;
+                    return doc.path || doc.name || doc.originalName;
+                  });
+                  
+                  return validDocuments.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {validDocuments.map((doc, index) => (
+                        <div
+                          key={doc._id || doc.path || index}
+                          className="bg-dark-900/30 border border-dark-600 rounded-lg p-4 hover:bg-dark-900/50 transition-all duration-200 cursor-pointer"
+                          onClick={() => handleDocumentClick(doc)}
+                        >
+                          <div className="flex items-center gap-3">
+                            <FaFileAlt className="w-5 h-5 text-primary-400" />
+                            <div className="flex-1">
+                              <div className="font-medium text-white truncate">
+                                {doc.originalName ||
+                                  doc.name ||
+                                  (doc.path ? doc.path.split("/").pop() : `Document ${index + 1}`)}
+                              </div>
+                              <div className="text-sm text-dark-400">
+                                {doc.uploadedBy?.firstName || doc.uploadedBy ? `${doc.uploadedBy.firstName || ''} ${doc.uploadedBy.lastName || ''}`.trim() : 'Unknown'}
+                              </div>
                             </div>
-                            <div className="text-sm text-dark-400">
-                              {doc.uploadedBy?.firstName}{" "}
-                              {doc.uploadedBy?.lastName}
-                            </div>
+                            <FaEye className="w-4 h-4 text-dark-400 hover:text-primary-400 transition-colors" />
                           </div>
-                          <FaEye className="w-4 h-4 text-dark-400 hover:text-primary-400 transition-colors" />
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-dark-400">
-                    <FaFileAlt className="mx-auto text-4xl mb-4" />
-                    <p>No documents uploaded yet</p>
-                  </div>
-                )}
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-dark-400">
+                      <FaFileAlt className="mx-auto text-4xl mb-4" />
+                      <p>No documents uploaded yet</p>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
 
