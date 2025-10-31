@@ -10,7 +10,7 @@ import {
   setFilters,
   clearFilters,
 } from "../../store/slices/clientSlice";
-import { fetchDepartments } from "../../store/slices/departmentSlice";
+import { getDepartments } from "../../store/slices/departmentSlice";
 import {
   FaSearch,
   FaPlus,
@@ -69,7 +69,7 @@ const ClientManagement = () => {
   useEffect(() => {
     dispatch(fetchClients(filters));
     dispatch(fetchClientStats());
-    dispatch(fetchDepartments());
+    dispatch(getDepartments());
   }, [dispatch, filters]);
 
   const handleSearch = (e) => {
