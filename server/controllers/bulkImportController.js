@@ -1,6 +1,7 @@
 import CreditCase from "../models/CreditCase.js";
 import ExcelJS from "exceljs";
 import { v4 as uuidv4 } from "uuid";
+import mongoose from "mongoose";
 import {
   sendBulkSMS,
   sendSMS,
@@ -463,11 +464,14 @@ export const getImportBatches = async (req, res) => {
 
     console.log("User law firm ID resolved:", userLawFirmId);
 
+    // Convert to ObjectId for aggregation
+    const lawFirmObjectId = new mongoose.Types.ObjectId(userLawFirmId);
+
     // Get unique import batches for the user's law firm
     const batches = await CreditCase.aggregate([
       {
         $match: {
-          lawFirm: userLawFirmId,
+          lawFirm: lawFirmObjectId,
           importBatchId: { $exists: true, $ne: null },
         },
       },
