@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
 import axios from "axios";
 import toast from "react-hot-toast";
@@ -18,10 +18,17 @@ import {
 
 const BulkSMS = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const batchId = searchParams.get("batchId");
 
   const { user } = useSelector((state) => state.auth);
+  
+  // Determine base path based on current location
+  const isAdminRoute = location.pathname.startsWith("/admin");
+  const basePath = isAdminRoute ? "/admin" : "/credit-collection";
+  
+  console.log("🔔 BulkSMS Component - Location:", location.pathname, "basePath:", basePath, "batchId:", batchId);
   const [batchInfo, setBatchInfo] = useState(null);
   const [cases, setCases] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -33,11 +40,15 @@ const BulkSMS = () => {
   const [smsResult, setSmsResult] = useState(null);
 
   useEffect(() => {
-    if (batchId) {
-      fetchBatchCases();
-    } else {
-      fetchImportBatches();
+    // Only run if component has mounted and we have a valid basePath
+    if (basePath) {
+      if (batchId) {
+        fetchBatchCases();
+      } else {
+        fetchImportBatches();
+      }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [batchId]);
 
   const fetchBatchCases = async () => {
@@ -72,9 +83,15 @@ const BulkSMS = () => {
       );
 
       if (response.data.success && response.data.data.length > 0) {
-        // Redirect to the most recent batch
+        // Redirect to the most recent batch only if we don't already have a batchId
         const latestBatch = response.data.data[0];
-        navigate(`/credit-collection/bulk-sms?batchId=${latestBatch._id}`);
+        // Only redirect if we're not already showing this batch
+        if (!batchId || batchId !== latestBatch._id) {
+          navigate(`${basePath}/bulk-sms?batchId=${latestBatch._id}`, { replace: true });
+        } else {
+          // We already have the correct batch, just set loading to false
+          setIsLoading(false);
+        }
       } else {
         // No batches found - stay on page and show message
         console.log("No import batches found");
@@ -147,7 +164,7 @@ const BulkSMS = () => {
           {/* Header */}
           <div className="mb-6">
             <button
-              onClick={() => navigate("/credit-collection")}
+              onClick={() => navigate(basePath)}
               className="inline-flex items-center px-4 py-2 bg-slate-700/50 hover:bg-slate-700 text-white rounded-lg transition-all duration-200 mb-4"
             >
               <FaArrowLeft className="w-4 h-4 mr-2" />
@@ -183,14 +200,14 @@ const BulkSMS = () => {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <button
-                onClick={() => navigate("/credit-collection/bulk-import")}
+                onClick={() => navigate(`${basePath}/bulk-import`)}
                 className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-xl font-semibold transition-all duration-200 shadow-lg hover:shadow-xl"
               >
                 <FaFileExcel className="w-5 h-5 mr-2" />
                 Import Cases from Excel
               </button>
               <button
-                onClick={() => navigate("/credit-collection/cases")}
+                onClick={() => navigate(`${basePath}/cases`)}
                 className="inline-flex items-center px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-semibold transition-all duration-200"
               >
                 <FaUsers className="w-5 h-5 mr-2" />
@@ -209,7 +226,7 @@ const BulkSMS = () => {
         {/* Header */}
         <div className="mb-6">
           <button
-            onClick={() => navigate("/credit-collection")}
+            onClick={() => navigate(basePath)}
             className="inline-flex items-center px-4 py-2 bg-slate-700/50 hover:bg-slate-700 text-white rounded-lg transition-all duration-200 mb-4"
           >
             <FaArrowLeft className="w-4 h-4 mr-2" />
@@ -449,7 +466,7 @@ const BulkSMS = () => {
                 Send Another Batch
               </button>
               <button
-                onClick={() => navigate("/credit-collection/cases")}
+                onClick={() => navigate(`${basePath}/cases`)}
                 className="flex-1 inline-flex items-center justify-center px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-xl font-semibold transition-all duration-200"
               >
                 View All Cases

@@ -107,7 +107,12 @@ function App() {
       });
 
       // If user is on a protected route that doesn't match their role, redirect
-      if (!isCorrectRouteForRole(currentPath, actualRole)) {
+      // But don't redirect if they're already navigating (e.g., bulk-sms redirecting to add batchId)
+      const isNavigatingWithinRoute = 
+        (currentPath.startsWith("/admin") && correctRoute === "/admin") ||
+        (currentPath.startsWith("/credit-collection") && correctRoute === "/credit-collection");
+      
+      if (!isCorrectRouteForRole(currentPath, actualRole) && !isNavigatingWithinRoute) {
         console.log("🚀 Redirecting user to correct dashboard:", correctRoute);
         navigate(correctRoute, { replace: true });
       }
