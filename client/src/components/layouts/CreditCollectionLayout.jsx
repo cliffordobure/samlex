@@ -14,7 +14,9 @@ import {
   FaUserCircle, 
   FaSignOutAlt,
   FaBuilding,
-  FaGavel
+  FaGavel,
+  FaFileExcel,
+  FaSms
 } from "react-icons/fa";
 
 const CreditCollectionLayout = ({ children }) => {
@@ -35,6 +37,18 @@ const CreditCollectionLayout = ({ children }) => {
       href: "/credit-collection/cases",
       icon: <FaFolderOpen className="w-5 h-5" />,
       description: "Manage credit collection cases"
+    },
+    {
+      name: "Bulk Import",
+      href: "/credit-collection/bulk-import",
+      icon: <FaFileExcel className="w-5 h-5" />,
+      description: "Import cases from Excel"
+    },
+    {
+      name: "Bulk SMS",
+      href: "/credit-collection/bulk-sms",
+      icon: <FaSms className="w-5 h-5" />,
+      description: "Send SMS to debtors"
     },
     {
       name: "Calendar",
