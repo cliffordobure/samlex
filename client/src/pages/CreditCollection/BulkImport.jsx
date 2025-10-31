@@ -14,6 +14,7 @@ import {
   FaArrowLeft,
   FaSms,
   FaDownload,
+  FaTimes,
 } from "react-icons/fa";
 
 const BulkImport = () => {
@@ -23,8 +24,60 @@ const BulkImport = () => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const [importResult, setImportResult] = useState(null);
+  const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
+  const [duplicateInfo, setDuplicateInfo] = useState(null);
+  const [pendingImport, setPendingImport] = useState(null);
 
-  const handleFileChange = (e) => {
+  // Calculate file hash for duplicate detection
+  const calculateFileHash = async (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const buffer = e.target.result;
+        // Use first 1KB of file content for hash
+        const chunk = buffer.slice(0, 1024);
+        const hash = Array.from(new Uint8Array(chunk))
+          .map(b => b.toString(16).padStart(2, '0'))
+          .join('');
+        resolve(hash);
+      };
+      reader.onerror = reject;
+      reader.readAsArrayBuffer(file);
+    });
+  };
+
+  // Check for duplicate file
+  const checkDuplicate = async (file) => {
+    try {
+      const fileHash = await calculateFileHash(file);
+      const fileIdentifier = {
+        fileName: file.name,
+        fileSize: file.size,
+        fileHash: fileHash.substring(0, 32), // Use first 32 chars for quick comparison
+        bankName: bankName.trim() || undefined, // Include bank name if provided
+      };
+
+      const token = localStorage.getItem("token");
+      const response = await axios.post(
+        `${API_URL}/credit-cases/check-duplicate`,
+        fileIdentifier,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      return response.data;
+    } catch (error) {
+      console.error("Error checking duplicate:", error);
+      // If check fails, allow import to proceed
+      return { isDuplicate: false };
+    }
+  };
+
+  const handleFileChange = async (e) => {
     const file = e.target.files[0];
     if (file) {
       // Validate file type
@@ -36,7 +89,17 @@ const BulkImport = () => {
         toast.error("Please select a valid Excel file (.xlsx or .xls)");
         return;
       }
+      
       setSelectedFile(file);
+      
+      // Check for duplicate if bank name is provided
+      if (bankName.trim()) {
+        const duplicateCheck = await checkDuplicate(file);
+        if (duplicateCheck.isDuplicate) {
+          setDuplicateInfo(duplicateCheck);
+          setShowDuplicateDialog(true);
+        }
+      }
     }
   };
 
@@ -45,8 +108,8 @@ const BulkImport = () => {
     setImportResult(null);
   };
 
-  const handleImport = async (e) => {
-    e.preventDefault();
+  const handleImport = async (e, forceImport = false) => {
+    e?.preventDefault();
 
     if (!bankName.trim()) {
       toast.error("Please enter the bank/creditor name");
@@ -56,6 +119,17 @@ const BulkImport = () => {
     if (!selectedFile) {
       toast.error("Please select an Excel file to upload");
       return;
+    }
+
+    // Check for duplicate before importing (if not forced)
+    if (!forceImport) {
+      const duplicateCheck = await checkDuplicate(selectedFile);
+      if (duplicateCheck.isDuplicate) {
+        setDuplicateInfo(duplicateCheck);
+        setShowDuplicateDialog(true);
+        setPendingImport({ bankName, file: selectedFile });
+        return;
+      }
     }
 
     setIsUploading(true);
@@ -181,7 +255,17 @@ const BulkImport = () => {
                   <input
                     type="text"
                     value={bankName}
-                    onChange={(e) => setBankName(e.target.value)}
+                    onChange={async (e) => {
+                      setBankName(e.target.value);
+                      // Check for duplicate when bank name changes and file is selected
+                      if (selectedFile && e.target.value.trim()) {
+                        const duplicateCheck = await checkDuplicate(selectedFile);
+                        if (duplicateCheck.isDuplicate) {
+                          setDuplicateInfo(duplicateCheck);
+                          setShowDuplicateDialog(true);
+                        }
+                      }
+                    }}
                     placeholder="e.g., KCB Bank, Equity Bank"
                     className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     required
@@ -344,6 +428,108 @@ const BulkImport = () => {
                   className="flex-1 inline-flex items-center justify-center px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-semibold transition-all duration-200"
                 >
                   Import Another File
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Duplicate Detection Dialog */}
+        {showDuplicateDialog && duplicateInfo && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-gradient-to-r from-slate-800/95 to-slate-700/95 rounded-2xl p-6 w-full max-w-md border border-slate-600/50 shadow-2xl">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-yellow-500/20 rounded-lg">
+                    <FaExclamationTriangle className="w-6 h-6 text-yellow-400" />
+                  </div>
+                  <h3 className="text-xl font-bold text-white">
+                    Duplicate File Detected
+                  </h3>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowDuplicateDialog(false);
+                    setDuplicateInfo(null);
+                    setPendingImport(null);
+                  }}
+                  className="text-slate-400 hover:text-white transition-colors"
+                >
+                  <FaTimes className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="mb-6">
+                <p className="text-slate-300 mb-4">
+                  A file with the same name and content has been imported before.
+                </p>
+                
+                {duplicateInfo.previousImport && (
+                  <div className="bg-slate-700/50 rounded-xl p-4 mb-4 border border-slate-600">
+                    <h4 className="text-sm font-semibold text-slate-400 mb-2">
+                      Previous Import Details:
+                    </h4>
+                    <div className="space-y-1 text-sm text-slate-300">
+                      <p>
+                        <strong>Bank:</strong> {duplicateInfo.previousImport.bankName || "N/A"}
+                      </p>
+                      <p>
+                        <strong>Imported:</strong>{" "}
+                        {duplicateInfo.previousImport.importedAt
+                          ? new Date(duplicateInfo.previousImport.importedAt).toLocaleString()
+                          : "N/A"}
+                        {duplicateInfo.previousImport.timeAgo && (
+                          <span className="text-slate-400"> ({duplicateInfo.previousImport.timeAgo})</span>
+                        )}
+                      </p>
+                      <p>
+                        <strong>Cases:</strong> {duplicateInfo.previousImport.totalCases || 0}
+                      </p>
+                      {duplicateInfo.previousImport.importedBy && (
+                        <p>
+                          <strong>By:</strong>{" "}
+                          {duplicateInfo.previousImport.importedBy.firstName}{" "}
+                          {duplicateInfo.previousImport.importedBy.lastName}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4">
+                  <p className="text-yellow-400 text-sm">
+                    <strong>Warning:</strong> Importing this file again will create duplicate cases.
+                    Are you sure you want to proceed?
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-4">
+                <button
+                  onClick={() => {
+                    setShowDuplicateDialog(false);
+                    setDuplicateInfo(null);
+                    setPendingImport(null);
+                  }}
+                  className="flex-1 px-6 py-3 bg-slate-600/50 hover:bg-slate-600 text-white rounded-xl font-semibold transition-all duration-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    setShowDuplicateDialog(false);
+                    // Proceed with import
+                    if (pendingImport) {
+                      await handleImport(null, true);
+                    } else {
+                      await handleImport(null, true);
+                    }
+                    setDuplicateInfo(null);
+                    setPendingImport(null);
+                  }}
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white rounded-xl font-semibold transition-all duration-200 shadow-lg hover:shadow-xl"
+                >
+                  Yes, Import Anyway
                 </button>
               </div>
             </div>

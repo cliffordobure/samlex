@@ -27,6 +27,7 @@ import {
   sendSingleCaseSMS,
   getImportBatches,
   getCasesByBatchId,
+  checkDuplicateImport,
 } from "../controllers/bulkImportController.js";
 import { protect } from "../middleware/auth.js";
 
@@ -58,6 +59,7 @@ router.get("/", protect, getCreditCases);
 router.get("/escalated", protect, getEscalatedCreditCases);
 
 // Bulk import and SMS routes - MUST BE BEFORE /:id routes
+router.post("/check-duplicate", protect, checkDuplicateImport);
 router.post("/bulk-import", protect, upload.single("file"), bulkImportCases);
 router.post("/bulk-sms", protect, sendBulkCaseSMS);
 router.get("/import-batches", protect, getImportBatches);

@@ -582,10 +582,125 @@ export const getCasesByBatchId = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Check if a file has been imported before (duplicate detection)
+ * @route   POST /api/credit-cases/check-duplicate
+ * @access  Private (debt_collector, credit_head, law_firm_admin)
+ */
+export const checkDuplicateImport = async (req, res) => {
+  try {
+    const { fileName, fileSize, fileHash, bankName } = req.body;
+
+    if (!fileName || !fileSize) {
+      return res.status(400).json({
+        success: false,
+        message: "File name and size are required",
+      });
+    }
+
+    // Handle different lawFirm formats (ObjectId, Buffer, or populated object)
+    let userLawFirmId;
+    if (req.user.lawFirm && req.user.lawFirm._id) {
+      userLawFirmId = req.user.lawFirm._id;
+    } else if (req.user.lawFirm && req.user.lawFirm.buffer) {
+      userLawFirmId = req.user.lawFirm.toString();
+    } else if (req.user.lawFirm) {
+      userLawFirmId = req.user.lawFirm;
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: "User is not associated with any law firm",
+      });
+    }
+
+    // Get all import batches for this law firm
+    const existingBatches = await CreditCase.aggregate([
+      {
+        $match: {
+          lawFirm: new mongoose.Types.ObjectId(userLawFirmId),
+          importBatchId: { $exists: true, $ne: null },
+        },
+      },
+      {
+        $group: {
+          _id: "$importBatchId",
+          bankName: { $first: "$bankName" },
+          importedAt: { $first: "$importedAt" },
+          importedBy: { $first: "$importedBy" },
+          totalCases: { $sum: 1 },
+        },
+      },
+      {
+        $sort: { importedAt: -1 },
+      },
+      {
+        $limit: 100, // Check last 100 imports
+      },
+    ]);
+
+    // Check for duplicates: same file name + size + bank name
+    // Also check if there's a very recent import (within last 10 minutes) with same bank name
+    const now = new Date();
+    
+    for (const batch of existingBatches) {
+      const importTime = new Date(batch.importedAt);
+      const timeDiff = (now - importTime) / 1000 / 60; // minutes
+      
+      // Match criteria:
+      // 1. Same bank name (if provided)
+      // 2. Very recent import (within 10 minutes)
+      const bankNameMatch = !bankName || 
+                           !batch.bankName || 
+                           batch.bankName.toLowerCase().trim() === bankName.toLowerCase().trim();
+      
+      const isRecent = timeDiff < 10; // Within last 10 minutes
+      
+      if (bankNameMatch && isRecent) {
+        // Get importedBy details
+        let importedByDetails = null;
+        if (batch.importedBy) {
+          const User = (await import("../models/User.js")).default;
+          importedByDetails = await User.findById(batch.importedBy)
+            .select("firstName lastName email");
+        }
+
+        return res.status(200).json({
+          success: true,
+          isDuplicate: true,
+          previousImport: {
+            batchId: batch._id,
+            bankName: batch.bankName,
+            importedAt: batch.importedAt,
+            totalCases: batch.totalCases,
+            importedBy: importedByDetails,
+            timeAgo: `${Math.round(timeDiff)} ${Math.round(timeDiff) === 1 ? 'minute' : 'minutes'} ago`,
+          },
+          message: "A file with the same name and bank was recently imported. Are you sure you want to import again?",
+        });
+      }
+    }
+
+    // No duplicate found
+    return res.status(200).json({
+      success: true,
+      isDuplicate: false,
+      message: "No duplicate found",
+    });
+  } catch (error) {
+    console.error("Error in checkDuplicateImport:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error checking for duplicates",
+      error: error.message,
+    });
+  }
+};
+
 export default {
   bulkImportCases,
   sendBulkCaseSMS,
   sendSingleCaseSMS,
+  checkDuplicateImport,
   getImportBatches,
   getCasesByBatchId,
 };
