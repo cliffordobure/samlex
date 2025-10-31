@@ -153,6 +153,12 @@ export const bulkImportCases = async (req, res) => {
           continue;
         }
 
+        // Auto-assign to debt collector if they are the one uploading
+        // For admins and credit heads, leave unassigned so they can assign later
+        const isDebtCollector = req.user.role === "debt_collector";
+        const assignedTo = isDebtCollector ? req.user._id : null;
+        const initialStatus = isDebtCollector ? "assigned" : "new";
+
         // Create credit case
         const creditCase = new CreditCase({
           title: `${bankName} - ${debtorName} Debt Collection`,
@@ -163,10 +169,13 @@ export const bulkImportCases = async (req, res) => {
           creditorName: bankName,
           debtAmount,
           currency: "KES",
-          status: "new",
+          status: initialStatus,
           priority: debtAmount > 100000 ? "high" : "medium",
           lawFirm: req.user.lawFirm,
           department: department._id, // Assign to appropriate department
+          assignedTo: assignedTo, // Auto-assign to debt collector if they uploaded
+          assignedBy: isDebtCollector ? req.user._id : undefined,
+          assignedAt: isDebtCollector ? new Date() : undefined,
           createdBy: req.user._id,
           caseReference,
           bankName,
