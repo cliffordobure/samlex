@@ -51,6 +51,11 @@ const config = {
   BEEM_API_KEY: process.env.BEEM_API_KEY,
   BEEM_SECRET_KEY: process.env.BEEM_SECRET_KEY,
   BEEM_SOURCE_ADDR: process.env.BEEM_SOURCE_ADDR,
+
+  // Google OAuth (for Gmail integration)
+  GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
+  GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
+  GOOGLE_REDIRECT_URI: process.env.GOOGLE_REDIRECT_URI,
 };
 
 // Validate required environment variables

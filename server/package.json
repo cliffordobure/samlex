@@ -37,7 +37,8 @@
     "puppeteer": "^24.22.0",
     "socket.io": "^4.8.1",
     "stripe": "^14.9.0",
-    "uuid": "^11.1.0"
+    "uuid": "^11.1.0",
+    "googleapis": "^128.0.0"
   },
   "devDependencies": {
     "jest": "^29.7.0",

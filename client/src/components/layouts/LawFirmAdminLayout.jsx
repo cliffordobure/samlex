@@ -21,6 +21,7 @@ import {
   FaFileExcel,
   FaSms,
   FaPaperPlane,
+  FaEnvelope,
 } from "react-icons/fa";
 
 const LawFirmAdminLayout = ({ children }) => {
@@ -89,6 +90,12 @@ const LawFirmAdminLayout = ({ children }) => {
       href: "/admin/send-sms",
       icon: <FaPaperPlane className="w-5 h-5" />,
       description: "Send SMS to any phone number"
+    },
+    {
+      name: "Newsletter",
+      href: "/admin/newsletter",
+      icon: <FaEnvelope className="w-5 h-5" />,
+      description: "Compile and send newsletter"
     },
     {
       name: "Firm Settings",

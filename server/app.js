@@ -23,6 +23,7 @@ import legalCaseRoutes from "./routes/legalCaseRoutes.js";
 import notificationRoutes from "./routes/notifications.js";
 import aiRoutes from "./routes/ai.js";
 import clientRoutes from "./routes/clientRoutes.js";
+import newsletterRoutes from "./routes/newsletterRoutes.js";
 // import paymentRoutes from "./routes/payments.js";
 
 // Get __dirname equivalent for ES modules
@@ -150,6 +151,7 @@ app.use("/api/legal-cases", legalCaseRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/clients", clientRoutes);
+app.use("/api/newsletter", newsletterRoutes);
 // app.use("/api/payments", paymentRoutes);
 
 // 404 handler

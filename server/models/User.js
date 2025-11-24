@@ -90,6 +90,13 @@ const userSchema = new mongoose.Schema(
       type: Date,
       select: false,
     },
+    gmailTokens: {
+      access_token: { type: String, select: false },
+      refresh_token: { type: String, select: false },
+      expiry_date: { type: Number, select: false },
+      scope: { type: String, select: false },
+      token_type: { type: String, select: false },
+    },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",

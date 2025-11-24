@@ -48,6 +48,7 @@ import CreditCollectionCalendar from "./pages/CreditCollection/Calendar";
 import BulkImport from "./pages/CreditCollection/BulkImport";
 import BulkSMS from "./pages/CreditCollection/BulkSMS";
 import SingleSMS from "./pages/CreditCollection/SingleSMS";
+import Newsletter from "./pages/LawFirmAdmin/Newsletter";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Notifications from "./pages/Notifications";
@@ -248,6 +249,8 @@ function App() {
           <Route path="bulk-import" element={<BulkImport />} />
           <Route path="bulk-sms" element={<BulkSMS />} />
           <Route path="send-sms" element={<SingleSMS />} />
+          <Route path="newsletter" element={<Newsletter />} />
+          <Route path="newsletter/auth/callback" element={<Newsletter />} />
         </Route>
 
         <Route
