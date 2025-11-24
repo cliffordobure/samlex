@@ -16,7 +16,8 @@ import {
   FaBuilding,
   FaGavel,
   FaFileExcel,
-  FaSms
+  FaSms,
+  FaPaperPlane
 } from "react-icons/fa";
 
 const CreditCollectionLayout = ({ children }) => {
@@ -48,7 +49,13 @@ const CreditCollectionLayout = ({ children }) => {
       name: "Bulk SMS",
       href: "/credit-collection/bulk-sms",
       icon: <FaSms className="w-5 h-5" />,
-      description: "Send SMS to debtors"
+      description: "Send SMS to multiple debtors"
+    },
+    {
+      name: "Single SMS",
+      href: "/credit-collection/send-sms",
+      icon: <FaPaperPlane className="w-5 h-5" />,
+      description: "Send SMS to any phone number"
     },
     {
       name: "Send SMS",

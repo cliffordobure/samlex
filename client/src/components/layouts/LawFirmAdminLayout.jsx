@@ -20,6 +20,7 @@ import {
   FaGavel,
   FaFileExcel,
   FaSms,
+  FaPaperPlane,
 } from "react-icons/fa";
 
 const LawFirmAdminLayout = ({ children }) => {
@@ -81,13 +82,13 @@ const LawFirmAdminLayout = ({ children }) => {
       name: "Bulk SMS",
       href: "/admin/bulk-sms",
       icon: <FaSms className="w-5 h-5" />,
-      description: "Send SMS to debtors"
+      description: "Send SMS to multiple debtors"
     },
     {
-      name: "Send SMS",
+      name: "Single SMS",
       href: "/admin/send-sms",
-      icon: <FaSms className="w-5 h-5" />,
-      description: "Send single SMS to any number"
+      icon: <FaPaperPlane className="w-5 h-5" />,
+      description: "Send SMS to any phone number"
     },
     {
       name: "Firm Settings",
