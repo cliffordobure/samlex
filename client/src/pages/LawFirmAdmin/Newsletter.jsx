@@ -40,6 +40,11 @@ const Newsletter = () => {
   const [sendResult, setSendResult] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
 
+  // Debug: Log selectedClients changes
+  useEffect(() => {
+    console.log("Selected clients changed:", selectedClients);
+  }, [selectedClients]);
+
   useEffect(() => {
     checkConnectionStatus();
     fetchClients();
@@ -520,19 +525,23 @@ const Newsletter = () => {
               ) : (
                 <>
                   <div className="space-y-2 max-h-48 overflow-y-auto mb-4">
-                    {clients.filter(c => c.email).map((client) => {
-                      const isSelected = selectedClients.includes(client._id);
+                    {clients.filter(c => c && c.email).map((client) => {
+                      const clientId = String(client._id || client.id);
+                      const isSelected = selectedClients.some(id => String(id) === clientId);
                       return (
                         <div
-                          key={client._id}
+                          key={clientId}
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
-                            setSelectedClients((prev) =>
-                              isSelected
-                                ? prev.filter((id) => id !== client._id)
-                                : [...prev, client._id]
-                            );
+                            setSelectedClients((prev) => {
+                              const prevStr = prev.map(id => String(id));
+                              if (prevStr.includes(clientId)) {
+                                return prev.filter((id) => String(id) !== clientId);
+                              } else {
+                                return [...prev, client._id || client.id];
+                              }
+                            });
                           }}
                           className={`p-3 rounded-lg border cursor-pointer transition-all duration-200 ${
                             isSelected
@@ -558,33 +567,43 @@ const Newsletter = () => {
                   </div>
                 </>
               )}
-              <div className="flex gap-2">
+              <div className="flex gap-2 mt-4">
                 <button
                   type="button"
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    const allClientIds = clients.filter(c => c.email).map((c) => c._id);
-                    setSelectedClients(allClientIds);
-                    toast.success(`Selected ${allClientIds.length} clients`);
+                    const clientsWithEmail = clients.filter(c => c && c.email && c._id);
+                    const allClientIds = clientsWithEmail.map((c) => c._id || c.id).filter(Boolean);
+                    
+                    if (allClientIds.length > 0) {
+                      setSelectedClients(allClientIds);
+                      toast.success(`Selected ${allClientIds.length} ${allClientIds.length === 1 ? 'client' : 'clients'}`);
+                    } else {
+                      toast.error("No clients with email addresses available");
+                    }
                   }}
-                  disabled={clients.length === 0}
-                  className="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-all duration-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={clients.filter(c => c && c.email).length === 0}
+                  className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-lg transition-all duration-200 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  style={{ pointerEvents: clients.filter(c => c && c.email).length === 0 ? 'none' : 'auto' }}
                 >
-                  Select All
+                  Select All ({clients.filter(c => c && c.email).length})
                 </button>
                 <button
                   type="button"
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    setSelectedClients([]);
-                    toast.success("Selection cleared");
+                    if (selectedClients.length > 0) {
+                      setSelectedClients([]);
+                      toast.success("Selection cleared");
+                    }
                   }}
                   disabled={selectedClients.length === 0}
-                  className="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-all duration-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white rounded-lg transition-all duration-200 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                  style={{ pointerEvents: selectedClients.length === 0 ? 'none' : 'auto' }}
                 >
-                  Clear Selection
+                  Clear Selection ({selectedClients.length})
                 </button>
               </div>
             </div>
