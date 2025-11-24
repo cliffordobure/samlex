@@ -75,15 +75,22 @@ export const sendSMS = async (phoneNumber, message) => {
       };
     }
 
+    // Determine encoding type: 0 for plain text (GSM 7-bit), 1 for Unicode
+    // Check if message contains non-GSM characters (Unicode)
+    const hasUnicode = /[^\x00-\x7F]/.test(message);
+    const encoding = hasUnicode ? 1 : 0;
+    
     // Prepare Beem API request
+    const destAddr = cleanedPhone.replace('+', ''); // Beem expects numbers without +
     const requestData = {
       source_addr: beemConfig.sourceAddr,
       schedule_time: '',
-      message: message.substring(0, 160), // SMS character limit
+      encoding: encoding, // Required by Beem API: 0 for plain text, 1 for Unicode
+      message: message.substring(0, hasUnicode ? 70 : 160), // Unicode has shorter limit (70 chars)
       recipients: [
         {
           recipient_id: 1,
-          dest_addr: cleanedPhone.replace('+', ''), // Beem expects numbers without +
+          dest_addr: destAddr,
         }
       ]
     };
@@ -230,11 +237,16 @@ export const sendBulkSMS = async (recipients) => {
             };
           });
 
+          // Determine encoding type: 0 for plain text (GSM 7-bit), 1 for Unicode
+          const hasUnicode = /[^\x00-\x7F]/.test(firstMessage);
+          const encoding = hasUnicode ? 1 : 0;
+          
           // Prepare Beem API request for batch
           const requestData = {
             source_addr: beemConfig.sourceAddr,
             schedule_time: '',
-            message: firstMessage.substring(0, 160),
+            encoding: encoding, // Required by Beem API: 0 for plain text, 1 for Unicode
+            message: firstMessage.substring(0, hasUnicode ? 70 : 160), // Unicode has shorter limit
             recipients: formattedRecipients,
           };
 
@@ -340,11 +352,16 @@ export const sendBulkSMS = async (recipients) => {
               return { success: false, phone: cleanedPhone };
             }
 
+            // Determine encoding type: 0 for plain text (GSM 7-bit), 1 for Unicode
+            const hasUnicode = /[^\x00-\x7F]/.test(message);
+            const encoding = hasUnicode ? 1 : 0;
+            
             // Prepare Beem API request
             const requestData = {
               source_addr: beemConfig.sourceAddr,
               schedule_time: '',
-              message: message.substring(0, 160),
+              encoding: encoding, // Required by Beem API: 0 for plain text, 1 for Unicode
+              message: message.substring(0, hasUnicode ? 70 : 160), // Unicode has shorter limit
               recipients: [
                 {
                   recipient_id: 1,
