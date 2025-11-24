@@ -5,6 +5,7 @@ import CaseManagement from "./CaseManagement";
 import CaseDetails from "./CaseDetails";
 import BulkImport from "./BulkImport";
 import BulkSMS from "./BulkSMS";
+import SingleSMS from "./SingleSMS";
 // import CreateCase from "./CreateCase";
 
 const CreditCollectionDashboard = () => {
@@ -16,6 +17,7 @@ const CreditCollectionDashboard = () => {
         <Route path="/cases/:id" element={<CaseDetails />} />
         <Route path="/bulk-import" element={<BulkImport />} />
         <Route path="/bulk-sms" element={<BulkSMS />} />
+        <Route path="/send-sms" element={<SingleSMS />} />
         {/* <Route path="/cases/create" element={<CreateCase />} /> */}
       </Routes>
     </CreditCollectionLayout>

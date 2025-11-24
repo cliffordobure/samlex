@@ -51,6 +51,12 @@ const CreditCollectionLayout = ({ children }) => {
       description: "Send SMS to debtors"
     },
     {
+      name: "Send SMS",
+      href: "/credit-collection/send-sms",
+      icon: <FaSms className="w-5 h-5" />,
+      description: "Send single SMS to any number"
+    },
+    {
       name: "Calendar",
       href: "/credit-collection/calendar",
       icon: <FaCalendarAlt className="w-5 h-5" />,

@@ -347,6 +347,78 @@ export const sendBulkCaseSMS = async (req, res) => {
 };
 
 /**
+ * @desc    Send a single SMS to any phone number
+ * @route   POST /api/credit-cases/send-sms
+ * @access  Private (debt_collector, credit_head, law_firm_admin)
+ */
+export const sendSingleSMS = async (req, res) => {
+  try {
+    const { phoneNumber, message } = req.body;
+
+    // Verify user permissions
+    if (
+      !["debt_collector", "credit_head", "law_firm_admin", "admin", "law_firm"].includes(
+        req.user.role
+      )
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "You don't have permission to send SMS",
+      });
+    }
+
+    // Validate required fields
+    if (!phoneNumber || !message) {
+      return res.status(400).json({
+        success: false,
+        message: "Phone number and message are required",
+      });
+    }
+
+    // Validate phone number format
+    if (!validatePhoneNumber(phoneNumber)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid phone number format. Please use format: +254712345678 or 0712345678",
+      });
+    }
+
+    // Validate message
+    if (message.trim().length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Message cannot be empty",
+      });
+    }
+
+    if (message.length > 160) {
+      return res.status(400).json({
+        success: false,
+        message: "Message is too long. Maximum 160 characters allowed.",
+      });
+    }
+
+    // Send SMS
+    const smsResult = await sendSMS(phoneNumber, message);
+
+    res.status(200).json({
+      success: smsResult.success,
+      message: smsResult.success
+        ? "SMS sent successfully"
+        : smsResult.error || "Failed to send SMS",
+      data: smsResult,
+    });
+  } catch (error) {
+    console.error("Error in sendSingleSMS:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error sending SMS",
+      error: error.message,
+    });
+  }
+};
+
+/**
  * @desc    Send SMS to a single case
  * @route   POST /api/credit-cases/:id/send-sms
  * @access  Private (debt_collector, credit_head, law_firm_admin)

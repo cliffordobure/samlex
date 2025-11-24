@@ -84,6 +84,12 @@ const LawFirmAdminLayout = ({ children }) => {
       description: "Send SMS to debtors"
     },
     {
+      name: "Send SMS",
+      href: "/admin/send-sms",
+      icon: <FaSms className="w-5 h-5" />,
+      description: "Send single SMS to any number"
+    },
+    {
       name: "Firm Settings",
       href: "/admin/settings",
       icon: <FaCog className="w-5 h-5" />,

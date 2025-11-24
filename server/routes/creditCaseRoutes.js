@@ -24,6 +24,7 @@ import {
 import {
   bulkImportCases,
   sendBulkCaseSMS,
+  sendSingleSMS,
   sendSingleCaseSMS,
   getImportBatches,
   getCasesByBatchId,
@@ -62,6 +63,7 @@ router.get("/escalated", protect, getEscalatedCreditCases);
 router.post("/check-duplicate", protect, checkDuplicateImport);
 router.post("/bulk-import", protect, upload.single("file"), bulkImportCases);
 router.post("/bulk-sms", protect, sendBulkCaseSMS);
+router.post("/send-sms", protect, sendSingleSMS); // General single SMS (not tied to a case)
 router.get("/import-batches", protect, getImportBatches);
 router.get("/import-batch/:batchId", protect, getCasesByBatchId);
 
