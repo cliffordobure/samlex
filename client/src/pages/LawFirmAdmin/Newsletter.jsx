@@ -167,10 +167,18 @@ const Newsletter = () => {
       });
 
       if (response.data.success) {
-        setClients(response.data.data.clients || []);
+        const fetchedClients = response.data.data.clients || [];
+        setClients(fetchedClients);
+        
+        if (fetchedClients.length === 0) {
+          toast.error("No clients with email addresses found. Please add email addresses to client profiles.", {
+            duration: 5000,
+          });
+        }
       }
     } catch (error) {
       console.error("Error fetching clients:", error);
+      toast.error(error.response?.data?.message || "Failed to fetch clients");
     }
   };
 
@@ -499,53 +507,82 @@ const Newsletter = () => {
             {/* Client Selection */}
             <div className="bg-gradient-to-r from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl border border-slate-600/50 shadow-2xl p-6">
               <h2 className="text-xl font-bold text-white mb-4">
-                Recipients ({clients.length} clients)
+                Recipients ({clients.filter(c => c.email).length} clients with email)
               </h2>
-              <div className="space-y-2 max-h-48 overflow-y-auto mb-4">
-                {clients.map((client) => {
-                  const isSelected = selectedClients.includes(client._id);
-                  return (
-                    <div
-                      key={client._id}
-                      onClick={() => {
-                        setSelectedClients((prev) =>
-                          isSelected
-                            ? prev.filter((id) => id !== client._id)
-                            : [...prev, client._id]
-                        );
-                      }}
-                      className={`p-3 rounded-lg border cursor-pointer transition-all duration-200 ${
-                        isSelected
-                          ? "bg-green-500/20 border-green-500/50"
-                          : "bg-slate-700/30 border-slate-600/50 hover:bg-slate-700/50"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-white text-sm font-medium">
-                            {client.firstName} {client.lastName}
-                            {client.companyName && ` (${client.companyName})`}
-                          </p>
-                          <p className="text-slate-400 text-xs">{client.email}</p>
+              {clients.length === 0 ? (
+                <div className="text-center py-8">
+                  <FaExclamationCircle className="w-12 h-12 text-yellow-400 mx-auto mb-3" />
+                  <p className="text-slate-400">No clients with email addresses found</p>
+                  <p className="text-slate-500 text-sm mt-2">
+                    Make sure clients have email addresses in their profiles
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-2 max-h-48 overflow-y-auto mb-4">
+                    {clients.filter(c => c.email).map((client) => {
+                      const isSelected = selectedClients.includes(client._id);
+                      return (
+                        <div
+                          key={client._id}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setSelectedClients((prev) =>
+                              isSelected
+                                ? prev.filter((id) => id !== client._id)
+                                : [...prev, client._id]
+                            );
+                          }}
+                          className={`p-3 rounded-lg border cursor-pointer transition-all duration-200 ${
+                            isSelected
+                              ? "bg-green-500/20 border-green-500/50"
+                              : "bg-slate-700/30 border-slate-600/50 hover:bg-slate-700/50"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-white text-sm font-medium">
+                                {client.firstName} {client.lastName}
+                                {client.companyName && ` (${client.companyName})`}
+                              </p>
+                              <p className="text-slate-400 text-xs">{client.email}</p>
+                            </div>
+                            {isSelected && (
+                              <FaCheckCircle className="w-4 h-4 text-green-400" />
+                            )}
+                          </div>
                         </div>
-                        {isSelected && (
-                          <FaCheckCircle className="w-4 h-4 text-green-400" />
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
               <div className="flex gap-2">
                 <button
-                  onClick={() => setSelectedClients(clients.map((c) => c._id))}
-                  className="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-all duration-200 text-sm"
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const allClientIds = clients.filter(c => c.email).map((c) => c._id);
+                    setSelectedClients(allClientIds);
+                    toast.success(`Selected ${allClientIds.length} clients`);
+                  }}
+                  disabled={clients.length === 0}
+                  className="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-all duration-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Select All
                 </button>
                 <button
-                  onClick={() => setSelectedClients([])}
-                  className="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-all duration-200 text-sm"
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setSelectedClients([]);
+                    toast.success("Selection cleared");
+                  }}
+                  disabled={selectedClients.length === 0}
+                  className="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-all duration-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Clear Selection
                 </button>

@@ -171,13 +171,12 @@ export const getNewsletterClients = async (req, res) => {
       });
     }
 
-    // Get all active clients with email addresses
+    // Get all clients with email addresses (not just active ones)
     const clients = await Client.find({
       lawFirm: req.user.lawFirm._id,
-      status: 'active',
-      email: { $exists: true, $ne: '' },
+      email: { $exists: true, $ne: '', $regex: /.+@.+\..+/ }, // Valid email format
     })
-      .select('firstName lastName email companyName clientType')
+      .select('firstName lastName email companyName clientType status')
       .sort({ firstName: 1, lastName: 1 });
 
     res.json({
