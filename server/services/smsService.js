@@ -1,23 +1,24 @@
-import AfricasTalking from 'africastalking';
+import axios from 'axios';
 
-// Initialize Africa's Talking
-let smsClient = null;
+// Beem SMS Configuration
+const BEEM_API_URL = 'https://apisms.beem.africa/v1/send';
+let beemConfig = null;
 
 const initializeSMS = () => {
-  if (!process.env.AFRICASTALKING_API_KEY || !process.env.AFRICASTALKING_USERNAME) {
-    console.warn('⚠️  Africa\'s Talking credentials not found. SMS functionality will be disabled.');
+  if (!process.env.BEEM_API_KEY || !process.env.BEEM_SECRET_KEY || !process.env.BEEM_SOURCE_ADDR) {
+    console.warn('⚠️  Beem SMS credentials not found. SMS functionality will be disabled.');
     return null;
   }
 
   try {
-    const africastalking = AfricasTalking({
-      apiKey: process.env.AFRICASTALKING_API_KEY,
-      username: process.env.AFRICASTALKING_USERNAME,
-    });
+    beemConfig = {
+      apiKey: process.env.BEEM_API_KEY,
+      secretKey: process.env.BEEM_SECRET_KEY,
+      sourceAddr: process.env.BEEM_SOURCE_ADDR,
+    };
     
-    smsClient = africastalking.SMS;
-    console.log('✅ SMS Service initialized successfully');
-    return smsClient;
+    console.log('✅ Beem SMS Service initialized successfully');
+    return beemConfig;
   } catch (error) {
     console.error('❌ Failed to initialize SMS service:', error);
     return null;
@@ -32,15 +33,15 @@ const initializeSMS = () => {
  */
 export const sendSMS = async (phoneNumber, message) => {
   try {
-    if (!smsClient) {
-      smsClient = initializeSMS();
-      if (!smsClient) {
+    if (!beemConfig) {
+      beemConfig = initializeSMS();
+      if (!beemConfig) {
         throw new Error('SMS service is not configured');
       }
     }
 
     // Validate phone number format
-    const cleanedPhone = phoneNumber.replace(/\s+/g, '');
+    const cleanedPhone = formatPhoneNumber(phoneNumber);
     
     // Debug: Log phone number validation
     console.log('📞 Phone number validation:', {
@@ -49,47 +50,62 @@ export const sendSMS = async (phoneNumber, message) => {
       isValid: validatePhoneNumber(cleanedPhone)
     });
     
-    const options = {
-      to: [cleanedPhone],
-      message: message.substring(0, 160), // SMS character limit
-    };
-
-    const result = await smsClient.send(options);
-    
-    // Debug: Log the full response from Africa's Talking
-    console.log('📱 Single SMS Response for', cleanedPhone, ':', JSON.stringify(result, null, 2));
-    
-    // Check if the SMS was actually accepted by Africa's Talking
-    if (result && result.SMSMessageData && result.SMSMessageData.Recipients) {
-      const recipient = result.SMSMessageData.Recipients[0];
-      if (recipient && recipient.status === 'Success') {
-        return {
-          success: true,
-          data: result,
-          phone: cleanedPhone,
-        };
-      } else {
-        const errorMessage = getErrorMessage(recipient.status);
-        return {
-          success: false,
-          error: errorMessage,
-          phone: cleanedPhone,
-          data: result,
-        };
-      }
-    } else {
+    if (!validatePhoneNumber(cleanedPhone)) {
       return {
         success: false,
-        error: 'Invalid response from SMS provider',
+        error: 'Invalid phone number format',
         phone: cleanedPhone,
-        data: result,
+      };
+    }
+
+    // Prepare Beem API request
+    const requestData = {
+      source_addr: beemConfig.sourceAddr,
+      schedule_time: '',
+      message: message.substring(0, 160), // SMS character limit
+      recipients: [
+        {
+          recipient_id: 1,
+          dest_addr: cleanedPhone.replace('+', ''), // Beem expects numbers without +
+        }
+      ]
+    };
+
+    // Create Basic Auth header
+    const auth = Buffer.from(`${beemConfig.apiKey}:${beemConfig.secretKey}`).toString('base64');
+
+    const response = await axios.post(BEEM_API_URL, requestData, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Basic ${auth}`,
+      },
+    });
+    
+    // Debug: Log the full response from Beem
+    console.log('📱 Single SMS Response for', cleanedPhone, ':', JSON.stringify(response.data, null, 2));
+    
+    // Check if the SMS was successfully sent
+    if (response.data && response.data.successful === true) {
+      return {
+        success: true,
+        data: response.data,
+        phone: cleanedPhone,
+      };
+    } else {
+      const errorMessage = response.data?.message || 'Failed to send SMS';
+      return {
+        success: false,
+        error: errorMessage,
+        phone: cleanedPhone,
+        data: response.data,
       };
     }
   } catch (error) {
     console.error('❌ Error sending SMS:', error);
+    const errorMessage = error.response?.data?.message || error.message || 'Failed to send SMS';
     return {
       success: false,
-      error: error.message,
+      error: errorMessage,
       phone: phoneNumber,
     };
   }
@@ -102,22 +118,11 @@ export const sendSMS = async (phoneNumber, message) => {
  */
 export const sendBulkSMS = async (recipients) => {
   try {
-    if (!smsClient) {
-      smsClient = initializeSMS();
-      if (!smsClient) {
+    if (!beemConfig) {
+      beemConfig = initializeSMS();
+      if (!beemConfig) {
         throw new Error('SMS service is not configured');
       }
-    }
-
-    // Check if we're in test mode (sandbox credentials)
-    const isTestMode = process.env.AFRICASTALKING_USERNAME === 'sandbox' || 
-                      process.env.AFRICASTALKING_USERNAME === 'clifford';
-    
-    if (isTestMode) {
-      console.log('🧪 SMS Test Mode: Using sandbox credentials - SMS will not be delivered');
-      console.log('📱 Test recipients:', recipients.map(r => r.phoneNumber));
-      console.log('⚠️  IMPORTANT: Sandbox only works with whitelisted numbers');
-      console.log('💡 To send to real numbers, use production credentials');
     }
 
     const results = {
@@ -127,84 +132,181 @@ export const sendBulkSMS = async (recipients) => {
       details: [],
     };
 
-    // Process in batches to avoid rate limiting
-    const BATCH_SIZE = 10;
-    for (let i = 0; i < recipients.length; i += BATCH_SIZE) {
-      const batch = recipients.slice(i, i + BATCH_SIZE);
-      
-      const batchPromises = batch.map(async (recipient) => {
+    // Check if all messages are the same (can use batch API) or different (need individual sends)
+    const firstMessage = recipients[0]?.message;
+    const allSameMessage = recipients.every(r => r.message === firstMessage);
+
+    if (allSameMessage) {
+      // All messages are the same - use batch API (more efficient)
+      const BATCH_SIZE = 50; // Beem allows up to 100 recipients per request
+      for (let i = 0; i < recipients.length; i += BATCH_SIZE) {
+        const batch = recipients.slice(i, i + BATCH_SIZE);
+        
         try {
-          const { phoneNumber, message } = recipient;
-          
-          // Clean phone number
-          const cleanedPhone = phoneNumber.replace(/\s+/g, '');
-          
-          const options = {
-            to: [cleanedPhone],
-            message: message.substring(0, 160),
+          // Format recipients for Beem API
+          const formattedRecipients = batch.map((recipient, index) => {
+            const cleanedPhone = formatPhoneNumber(recipient.phoneNumber);
+            return {
+              recipient_id: i + index + 1,
+              dest_addr: cleanedPhone.replace('+', ''), // Beem expects numbers without +
+            };
+          });
+
+          // Prepare Beem API request for batch
+          const requestData = {
+            source_addr: beemConfig.sourceAddr,
+            schedule_time: '',
+            message: firstMessage.substring(0, 160),
+            recipients: formattedRecipients,
           };
 
-          const result = await smsClient.send(options);
-          
-          // Debug: Log the full response from Africa's Talking
-          console.log('📱 SMS Response for', cleanedPhone, ':', JSON.stringify(result, null, 2));
-          
-          // Check if the SMS was actually accepted by Africa's Talking
-          if (result && result.SMSMessageData && result.SMSMessageData.Recipients) {
-            const recipient = result.SMSMessageData.Recipients[0];
-            if (recipient && recipient.status === 'Success') {
+          // Create Basic Auth header
+          const auth = Buffer.from(`${beemConfig.apiKey}:${beemConfig.secretKey}`).toString('base64');
+
+          const response = await axios.post(BEEM_API_URL, requestData, {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Basic ${auth}`,
+            },
+          });
+
+          // Debug: Log the full response from Beem
+          console.log('📱 Bulk SMS Response:', JSON.stringify(response.data, null, 2));
+
+          // Process Beem response
+          if (response.data && response.data.successful === true) {
+            // All messages in batch were successful
+            batch.forEach((recipient) => {
+              const cleanedPhone = formatPhoneNumber(recipient.phoneNumber);
               results.sent++;
               results.details.push({
                 phone: cleanedPhone,
                 status: 'sent',
-                result: result,
+                result: response.data,
               });
-              return { success: true, phone: cleanedPhone };
-            } else {
-              // SMS was rejected by Africa's Talking
-              const errorMessage = getErrorMessage(recipient.status);
+            });
+          } else {
+            // Some or all messages failed
+            batch.forEach((recipient) => {
+              const cleanedPhone = formatPhoneNumber(recipient.phoneNumber);
+              const errorMessage = response.data?.message || 'Failed to send SMS';
               results.failed++;
               results.details.push({
                 phone: cleanedPhone,
                 status: 'failed',
                 error: errorMessage,
-                result: result,
+                result: response.data,
               });
-              return { success: false, phone: cleanedPhone, error: errorMessage };
-            }
-          } else {
-            // Invalid response format
+            });
+          }
+        } catch (error) {
+          // If batch request fails, mark all recipients in batch as failed
+          batch.forEach((recipient) => {
+            const cleanedPhone = formatPhoneNumber(recipient.phoneNumber);
+            const errorMessage = error.response?.data?.message || error.message || 'Failed to send SMS';
             results.failed++;
             results.details.push({
               phone: cleanedPhone,
               status: 'failed',
-              error: 'Invalid response from SMS provider',
-              result: result,
+              error: errorMessage,
             });
-            return { success: false, phone: cleanedPhone, error: 'Invalid response from SMS provider' };
-          }
-        } catch (error) {
-          results.failed++;
-          results.details.push({
-            phone: recipient.phoneNumber,
-            status: 'failed',
-            error: error.message,
           });
-          
-          return { success: false, phone: recipient.phoneNumber, error: error.message };
+          console.error('❌ Error sending batch SMS:', error);
         }
-      });
+        
+        // Add delay between batches to respect rate limits
+        if (i + BATCH_SIZE < recipients.length) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
+    } else {
+      // Messages are different - send individually
+      const BATCH_SIZE = 10; // Smaller batches for individual sends
+      for (let i = 0; i < recipients.length; i += BATCH_SIZE) {
+        const batch = recipients.slice(i, i + BATCH_SIZE);
+        
+        const batchPromises = batch.map(async (recipient) => {
+          try {
+            const { phoneNumber, message } = recipient;
+            const cleanedPhone = formatPhoneNumber(phoneNumber);
+            
+            if (!validatePhoneNumber(cleanedPhone)) {
+              results.failed++;
+              results.details.push({
+                phone: cleanedPhone,
+                status: 'failed',
+                error: 'Invalid phone number format',
+              });
+              return { success: false, phone: cleanedPhone };
+            }
 
-      await Promise.all(batchPromises);
-      
-      // Add delay between batches to respect rate limits
-      if (i + BATCH_SIZE < recipients.length) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
+            // Prepare Beem API request
+            const requestData = {
+              source_addr: beemConfig.sourceAddr,
+              schedule_time: '',
+              message: message.substring(0, 160),
+              recipients: [
+                {
+                  recipient_id: 1,
+                  dest_addr: cleanedPhone.replace('+', ''),
+                }
+              ]
+            };
+
+            // Create Basic Auth header
+            const auth = Buffer.from(`${beemConfig.apiKey}:${beemConfig.secretKey}`).toString('base64');
+
+            const response = await axios.post(BEEM_API_URL, requestData, {
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Basic ${auth}`,
+              },
+            });
+
+            // Check if SMS was successfully sent
+            if (response.data && response.data.successful === true) {
+              results.sent++;
+              results.details.push({
+                phone: cleanedPhone,
+                status: 'sent',
+                result: response.data,
+              });
+              return { success: true, phone: cleanedPhone };
+            } else {
+              const errorMessage = response.data?.message || 'Failed to send SMS';
+              results.failed++;
+              results.details.push({
+                phone: cleanedPhone,
+                status: 'failed',
+                error: errorMessage,
+                result: response.data,
+              });
+              return { success: false, phone: cleanedPhone, error: errorMessage };
+            }
+          } catch (error) {
+            const cleanedPhone = formatPhoneNumber(recipient.phoneNumber);
+            const errorMessage = error.response?.data?.message || error.message || 'Failed to send SMS';
+            results.failed++;
+            results.details.push({
+              phone: cleanedPhone,
+              status: 'failed',
+              error: errorMessage,
+            });
+            return { success: false, phone: cleanedPhone, error: errorMessage };
+          }
+        });
+
+        await Promise.all(batchPromises);
+        
+        // Add delay between batches to respect rate limits
+        if (i + BATCH_SIZE < recipients.length) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
       }
     }
 
     return {
-      success: true,
+      success: results.sent > 0,
       ...results,
     };
   } catch (error) {
@@ -237,30 +339,33 @@ export const generateDebtCollectionMessage = (debtorName, debtAmount, bankName, 
 };
 
 /**
- * Get user-friendly error message for Africa's Talking status codes
- * @param {string} status - Africa's Talking status code
+ * Get user-friendly error message for Beem SMS error codes
+ * @param {string} error - Beem error message or code
  * @returns {string} - User-friendly error message
  */
-const getErrorMessage = (status) => {
-  const isTestMode = process.env.AFRICASTALKING_USERNAME === 'sandbox' || 
-                    process.env.AFRICASTALKING_USERNAME === 'clifford';
-  
+const getErrorMessage = (error) => {
   const errorMessages = {
-    'UserInBlacklist': isTestMode 
-      ? 'Phone number not whitelisted for sandbox testing. Use production credentials or add number to sandbox whitelist.'
-      : 'Phone number is blacklisted or opted out of SMS',
-    'InvalidPhoneNumber': 'Invalid phone number format',
-    'InsufficientBalance': 'Insufficient account balance',
-    'InvalidSenderId': 'Invalid sender ID',
-    'InvalidMessage': 'Invalid message content',
-    'InvalidRecipient': 'Invalid recipient number',
-    'MessageTooLong': 'Message exceeds character limit',
-    'RateLimitExceeded': 'Rate limit exceeded, please try again later',
-    'ServiceUnavailable': 'SMS service temporarily unavailable',
-    'NetworkError': 'Network error, please try again',
+    'Invalid phone number': 'Invalid phone number format',
+    'Insufficient balance': 'Insufficient account balance',
+    'Invalid sender ID': 'Invalid sender ID',
+    'Invalid message': 'Invalid message content',
+    'Invalid recipient': 'Invalid recipient number',
+    'Message too long': 'Message exceeds character limit',
+    'Rate limit exceeded': 'Rate limit exceeded, please try again later',
+    'Service unavailable': 'SMS service temporarily unavailable',
+    'Network error': 'Network error, please try again',
+    'Authentication failed': 'Invalid API credentials',
+    'Blacklisted': 'Phone number is blacklisted or opted out of SMS',
   };
   
-  return errorMessages[status] || `SMS failed: ${status}`;
+  // Try to match error message
+  for (const [key, value] of Object.entries(errorMessages)) {
+    if (error.toLowerCase().includes(key.toLowerCase())) {
+      return value;
+    }
+  }
+  
+  return error || 'Failed to send SMS';
 };
 
 /**

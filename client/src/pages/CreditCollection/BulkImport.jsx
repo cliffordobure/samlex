@@ -92,13 +92,11 @@ const BulkImport = () => {
       
       setSelectedFile(file);
       
-      // Check for duplicate if bank name is provided
-      if (bankName.trim()) {
-        const duplicateCheck = await checkDuplicate(file);
-        if (duplicateCheck.isDuplicate) {
-          setDuplicateInfo(duplicateCheck);
-          setShowDuplicateDialog(true);
-        }
+      // Always check for duplicate when file is selected (even without bank name)
+      const duplicateCheck = await checkDuplicate(file);
+      if (duplicateCheck.isDuplicate) {
+        setDuplicateInfo(duplicateCheck);
+        setShowDuplicateDialog(true);
       }
     }
   };

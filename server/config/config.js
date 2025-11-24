@@ -47,9 +47,10 @@ const config = {
   // Session
   SESSION_SECRET: process.env.SESSION_SECRET || "your-session-secret",
 
-  // Africa's Talking SMS
-  AFRICASTALKING_USERNAME: process.env.AFRICASTALKING_USERNAME,
-  AFRICASTALKING_API_KEY: process.env.AFRICASTALKING_API_KEY,
+  // Beem SMS
+  BEEM_API_KEY: process.env.BEEM_API_KEY,
+  BEEM_SECRET_KEY: process.env.BEEM_SECRET_KEY,
+  BEEM_SOURCE_ADDR: process.env.BEEM_SOURCE_ADDR,
 };
 
 // Validate required environment variables

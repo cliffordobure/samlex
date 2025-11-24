@@ -7,7 +7,7 @@ import { fileURLToPath } from "url";
 
 // Import middleware
 import errorHandler from "./middleware/errorHandler.js";
-import { accessLogger, errorLogger } from "./middleware/logger.js";
+import { accessLogger, errorLogger } from "./middleware/logger.js"; 
 import { generalLimiter } from "./middleware/rateLimiter.js";
 import devRoutes from "./routes/dev.js";
 // Import routes
