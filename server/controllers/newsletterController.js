@@ -54,14 +54,15 @@ export const handleAuthCallback = async (req, res) => {
     // Exchange code for tokens
     const tokens = await gmailService.getTokensFromCode(code);
 
-    // Store tokens in user's record (you might want to create a separate model for this)
-    // For now, we'll store in a session or return to frontend to store
+    // Store tokens in user's record
     await User.findByIdAndUpdate(req.user._id, {
       $set: {
         'gmailTokens': {
           access_token: tokens.access_token,
           refresh_token: tokens.refresh_token,
           expiry_date: tokens.expiry_date,
+          scope: tokens.scope,
+          token_type: tokens.token_type || 'Bearer',
         },
       },
     });

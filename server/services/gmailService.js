@@ -48,6 +48,7 @@ export const getAuthUrl = () => {
     access_type: 'offline',
     scope: scopes,
     prompt: 'consent', // Force consent screen to get refresh token
+    include_granted_scopes: true, // Include previously granted scopes
   });
 };
 
