@@ -507,7 +507,7 @@ const Newsletter = () => {
             {/* Client Selection */}
             <div className="bg-gradient-to-r from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl border border-slate-600/50 shadow-2xl p-6">
               <h2 className="text-xl font-bold text-white mb-4">
-                Recipients ({clients.filter(c => c.email).length} clients with email)
+                Recipients ({clients.length} {clients.length === 1 ? 'client' : 'clients'})
               </h2>
               {clients.length === 0 ? (
                 <div className="text-center py-8">

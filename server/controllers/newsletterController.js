@@ -171,19 +171,42 @@ export const getNewsletterClients = async (req, res) => {
       });
     }
 
-    // Get all clients with email addresses (not just active ones)
+    // Get law firm ID (handle both populated and unpopulated)
+    const lawFirmId = req.user.lawFirm?._id || req.user.lawFirm;
+    
+    if (!lawFirmId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Law firm not found for this user',
+      });
+    }
+
+    console.log('Fetching clients for law firm:', lawFirmId);
+
+    // Get all clients with email addresses
+    // Simplified email check - just ensure it exists and is not empty
     const clients = await Client.find({
-      lawFirm: req.user.lawFirm._id,
-      email: { $exists: true, $ne: '', $regex: /.+@.+\..+/ }, // Valid email format
+      lawFirm: lawFirmId,
+      email: { $exists: true, $ne: null, $ne: '' },
     })
       .select('firstName lastName email companyName clientType status')
       .sort({ firstName: 1, lastName: 1 });
 
+    console.log(`Found ${clients.length} clients with emails for law firm ${lawFirmId}`);
+
+    // Filter clients with valid email format on the application side
+    const validClients = clients.filter(client => {
+      const email = client.email?.trim();
+      return email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    });
+
+    console.log(`Filtered to ${validClients.length} clients with valid email format`);
+
     res.json({
       success: true,
       data: {
-        clients,
-        total: clients.length,
+        clients: validClients,
+        total: validClients.length,
       },
     });
   } catch (error) {
