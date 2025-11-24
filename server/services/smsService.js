@@ -5,19 +5,36 @@ const BEEM_API_URL = 'https://apisms.beem.africa/v1/send';
 let beemConfig = null;
 
 const initializeSMS = () => {
+  console.log('🔧 Initializing Beem SMS Service...');
+  console.log('🔍 Checking environment variables:', {
+    hasApiKey: !!process.env.BEEM_API_KEY,
+    hasSecretKey: !!process.env.BEEM_SECRET_KEY,
+    hasSourceAddr: !!process.env.BEEM_SOURCE_ADDR,
+  });
+  
   if (!process.env.BEEM_API_KEY || !process.env.BEEM_SECRET_KEY || !process.env.BEEM_SOURCE_ADDR) {
-    console.warn('⚠️  Beem SMS credentials not found. SMS functionality will be disabled.');
+    console.error('❌ Beem SMS credentials not found. SMS functionality will be disabled.');
+    console.error('❌ Required environment variables:');
+    console.error('   - BEEM_API_KEY');
+    console.error('   - BEEM_SECRET_KEY');
+    console.error('   - BEEM_SOURCE_ADDR');
     return null;
   }
 
   try {
     beemConfig = {
-      apiKey: process.env.BEEM_API_KEY,
-      secretKey: process.env.BEEM_SECRET_KEY,
-      sourceAddr: process.env.BEEM_SOURCE_ADDR,
+      apiKey: process.env.BEEM_API_KEY.trim(),
+      secretKey: process.env.BEEM_SECRET_KEY.trim(),
+      sourceAddr: process.env.BEEM_SOURCE_ADDR.trim(),
     };
     
     console.log('✅ Beem SMS Service initialized successfully');
+    console.log('📋 Configuration:', {
+      apiKey: beemConfig.apiKey.substring(0, 8) + '...',
+      secretKey: beemConfig.secretKey.substring(0, 8) + '...',
+      sourceAddr: beemConfig.sourceAddr,
+      apiUrl: BEEM_API_URL,
+    });
     return beemConfig;
   } catch (error) {
     console.error('❌ Failed to initialize SMS service:', error);
@@ -83,21 +100,82 @@ export const sendSMS = async (phoneNumber, message) => {
     
     // Debug: Log the full response from Beem
     console.log('📱 Single SMS Response for', cleanedPhone, ':', JSON.stringify(response.data, null, 2));
+    console.log('📱 Response Status:', response.status);
     
     // Check if the SMS was successfully sent
-    if (response.data && response.data.successful === true) {
+    // Beem API typically returns: { "code": 100, "message": "Success", ... } for success
+    // Or error codes like 101, 102, etc. for failures
+    const responseData = response.data;
+    
+    console.log('📥 Beem API Response:', {
+      status: response.status,
+      statusText: response.statusText,
+      data: JSON.stringify(responseData, null, 2),
+    });
+    
+    // Beem success codes: 100 typically means success
+    // Check for success indicators
+    const isSuccessful = 
+      response.status === 200 && (
+        responseData?.code === 100 ||
+        responseData?.successful === true ||
+        (responseData?.message && (
+          responseData.message.toLowerCase().includes('success') ||
+          responseData.message.toLowerCase().includes('sent') ||
+          responseData.message.toLowerCase().includes('queued')
+        )) ||
+        (Array.isArray(responseData) && responseData.length > 0 && !responseData[0]?.error)
+      );
+    
+    if (isSuccessful) {
+      console.log('✅ SMS sent successfully to', cleanedPhone);
       return {
         success: true,
-        data: response.data,
+        data: responseData,
         phone: cleanedPhone,
       };
     } else {
-      const errorMessage = response.data?.message || 'Failed to send SMS';
+      // Extract error message from various possible response formats
+      let errorMessage = 'Failed to send SMS';
+      
+      if (responseData?.code) {
+        // Beem error codes
+        const errorCodes = {
+          101: 'Invalid request parameters',
+          102: 'Authentication failed - check your API credentials',
+          103: 'Insufficient balance',
+          104: 'Invalid sender ID',
+          105: 'Invalid phone number format',
+          106: 'Message too long',
+          107: 'Rate limit exceeded',
+        };
+        errorMessage = errorCodes[responseData.code] || `Beem error code: ${responseData.code}`;
+        if (responseData.message) {
+          errorMessage += ` - ${responseData.message}`;
+        }
+      } else {
+        errorMessage = 
+          responseData?.message || 
+          responseData?.error || 
+          responseData?.description ||
+          responseData?.errorMessage ||
+          `HTTP ${response.status}: ${response.statusText}` ||
+          'Failed to send SMS';
+      }
+      
+      console.error('❌ SMS Send Failed:', {
+        phone: cleanedPhone,
+        status: response.status,
+        responseCode: responseData?.code,
+        response: responseData,
+        error: errorMessage
+      });
+      
       return {
         success: false,
         error: errorMessage,
         phone: cleanedPhone,
-        data: response.data,
+        data: responseData,
       };
     }
   } catch (error) {
@@ -172,9 +250,19 @@ export const sendBulkSMS = async (recipients) => {
 
           // Debug: Log the full response from Beem
           console.log('📱 Bulk SMS Response:', JSON.stringify(response.data, null, 2));
+          console.log('📱 Response Status:', response.status);
 
-          // Process Beem response
-          if (response.data && response.data.successful === true) {
+          // Process Beem response - check multiple possible success indicators
+          const responseData = response.data;
+          const isSuccessful = 
+            response.status === 200 && (
+              responseData?.successful === true ||
+              responseData?.code === 100 ||
+              (responseData?.message && responseData.message.toLowerCase().includes('success')) ||
+              (Array.isArray(responseData) && responseData.length > 0)
+            );
+
+          if (isSuccessful) {
             // All messages in batch were successful
             batch.forEach((recipient) => {
               const cleanedPhone = formatPhoneNumber(recipient.phoneNumber);
@@ -187,15 +275,27 @@ export const sendBulkSMS = async (recipients) => {
             });
           } else {
             // Some or all messages failed
+            const errorMessage = 
+              responseData?.message || 
+              responseData?.error || 
+              responseData?.description ||
+              `HTTP ${response.status}: ${response.statusText}` ||
+              'Failed to send SMS';
+            
+            console.error('❌ Bulk SMS Batch Failed:', {
+              status: response.status,
+              response: responseData,
+              error: errorMessage
+            });
+            
             batch.forEach((recipient) => {
               const cleanedPhone = formatPhoneNumber(recipient.phoneNumber);
-              const errorMessage = response.data?.message || 'Failed to send SMS';
               results.failed++;
               results.details.push({
                 phone: cleanedPhone,
                 status: 'failed',
                 error: errorMessage,
-                result: response.data,
+                result: responseData,
               });
             });
           }
@@ -263,23 +363,45 @@ export const sendBulkSMS = async (recipients) => {
               },
             });
 
-            // Check if SMS was successfully sent
-            if (response.data && response.data.successful === true) {
+            // Check if SMS was successfully sent - check multiple possible success indicators
+            const responseData = response.data;
+            const isSuccessful = 
+              response.status === 200 && (
+                responseData?.successful === true ||
+                responseData?.code === 100 ||
+                (responseData?.message && responseData.message.toLowerCase().includes('success')) ||
+                (Array.isArray(responseData) && responseData.length > 0)
+              );
+            
+            if (isSuccessful) {
               results.sent++;
               results.details.push({
                 phone: cleanedPhone,
                 status: 'sent',
-                result: response.data,
+                result: responseData,
               });
               return { success: true, phone: cleanedPhone };
             } else {
-              const errorMessage = response.data?.message || 'Failed to send SMS';
+              const errorMessage = 
+                responseData?.message || 
+                responseData?.error || 
+                responseData?.description ||
+                `HTTP ${response.status}: ${response.statusText}` ||
+                'Failed to send SMS';
+              
+              console.error('❌ Individual SMS Failed:', {
+                phone: cleanedPhone,
+                status: response.status,
+                response: responseData,
+                error: errorMessage
+              });
+              
               results.failed++;
               results.details.push({
                 phone: cleanedPhone,
                 status: 'failed',
                 error: errorMessage,
-                result: response.data,
+                result: responseData,
               });
               return { success: false, phone: cleanedPhone, error: errorMessage };
             }
