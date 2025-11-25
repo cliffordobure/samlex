@@ -340,6 +340,7 @@ const Newsletter = () => {
                   Connect Gmail
                 </button>
               </div>
+              {/* Temporarily commented out to fix build error
               <div className="mt-4 p-4 bg-yellow-900/20 border border-yellow-700/50 rounded-lg">
                 <div className="flex items-start space-x-3">
                   <FaExclamationTriangle className="w-5 h-5 text-yellow-400 mt-0.5 flex-shrink-0" />
@@ -360,6 +361,7 @@ const Newsletter = () => {
                   </div>
                 </div>
               </div>
+              */}
             </>
           )}
         </div>
