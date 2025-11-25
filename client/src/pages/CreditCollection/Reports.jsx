@@ -17,6 +17,7 @@ import reportsApi from "../../store/api/reportsApi";
 import aiApi from "../../store/api/aiApi";
 import CreditCollectionLayout from "../../components/layouts/CreditCollectionLayout";
 import Loading from "../../components/common/Loading";
+import socket from "../../utils/socket";
 import {
   FaChartBar,
   FaChartLine,
@@ -193,8 +194,6 @@ ChartJS.register(
 
   // Socket listeners for real-time updates
   useEffect(() => {
-    const socket = window.socket;
-
     if (socket) {
       // Listen for promised payment updates
       socket.on("promisedPaymentUpdated", (updatedCase) => {

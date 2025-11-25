@@ -30,6 +30,15 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    minify: 'esbuild',
+    target: 'es2015',
+    rollupOptions: {
+      output: {
+        manualChunks: undefined,
+      },
+    },
+  },
   // If you need to expose environment variables, use import.meta.env in your code instead of process.env
   // define: {
   //   "process.env": process.env,
