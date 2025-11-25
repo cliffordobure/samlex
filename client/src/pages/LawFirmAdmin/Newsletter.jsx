@@ -322,26 +322,24 @@ const Newsletter = () => {
               </button>
             </div>
           ) : (
-            <>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <FaExclamationCircle className="w-6 h-6 text-yellow-400" />
-                  <div>
-                    <h3 className="text-white font-semibold">Gmail Not Connected</h3>
-                    <p className="text-slate-400 text-sm">
-                      Connect your Gmail account to fetch emails
-                    </p>
-                  </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <FaExclamationCircle className="w-6 h-6 text-yellow-400" />
+                <div>
+                  <h3 className="text-white font-semibold">Gmail Not Connected</h3>
+                  <p className="text-slate-400 text-sm">
+                    Connect your Gmail account to fetch emails
+                  </p>
                 </div>
-                <button
-                  onClick={handleConnectGmail}
-                  className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-xl font-semibold transition-all duration-200 shadow-lg hover:shadow-xl"
-                >
-                  <FaGoogle className="w-5 h-5 mr-2" />
-                  Connect Gmail
-                </button>
               </div>
-            </>
+              <button
+                onClick={handleConnectGmail}
+                className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-xl font-semibold transition-all duration-200 shadow-lg hover:shadow-xl"
+              >
+                <FaGoogle className="w-5 h-5 mr-2" />
+                Connect Gmail
+              </button>
+            </div>
           )}
         </div>
 
