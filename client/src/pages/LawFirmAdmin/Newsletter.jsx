@@ -340,26 +340,28 @@ const Newsletter = () => {
               </button>
             </div>
             {/* Setup Warning */}
-            <div className="mt-4 p-4 bg-yellow-900/20 border border-yellow-700/50 rounded-lg">
-              <div className="flex items-start space-x-3">
-                <FaExclamationTriangle className="w-5 h-5 text-yellow-400 mt-0.5 flex-shrink-0" />
-                <div className="text-sm">
-                  <p className="text-yellow-400 font-semibold mb-1">
-                    Setup Required Before Connecting
-                  </p>
-                  <p className="text-yellow-300/90 mb-2">
-                    If you see "Access blocked" error, you need to add your email as a test user in Google Cloud Console:
-                  </p>
-                  <ol className="list-decimal list-inside text-yellow-300/80 space-y-1 ml-2">
-                    <li>Go to <a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer" className="underline text-yellow-400 hover:text-yellow-300">Google Cloud Console</a></li>
-                    <li>Navigate to <strong>APIs & Services → OAuth consent screen</strong></li>
-                    <li>Scroll to <strong>Test users</strong> section</li>
-                    <li>Click <strong>+ ADD USERS</strong> and add your email: <code className="bg-yellow-900/30 px-1 rounded">cliffordobure98@gmail.com</code></li>
-                    <li>Click <strong>SAVE</strong> and try connecting again</li>
-                  </ol>
+            {!connectionStatus?.connected && (
+              <div className="mt-4 p-4 bg-yellow-900/20 border border-yellow-700/50 rounded-lg">
+                <div className="flex items-start space-x-3">
+                  <FaExclamationTriangle className="w-5 h-5 text-yellow-400 mt-0.5 flex-shrink-0" />
+                  <div className="text-sm">
+                    <p className="text-yellow-400 font-semibold mb-1">
+                      Setup Required Before Connecting
+                    </p>
+                    <p className="text-yellow-300/90 mb-2">
+                      If you see "Access blocked" error, you need to add your email as a test user in Google Cloud Console:
+                    </p>
+                    <ol className="list-decimal list-inside text-yellow-300/80 space-y-1 ml-2">
+                      <li>Go to <a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer" className="underline text-yellow-400 hover:text-yellow-300">Google Cloud Console</a></li>
+                      <li>Navigate to <strong>APIs & Services → OAuth consent screen</strong></li>
+                      <li>Scroll to <strong>Test users</strong> section</li>
+                      <li>Click <strong>+ ADD USERS</strong> and add your email: <code className="bg-yellow-900/30 px-1 rounded">cliffordobure98@gmail.com</code></li>
+                      <li>Click <strong>SAVE</strong> and try connecting again</li>
+                    </ol>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
           )}
         </div>
 
