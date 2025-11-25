@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, Fragment } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import axios from "axios";
@@ -321,7 +321,7 @@ const Newsletter = () => {
               </button>
             </div>
           ) : (
-            <>
+            <Fragment>
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
                   <FaExclamationCircle className="w-6 h-6 text-yellow-400" />
@@ -340,7 +340,6 @@ const Newsletter = () => {
                   Connect Gmail
                 </button>
               </div>
-              {/* Setup Warning */}
               <div className="mt-4 p-4 bg-yellow-900/20 border border-yellow-700/50 rounded-lg">
                 <div className="flex items-start space-x-3">
                   <FaExclamationTriangle className="w-5 h-5 text-yellow-400 mt-0.5 flex-shrink-0" />
@@ -361,7 +360,7 @@ const Newsletter = () => {
                   </div>
                 </div>
               </div>
-            </>
+            </Fragment>
           )}
         </div>
 
