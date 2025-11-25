@@ -510,11 +510,11 @@ const Newsletter = () => {
             </div>
 
             {/* Client Selection */}
-            <div className="bg-gradient-to-r from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl border border-slate-600/50 shadow-2xl p-6">
+            <div className="bg-gradient-to-r from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl border border-slate-600/50 shadow-2xl p-6" style={{ position: 'relative', zIndex: 1 }}>
               <h2 className="text-xl font-bold text-white mb-4">
-                Recipients ({clients.length} {clients.length === 1 ? 'client' : 'clients'})
+                Recipients ({clients.filter(c => c && c.email).length} {clients.filter(c => c && c.email).length === 1 ? 'client' : 'clients'})
               </h2>
-              {clients.length === 0 ? (
+              {clients.filter(c => c && c.email).length === 0 ? (
                 <div className="text-center py-8">
                   <FaExclamationCircle className="w-12 h-12 text-yellow-400 mx-auto mb-3" />
                   <p className="text-slate-400">No clients with email addresses found</p>
@@ -523,69 +523,72 @@ const Newsletter = () => {
                   </p>
                 </div>
               ) : (
-                <>
-                  <div className="space-y-2 max-h-48 overflow-y-auto mb-4">
-                    {clients.filter(c => c && c.email).map((client) => {
-                      const clientId = String(client._id || client.id);
-                      const isSelected = selectedClients.some(id => String(id) === clientId);
-                      return (
-                        <div
-                          key={clientId}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            setSelectedClients((prev) => {
-                              const prevStr = prev.map(id => String(id));
-                              if (prevStr.includes(clientId)) {
-                                return prev.filter((id) => String(id) !== clientId);
-                              } else {
-                                return [...prev, client._id || client.id];
-                              }
-                            });
-                          }}
-                          className={`p-3 rounded-lg border cursor-pointer transition-all duration-200 ${
-                            isSelected
-                              ? "bg-green-500/20 border-green-500/50"
-                              : "bg-slate-700/30 border-slate-600/50 hover:bg-slate-700/50"
-                          }`}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="text-white text-sm font-medium">
-                                {client.firstName} {client.lastName}
-                                {client.companyName && ` (${client.companyName})`}
-                              </p>
-                              <p className="text-slate-400 text-xs">{client.email}</p>
-                            </div>
-                            {isSelected && (
-                              <FaCheckCircle className="w-4 h-4 text-green-400" />
-                            )}
+                <div className="space-y-2 max-h-48 overflow-y-auto mb-4">
+                  {clients.filter(c => c && c.email).map((client) => {
+                    const clientId = String(client._id || client.id);
+                    const isSelected = selectedClients.some(id => String(id) === clientId);
+                    return (
+                      <div
+                        key={clientId}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setSelectedClients((prev) => {
+                            const prevStr = prev.map(id => String(id));
+                            if (prevStr.includes(clientId)) {
+                              return prev.filter((id) => String(id) !== clientId);
+                            } else {
+                              return [...prev, client._id || client.id];
+                            }
+                          });
+                        }}
+                        className={`p-3 rounded-lg border cursor-pointer transition-all duration-200 ${
+                          isSelected
+                            ? "bg-green-500/20 border-green-500/50"
+                            : "bg-slate-700/30 border-slate-600/50 hover:bg-slate-700/50"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-white text-sm font-medium">
+                              {client.firstName} {client.lastName}
+                              {client.companyName && ` (${client.companyName})`}
+                            </p>
+                            <p className="text-slate-400 text-xs">{client.email}</p>
                           </div>
+                          {isSelected && (
+                            <FaCheckCircle className="w-4 h-4 text-green-400" />
+                          )}
                         </div>
-                      );
-                    })}
-                  </div>
-                </>
+                      </div>
+                    );
+                  })}
+                </div>
               )}
-              <div className="flex gap-2 mt-4">
+              <div className="flex gap-2 mt-4" style={{ zIndex: 10, position: 'relative' }}>
                 <button
                   type="button"
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    const clientsWithEmail = clients.filter(c => c && c.email && c._id);
+                    console.log("Select All button clicked!");
+                    console.log("Clients array:", clients);
+                    const clientsWithEmail = clients.filter(c => c && c.email && (c._id || c.id));
+                    console.log("Clients with email:", clientsWithEmail);
                     const allClientIds = clientsWithEmail.map((c) => c._id || c.id).filter(Boolean);
+                    console.log("All client IDs to select:", allClientIds);
                     
                     if (allClientIds.length > 0) {
-                      setSelectedClients(allClientIds);
+                      setSelectedClients([...allClientIds]);
+                      console.log("Selected clients state updated to:", allClientIds);
                       toast.success(`Selected ${allClientIds.length} ${allClientIds.length === 1 ? 'client' : 'clients'}`);
                     } else {
+                      console.log("No clients available to select");
                       toast.error("No clients with email addresses available");
                     }
                   }}
                   disabled={clients.filter(c => c && c.email).length === 0}
                   className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-lg transition-all duration-200 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  style={{ pointerEvents: clients.filter(c => c && c.email).length === 0 ? 'none' : 'auto' }}
                 >
                   Select All ({clients.filter(c => c && c.email).length})
                 </button>
@@ -594,14 +597,19 @@ const Newsletter = () => {
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
+                    console.log("Clear Selection button clicked!");
+                    console.log("Current selected clients:", selectedClients);
                     if (selectedClients.length > 0) {
                       setSelectedClients([]);
+                      console.log("Selection cleared");
                       toast.success("Selection cleared");
+                    } else {
+                      console.log("No selection to clear");
+                      toast.info("No selection to clear");
                     }
                   }}
                   disabled={selectedClients.length === 0}
                   className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white rounded-lg transition-all duration-200 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-red-500"
-                  style={{ pointerEvents: selectedClients.length === 0 ? 'none' : 'auto' }}
                 >
                   Clear Selection ({selectedClients.length})
                 </button>
