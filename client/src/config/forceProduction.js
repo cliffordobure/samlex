@@ -8,11 +8,11 @@ const forceProductionUrls = () => {
     
     // Override environment variables
     if (!import.meta.env.VITE_API_URL) {
-      import.meta.env.VITE_API_URL = 'https://ec2-3-89-161-91.compute-1.amazonaws.com/api';
+      import.meta.env.VITE_API_URL = 'https://ec2-34-224-51-176.compute-1.amazonaws.com/api';
     }
     
     if (!import.meta.env.VITE_SOCKET_URL) {
-      import.meta.env.VITE_SOCKET_URL = 'https://ec2-3-89-161-91.compute-1.amazonaws.com';
+      import.meta.env.VITE_SOCKET_URL = 'https://ec2-34-224-51-176.compute-1.amazonaws.com';
     }
     
     console.log('✅ Forced production URLs:', {

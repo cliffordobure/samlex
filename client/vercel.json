@@ -1,7 +1,7 @@
 {
   "rewrites": [{ "source": "/(.*)", "destination": "/" }],
   "env": {
-    "VITE_API_URL": "https://ec2-3-89-161-91.compute-1.amazonaws.com/api",
-    "VITE_SOCKET_URL": "https://ec2-3-89-161-91.compute-1.amazonaws.com"
+    "VITE_API_URL": "https://ec2-34-224-51-176.compute-1.amazonaws.com/api",
+    "VITE_SOCKET_URL": "https://ec2-34-224-51-176.compute-1.amazonaws.com"
   }
 }

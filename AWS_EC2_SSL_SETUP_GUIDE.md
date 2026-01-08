@@ -12,10 +12,24 @@ Your frontend (HTTPS) is trying to connect to an insecure backend (HTTP), which 
 This is the most cost-effective solution using free SSL certificates from Let's Encrypt.
 
 #### Prerequisites
-- An EC2 instance running Ubuntu/Linux
+- An EC2 instance running Ubuntu/Linux or Amazon Linux
 - A domain name pointing to your EC2 instance (or use the EC2 public DNS)
 - SSH access to your EC2 instance
 - Ports 80 and 443 open in your EC2 Security Group
+
+#### Quick Check: Which Linux Distribution?
+
+First, check which Linux you're using:
+```bash
+cat /etc/os-release
+```
+
+**Common distributions:**
+- **Ubuntu/Debian**: Uses `apt` package manager
+- **Amazon Linux 2**: Uses `yum` package manager
+- **Amazon Linux 2023**: Uses `dnf` package manager
+
+If you see "apt: command not found", you're on Amazon Linux - use `yum` or `dnf` commands instead!
 
 #### Step 1: Update Security Group
 1. Go to AWS Console → EC2 → Security Groups
@@ -25,6 +39,8 @@ This is the most cost-effective solution using free SSL certificates from Let's 
    - **Type**: HTTPS, **Port**: 443, **Source**: 0.0.0.0/0
 
 #### Step 2: Install Nginx
+
+**For Ubuntu/Debian:**
 SSH into your EC2 instance and run:
 
 ```bash
@@ -39,21 +55,126 @@ sudo systemctl start nginx
 sudo systemctl enable nginx
 ```
 
+**For Amazon Linux 2:**
+```bash
+# Update package list
+sudo yum update -y
+
+# Install Nginx (may need to add EPEL repository first)
+sudo amazon-linux-extras install nginx1 -y
+# OR if that doesn't work:
+sudo yum install nginx -y
+
+# Start and enable Nginx
+sudo systemctl start nginx
+sudo systemctl enable nginx
+```
+
+**For Amazon Linux 2023:**
+```bash
+# Update package list
+sudo dnf update -y
+
+# Install Nginx
+sudo dnf install nginx -y
+
+# Start and enable Nginx
+sudo systemctl start nginx
+sudo systemctl enable nginx
+```
+
 #### Step 3: Install Certbot (Let's Encrypt)
+
+**For Ubuntu/Debian:**
 ```bash
 # Install Certbot
 sudo apt install certbot python3-certbot-nginx -y
 ```
 
+**For Amazon Linux 2:**
+```bash
+# Install Certbot
+sudo yum install certbot python3-certbot-nginx -y
+```
+
+**For Amazon Linux 2023:**
+```bash
+# Install Certbot
+sudo dnf install certbot python3-certbot-nginx -y
+```
+
+**If Certbot is not available in default repos (Amazon Linux):**
+```bash
+# For Amazon Linux 2
+sudo yum install python3-pip -y
+sudo pip3 install certbot certbot-nginx
+
+# For Amazon Linux 2023
+sudo dnf install python3-pip -y
+sudo pip3 install certbot certbot-nginx
+```
+
 #### Step 4: Configure Nginx as Reverse Proxy
 
-Create/edit the Nginx configuration file:
+**Determine your Linux distribution first:**
+```bash
+# Check which Linux you're using
+cat /etc/os-release
+```
 
+**For Ubuntu/Debian:**
+Create/edit the Nginx configuration file:
 ```bash
 sudo nano /etc/nginx/sites-available/default
 ```
 
+**For Ubuntu/Debian:**
 Replace the content with this configuration (adjust the domain name):
+
+```nginx
+server {
+    listen 80;
+    server_name ec2-3-89-161-91.compute-1.amazonaws.com;  # Replace with your domain if you have one
+
+    # Redirect HTTP to HTTPS (will be enabled after SSL setup)
+    # return 301 https://$server_name$request_uri;
+
+    # Temporary: Proxy to Node.js app
+    location / {
+        proxy_pass http://localhost:5000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    # WebSocket support
+    location /socket.io/ {
+        proxy_pass http://localhost:5000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+**For Amazon Linux:**
+The nginx config structure is different. You need to edit `/etc/nginx/nginx.conf` or create a new file in `/etc/nginx/conf.d/`:
+
+```bash
+# Create a new config file
+sudo nano /etc/nginx/conf.d/nodejs.conf
+```
+
+Add this content:
 
 ```nginx
 server {
@@ -299,7 +420,10 @@ After setting up SSL:
    - External traffic should only access ports 80/443
 
 3. **Security**: 
-   - Keep Certbot updated: `sudo apt upgrade certbot`
+   - Keep Certbot updated:
+     - Ubuntu/Debian: `sudo apt upgrade certbot`
+     - Amazon Linux 2: `sudo yum update certbot`
+     - Amazon Linux 2023: `sudo dnf update certbot`
    - Monitor certificate expiration
    - Use strong SSL/TLS configurations
 
