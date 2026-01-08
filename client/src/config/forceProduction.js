@@ -8,11 +8,11 @@ const forceProductionUrls = () => {
     
     // Override environment variables
     if (!import.meta.env.VITE_API_URL) {
-      import.meta.env.VITE_API_URL = 'https://samlex.onrender.com/api';
+      import.meta.env.VITE_API_URL = 'http://ec2-3-89-161-91.compute-1.amazonaws.com:5000/api';
     }
     
     if (!import.meta.env.VITE_SOCKET_URL) {
-      import.meta.env.VITE_SOCKET_URL = 'https://samlex.onrender.com';
+      import.meta.env.VITE_SOCKET_URL = 'http://ec2-3-89-161-91.compute-1.amazonaws.com:5000';
     }
     
     console.log('✅ Forced production URLs:', {
