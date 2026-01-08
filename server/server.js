@@ -21,7 +21,12 @@ const server = createServer(app);
 // Allow CORS for your client
 const io = new SocketIOServer(server, {
   cors: { 
-    origin: ["https://samlex-client.vercel.app", "http://localhost:5001", "http://localhost:5002"],
+    origin: [
+      "https://samlex-client.vercel.app", 
+      "https://ec2-3-89-161-91.compute-1.amazonaws.com", // EC2 HTTPS endpoint (update with your domain after SSL setup)
+      "http://localhost:5001", 
+      "http://localhost:5002"
+    ],
     methods: ["*"], // Allow all HTTP methods
     credentials: true,
   },

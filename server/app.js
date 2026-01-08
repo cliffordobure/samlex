@@ -33,6 +33,7 @@ const __dirname = path.dirname(__filename);
 const allowedOrigins = [
   "https://samlex-client.vercel.app",
   "https://lawfirm-saas-client.vercel.app",
+  "https://ec2-3-89-161-91.compute-1.amazonaws.com", // EC2 HTTPS endpoint (update with your domain after SSL setup)
   "http://localhost:5001",
   "http://localhost:5002",
   // Add more allowed origins if needed
@@ -123,6 +124,7 @@ app.use("/api/upload", (req, res, next) => {
   const allowedOrigins = [
     'https://samlex-client.vercel.app',
     'https://lawfirm-saas-client.vercel.app',
+    'https://ec2-3-89-161-91.compute-1.amazonaws.com', // EC2 HTTPS endpoint (update with your domain after SSL setup)
     'http://localhost:5001',
     'http://localhost:5002'
   ];
