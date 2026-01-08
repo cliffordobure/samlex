@@ -1,7 +1,7 @@
 {
   "rewrites": [{ "source": "/(.*)", "destination": "/" }],
   "env": {
-    "VITE_API_URL": "https://ec2-34-224-51-176.compute-1.amazonaws.com/api",
-    "VITE_SOCKET_URL": "https://ec2-34-224-51-176.compute-1.amazonaws.com"
+    "VITE_API_URL": "https://samlex.onrender.com/api",
+    "VITE_SOCKET_URL": "https://samlex.onrender.com"
   }
 }

@@ -7,7 +7,7 @@ const getApiUrl = () => {
   
   // Check if we're on Vercel (production)
   if (window.location.hostname.includes('vercel.app')) {
-    return 'https://ec2-34-224-51-176.compute-1.amazonaws.com/api';
+    return 'https://samlex.onrender.com/api';
   }
   
   // Check if environment variable is set
@@ -16,7 +16,7 @@ const getApiUrl = () => {
   }
   
   // Default to production URL
-  return 'https://ec2-34-224-51-176.compute-1.amazonaws.com/api';
+  return 'https://samlex.onrender.com/api';
 };
 
 const getSocketUrl = () => {
@@ -27,7 +27,7 @@ const getSocketUrl = () => {
   
   // Check if we're on Vercel (production)
   if (window.location.hostname.includes('vercel.app')) {
-    return 'https://ec2-34-224-51-176.compute-1.amazonaws.com';
+    return 'https://samlex.onrender.com';
   }
   
   // Check if environment variable is set
@@ -36,7 +36,7 @@ const getSocketUrl = () => {
   }
   
   // Default to production URL
-  return 'https://ec2-34-224-51-176.compute-1.amazonaws.com';
+  return 'https://samlex.onrender.com';
 };
 
 export const API_URL = getApiUrl();
