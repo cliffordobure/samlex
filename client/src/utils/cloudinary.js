@@ -4,9 +4,10 @@
  */
 
 // Cloudinary configuration - these should be set in your environment variables
-const CLOUDINARY_CLOUD_NAME = process.env.REACT_APP_CLOUDINARY_CLOUD_NAME || 'your_cloudinary_cloud_name';
-const CLOUDINARY_UPLOAD_PRESET = process.env.REACT_APP_CLOUDINARY_UPLOAD_PRESET || 'your_upload_preset';
-const CLOUDINARY_FOLDER = process.env.REACT_APP_CLOUDINARY_FOLDER || 'law-firm-documents';
+// Note: In Vite, use import.meta.env instead of process.env, and prefix with VITE_
+const CLOUDINARY_CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || import.meta.env.REACT_APP_CLOUDINARY_CLOUD_NAME || 'your_cloudinary_cloud_name';
+const CLOUDINARY_UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || import.meta.env.REACT_APP_CLOUDINARY_UPLOAD_PRESET || 'your_upload_preset';
+const CLOUDINARY_FOLDER = import.meta.env.VITE_CLOUDINARY_FOLDER || import.meta.env.REACT_APP_CLOUDINARY_FOLDER || 'law-firm-documents';
 
 // TEMPORARY: If you want to test immediately, replace the values below with your actual Cloudinary credentials
 // const CLOUDINARY_CLOUD_NAME = 'YOUR_ACTUAL_CLOUD_NAME_HERE';

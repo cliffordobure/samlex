@@ -51,7 +51,7 @@ io.on("connection", (socket) => {
     socket.join(`department-${departmentId}`);
     console.log(`User ${socket.id} joined department room: ${departmentId}`);
   });
-
+ 
   // Handle case updates
   socket.on("case-update", (data) => {
     // Broadcast to law firm members
@@ -63,7 +63,7 @@ io.on("connection", (socket) => {
     // Send to specific user or broadcast to law firm
     if (notification.recipient) {
       socket
-        .to(`user-${notification.recipient}`)
+        .to(`user-${notification.recipient}`) 
         .emit("new-notification", notification);
     } else if (notification.lawFirm) { 
       socket

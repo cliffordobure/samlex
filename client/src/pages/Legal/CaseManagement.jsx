@@ -11,6 +11,7 @@ import {
 import { getUsers } from "../../store/slices/userSlice";
 import LegalKanbanBoard from "./LegalKanbanBoard";
 import toast from "react-hot-toast";
+import socket from "../../utils/socket";
 import {
   FaPlus,
   FaSearch,
@@ -121,6 +122,7 @@ const LegalCaseManagement = () => {
     caseGrowth: 0,
   });
 
+  // Fetch cases and users
   useEffect(() => {
     if (!user) return;
 
@@ -139,6 +141,30 @@ const LegalCaseManagement = () => {
 
     // Load statistics
     dispatch(getLegalCaseStatistics({ period: "30" }));
+  }, [dispatch, user]);
+
+  // Socket listeners for real-time updates
+  useEffect(() => {
+    if (!user) return;
+
+    const refetchCases = () => {
+      if (user.role === "legal_head") {
+        dispatch(getLegalCases({ lawFirm: user.lawFirm._id }));
+        dispatch(getPendingAssignmentCases());
+      } else if (user.role === "advocate") {
+        dispatch(getLegalCases({ assignedTo: user._id }));
+      }
+    };
+
+    socket.on("legalCaseAssigned", refetchCases);
+    socket.on("legalCaseStatusUpdated", refetchCases);
+    socket.on("legalCaseCreated", refetchCases);
+
+    return () => {
+      socket.off("legalCaseAssigned", refetchCases);
+      socket.off("legalCaseStatusUpdated", refetchCases);
+      socket.off("legalCaseCreated", refetchCases);
+    };
   }, [dispatch, user]);
 
   useEffect(() => {
@@ -254,6 +280,14 @@ const LegalCaseManagement = () => {
       toast.success("Case assigned successfully");
       setShowAssignmentModal(false);
       setAssignmentData({ caseId: "", assignedTo: "", notes: "" });
+      
+      // Immediately refetch cases to show updated assignment
+      if (user.role === "legal_head") {
+        dispatch(getLegalCases({ lawFirm: user.lawFirm._id }));
+        dispatch(getPendingAssignmentCases());
+      } else if (user.role === "advocate") {
+        dispatch(getLegalCases({ assignedTo: user._id }));
+      }
     } catch (error) {
       toast.error(error || "Failed to assign case");
     }

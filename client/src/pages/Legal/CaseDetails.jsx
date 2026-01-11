@@ -309,7 +309,7 @@ const CaseDetails = () => {
     }
   }, [currentCase]);
 
-  // Socket listeners for real-time chat
+  // Socket listeners for real-time updates
   useEffect(() => {
     if (currentCase && id) {
       // Join the case room for real-time updates
@@ -318,12 +318,22 @@ const CaseDetails = () => {
       // Listen for new comments
       socket.on("legalCaseCommented", handleNewComment);
       
+      // Listen for case assignment updates
+      const handleCaseAssigned = (updatedCase) => {
+        if (updatedCase._id === id) {
+          dispatch(getLegalCase(id)); // Refresh case details
+        }
+      };
+      
+      socket.on("legalCaseAssigned", handleCaseAssigned);
+      
       return () => {
         socket.off("legalCaseCommented", handleNewComment);
+        socket.off("legalCaseAssigned", handleCaseAssigned);
         socket.emit("leave-case", id);
       };
     }
-  }, [currentCase, id]);
+  }, [currentCase, id, dispatch]);
 
   // Scroll to bottom when comments update
   useEffect(() => {

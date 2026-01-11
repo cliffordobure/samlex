@@ -260,6 +260,12 @@ const creditCaseSchema = new mongoose.Schema(
       trim: true,
       unique: true,
     },
+    resolvedAt: {
+      type: Date,
+    },
+    resolvedAt: {
+      type: Date,
+    },
     lastActivity: {
       type: Date,
       default: Date.now,
@@ -290,7 +296,22 @@ const creditCaseSchema = new mongoose.Schema(
   }
 );
 
-// Pre-save hook to generate case number
+// Pre-save hook to set resolvedAt when status changes to resolved
+creditCaseSchema.pre("save", function (next) {
+  // If status is changing to "resolved" and resolvedAt is not set, set it to now
+  if (this.isModified("status")) {
+    if (this.status === "resolved" && !this.resolvedAt) {
+      this.resolvedAt = new Date();
+    }
+    // If status is changing away from "resolved", clear resolvedAt
+    if (this.status !== "resolved" && this.resolvedAt) {
+      this.resolvedAt = null;
+    }
+  }
+  next();
+});
+
+// Pre-save hook to generate case number (must be after resolvedAt hook)
 creditCaseSchema.pre("save", async function (next) {
   if (!this.caseNumber) {
     if (!this.lawFirm || !this.department) {

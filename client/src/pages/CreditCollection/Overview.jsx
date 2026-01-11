@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Link } from "react-router-dom";
 import { getCreditCases } from "../../store/slices/creditCaseSlice";
+import socket from "../../utils/socket";
 import { 
   FaFolderOpen, 
   FaUser, 
@@ -35,9 +36,14 @@ const CreditOverview = () => {
   });
 
   // Filter cases assigned to the current user
-  const assignedCases = cases.filter(
-    (c) => c.assignedTo === user?._id || c.assignedTo?._id === user?._id
-  );
+  // Check both string ID and populated object ID
+  const assignedCases = cases.filter((c) => {
+    if (!user?._id) return false;
+    const assignedToId = typeof c.assignedTo === 'string' 
+      ? c.assignedTo 
+      : c.assignedTo?._id;
+    return assignedToId === user._id || assignedToId?.toString() === user._id.toString();
+  });
 
   useEffect(() => {
     if (!user) return;
@@ -48,6 +54,31 @@ const CreditOverview = () => {
     } else {
       dispatch(getCreditCases());
     }
+  }, [dispatch, user]);
+
+  // Socket listeners for real-time updates
+  useEffect(() => {
+    if (!user) return;
+
+    const refetchCases = () => {
+      if (user.role === "debt_collector") {
+        dispatch(getCreditCases({ assignedTo: user._id }));
+      } else if (user.role === "credit_head") {
+        dispatch(getCreditCases({ lawFirm: user.lawFirm?._id }));
+      } else {
+        dispatch(getCreditCases());
+      }
+    };
+
+    socket.on("caseAssigned", refetchCases);
+    socket.on("caseMoved", refetchCases);
+    socket.on("caseCreated", refetchCases);
+
+    return () => {
+      socket.off("caseAssigned", refetchCases);
+      socket.off("caseMoved", refetchCases);
+      socket.off("caseCreated", refetchCases);
+    };
   }, [dispatch, user]);
 
   useEffect(() => {
@@ -78,8 +109,11 @@ const CreditOverview = () => {
     });
   }, [assignedCases, cases, user]);
 
-  // For recent cases and priority cases, use all law firm cases for credit_head
+  // For recent cases and priority cases, only show cases assigned to the user
+  // Credit head can see all cases, but debt_collector should only see assigned cases
+  // This ensures credit collectors never see cases that aren't assigned to them
   const recentCases = user?.role === "credit_head" ? cases : assignedCases;
+  
   const priorityCases =
     user?.role === "credit_head"
       ? cases.filter((c) => c.priority === "urgent" || c.priority === "high")

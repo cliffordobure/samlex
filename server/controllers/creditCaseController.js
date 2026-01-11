@@ -6,6 +6,7 @@ import Comment from "../models/Comment.js";
 import Payment from "../models/Payment.js";
 import { createNotification } from "../services/notificationService.js";
 import { getDepartmentForCase } from "../utils/departmentAssignment.js";
+import { sendSMS } from "../services/smsService.js";
 
 // Create a new credit collection case
 export const createCreditCase = async (req, res) => {
@@ -105,6 +106,47 @@ export const createCreditCase = async (req, res) => {
         },
         sendEmail: true, // Enable email notification
       });
+
+      // Send SMS to assigned user if phone number is available
+      try {
+        const assignedUser = await User.findById(savedCase.assignedTo);
+        if (assignedUser && assignedUser.phoneNumber) {
+          const debtAmount = savedCase.debtAmount?.toLocaleString() || '0';
+          const currency = savedCase.currency || 'KES';
+          const smsMessage = `Hello ${assignedUser.firstName}, you have been assigned credit collection case "${savedCase.title}" (${savedCase.caseNumber}). Debtor: ${savedCase.debtorName}. Amount: ${currency} ${debtAmount}. Status: Assigned. Please check your dashboard.`;
+          await sendSMS(assignedUser.phoneNumber, smsMessage);
+          console.log(`✅ SMS sent to assigned user on case creation: ${assignedUser.phoneNumber}`);
+        }
+      } catch (smsError) {
+        console.error("❌ Error sending SMS to assigned user on case creation:", smsError);
+        // Don't fail the request if SMS fails
+      }
+
+      // Send SMS to debtor if phone number is available
+      try {
+        if (savedCase.debtorContact) {
+          const debtAmount = savedCase.debtAmount?.toLocaleString() || '0';
+          const currency = savedCase.currency || 'KES';
+          const smsMessage = `Dear ${savedCase.debtorName}, your credit collection case "${savedCase.title}" (${savedCase.caseNumber}) has been assigned to a debt collector. Amount: ${currency} ${debtAmount}. Status: Assigned. You will be contacted shortly.`;
+          await sendSMS(savedCase.debtorContact, smsMessage);
+          console.log(`✅ SMS sent to debtor on case creation: ${savedCase.debtorContact}`);
+        }
+      } catch (smsError) {
+        console.error("❌ Error sending SMS to debtor on case creation:", smsError);
+        // Don't fail the request if SMS fails
+      }
+
+      // Send SMS to creditor if phone number is available
+      try {
+        if (savedCase.creditorContact) {
+          const smsMessage = `Dear ${savedCase.creditorName}, credit collection case "${savedCase.title}" (${savedCase.caseNumber}) for debtor ${savedCase.debtorName} has been assigned to a debt collector. Status: Assigned. We will keep you updated.`;
+          await sendSMS(savedCase.creditorContact, smsMessage);
+          console.log(`✅ SMS sent to creditor on case creation: ${savedCase.creditorContact}`);
+        }
+      } catch (smsError) {
+        console.error("❌ Error sending SMS to creditor on case creation:", smsError);
+        // Don't fail the request if SMS fails
+      }
     }
 
     req.app.get("io").emit("caseCreated", savedCase);
@@ -191,11 +233,54 @@ export const moveCreditCase = async (req, res) => {
     }
 
     console.log("Updating case status to:", status);
+    // Set resolvedAt when status changes to resolved
+    const updateData = { status };
+    if (status === "resolved" && case_.status !== "resolved") {
+      updateData.resolvedAt = new Date();
+    } else if (status !== "resolved" && case_.status === "resolved") {
+      updateData.resolvedAt = null;
+    }
+    
     const updatedCase = await CreditCase.findByIdAndUpdate(
       id,
-      { status },
+      updateData,
       { new: true }
     );
+
+    // Send SMS notifications for status update
+    try {
+      // Send SMS to assigned user if phone number is available
+      if (updatedCase.assignedTo) {
+        const assignedUser = await User.findById(updatedCase.assignedTo);
+        if (assignedUser && assignedUser.phoneNumber) {
+          const statusDisplay = status.replace(/_/g, ' ').toUpperCase();
+          const smsMessage = `Hello ${assignedUser.firstName}, the status of your assigned credit case "${updatedCase.title}" (${updatedCase.caseNumber}) has been updated to: ${statusDisplay}. Please check your dashboard.`;
+          await sendSMS(assignedUser.phoneNumber, smsMessage);
+          console.log(`✅ SMS sent to assigned user for status update: ${assignedUser.phoneNumber}`);
+        }
+      }
+
+      // Send SMS to debtor if phone number is available
+      if (updatedCase.debtorContact) {
+        const statusDisplay = status.replace(/_/g, ' ').toUpperCase();
+        const debtAmount = updatedCase.debtAmount?.toLocaleString() || '0';
+        const currency = updatedCase.currency || 'KES';
+        const smsMessage = `Dear ${updatedCase.debtorName}, the status of your credit case "${updatedCase.title}" (${updatedCase.caseNumber}) has been updated to: ${statusDisplay}. Amount: ${currency} ${debtAmount}.`;
+        await sendSMS(updatedCase.debtorContact, smsMessage);
+        console.log(`✅ SMS sent to debtor for status update: ${updatedCase.debtorContact}`);
+      }
+
+      // Send SMS to creditor if phone number is available
+      if (updatedCase.creditorContact) {
+        const statusDisplay = status.replace(/_/g, ' ').toUpperCase();
+        const smsMessage = `Dear ${updatedCase.creditorName}, the status of credit case "${updatedCase.title}" (${updatedCase.caseNumber}) for debtor ${updatedCase.debtorName} has been updated to: ${statusDisplay}.`;
+        await sendSMS(updatedCase.creditorContact, smsMessage);
+        console.log(`✅ SMS sent to creditor for status update: ${updatedCase.creditorContact}`);
+      }
+    } catch (smsError) {
+      console.error("❌ Error sending SMS for status update:", smsError);
+      // Don't fail the request if SMS fails
+    }
 
     console.log("Case updated successfully:", updatedCase._id);
     req.app.get("io").emit("caseMoved", updatedCase);
@@ -308,6 +393,46 @@ export const assignCreditCase = async (req, res) => {
       },
       sendEmail: true, // Enable email notification
     });
+
+    // Send SMS to assigned user if phone number is available
+    try {
+      if (assignedUser.phoneNumber) {
+        const debtAmount = updatedCase.debtAmount?.toLocaleString() || '0';
+        const currency = updatedCase.currency || 'KES';
+        const smsMessage = `Hello ${assignedUser.firstName}, you have been assigned credit collection case "${updatedCase.title}" (${updatedCase.caseNumber}). Debtor: ${updatedCase.debtorName}. Amount: ${currency} ${debtAmount}. Status: Assigned. Please check your dashboard.`;
+        await sendSMS(assignedUser.phoneNumber, smsMessage);
+        console.log(`✅ SMS sent to assigned user: ${assignedUser.phoneNumber}`);
+      }
+    } catch (smsError) {
+      console.error("❌ Error sending SMS to assigned user:", smsError);
+      // Don't fail the request if SMS fails
+    }
+
+    // Send SMS to debtor if phone number is available
+    try {
+      if (updatedCase.debtorContact) {
+        const debtAmount = updatedCase.debtAmount?.toLocaleString() || '0';
+        const currency = updatedCase.currency || 'KES';
+        const smsMessage = `Dear ${updatedCase.debtorName}, your credit collection case "${updatedCase.title}" (${updatedCase.caseNumber}) has been assigned to a debt collector. Amount: ${currency} ${debtAmount}. Status: Assigned. You will be contacted shortly.`;
+        await sendSMS(updatedCase.debtorContact, smsMessage);
+        console.log(`✅ SMS sent to debtor: ${updatedCase.debtorContact}`);
+      }
+    } catch (smsError) {
+      console.error("❌ Error sending SMS to debtor:", smsError);
+      // Don't fail the request if SMS fails
+    }
+
+    // Send SMS to creditor if phone number is available
+    try {
+      if (updatedCase.creditorContact) {
+        const smsMessage = `Dear ${updatedCase.creditorName}, credit collection case "${updatedCase.title}" (${updatedCase.caseNumber}) for debtor ${updatedCase.debtorName} has been assigned to a debt collector. Status: Assigned. We will keep you updated.`;
+        await sendSMS(updatedCase.creditorContact, smsMessage);
+        console.log(`✅ SMS sent to creditor: ${updatedCase.creditorContact}`);
+      }
+    } catch (smsError) {
+      console.error("❌ Error sending SMS to creditor:", smsError);
+      // Don't fail the request if SMS fails
+    }
 
     req.app.get("io").emit("caseAssigned", updatedCase);
     res.json({ success: true, data: updatedCase });
@@ -1450,7 +1575,10 @@ export const updatePromisedPaymentStatus = async (req, res) => {
           "promisedPayments.$.paymentMethod": updateData.paymentMethod,
           lastActivity: new Date(),
           // Update case status if fully paid
-          ...(shouldResolveCase && { status: "resolved" }),
+          ...(shouldResolveCase && { 
+            status: "resolved",
+            resolvedAt: new Date()
+          }),
         },
       },
       { new: true }

@@ -6,6 +6,7 @@ import { Link, Routes, Route } from "react-router-dom";
 import {
   getCreditCases,
   updateCreditCase,
+  assignCase,
 } from "../../store/slices/creditCaseSlice";
 import { getUsers } from "../../store/slices/userSlice";
 import toast from "react-hot-toast";
@@ -13,6 +14,7 @@ import React from "react";
 import KanbanBoard from "./KanbanBoard";
 import CreateCase from "./CreateCase";
 import axios from "axios";
+import socket from "../../utils/socket";
 import { 
   FaFolderOpen, 
   FaSearch, 
@@ -49,6 +51,7 @@ const CaseManagement = () => {
   const [viewMode, setViewMode] = useState("list"); // 'list' or 'kanban'
   const [error, setError] = useState("");
 
+  // Fetch cases and users
   useEffect(() => {
     if (!user) return;
     if (user.role === "credit_head" && user.lawFirm?._id) {
@@ -59,6 +62,30 @@ const CaseManagement = () => {
       dispatch(getCreditCases());
     }
     dispatch(getUsers({ role: "debt_collector" }));
+  }, [dispatch, user]);
+
+  // Socket listeners for real-time updates
+  useEffect(() => {
+    const refetchCases = () => {
+      if (!user) return;
+      if (user.role === "credit_head" && user.lawFirm?._id) {
+        dispatch(getCreditCases({ lawFirm: user.lawFirm._id }));
+      } else if (user.role === "debt_collector") {
+        dispatch(getCreditCases({ assignedTo: user._id }));
+      } else {
+        dispatch(getCreditCases());
+      }
+    };
+
+    socket.on("caseAssigned", refetchCases);
+    socket.on("caseMoved", refetchCases);
+    socket.on("caseCreated", refetchCases);
+
+    return () => {
+      socket.off("caseAssigned", refetchCases);
+      socket.off("caseMoved", refetchCases);
+      socket.off("caseCreated", refetchCases);
+    };
   }, [dispatch, user]);
 
   useEffect(() => {
@@ -128,16 +155,19 @@ const CaseManagement = () => {
   const handleAssignCase = async (caseId, userId) => {
     try {
       const result = await dispatch(
-        updateCreditCase({
-          id: caseId,
-          data: { assignedTo: userId },
-        })
-      );
-      if (updateCreditCase.fulfilled.match(result)) {
-        toast.success("Case assigned successfully!");
+        assignCase({ id: caseId, userId })
+      ).unwrap();
+      toast.success("Case assigned successfully!");
+      // Immediately refetch cases to show updated assignment
+      if (user.role === "credit_head" && user.lawFirm?._id) {
+        dispatch(getCreditCases({ lawFirm: user.lawFirm._id }));
+      } else if (user.role === "debt_collector") {
+        dispatch(getCreditCases({ assignedTo: user._id }));
+      } else {
+        dispatch(getCreditCases());
       }
     } catch (error) {
-      toast.error("Failed to assign case");
+      toast.error(error || "Failed to assign case");
     }
   };
 

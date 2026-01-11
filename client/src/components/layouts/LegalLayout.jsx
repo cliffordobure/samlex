@@ -19,6 +19,7 @@ import {
   FaBalanceScale,
   FaUsers,
   FaCog,
+  FaBullseye,
 } from "react-icons/fa";
 
 const LegalLayout = ({ children }) => {
@@ -70,6 +71,16 @@ const LegalLayout = ({ children }) => {
       icon: <FaChartBar className="w-5 h-5" />,
       description: "Performance analytics and reports"
     },
+    ...(user?.role === "legal_head"
+      ? [
+          {
+            name: "Revenue Targets",
+            href: "/legal/revenue-targets",
+            icon: <FaBullseye className="w-5 h-5" />,
+            description: "Set and track revenue goals"
+          },
+        ]
+      : []),
   ];
 
   const handleLogout = () => {

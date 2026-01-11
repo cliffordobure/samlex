@@ -200,11 +200,21 @@ const creditCaseSlice = createSlice({
         state.caseDetailsError = action.error.message;
       })
       .addCase(assignCase.fulfilled, (state, action) => {
+        const updatedCase = action.payload;
+        // Update in cases array
         const index = state.cases.findIndex(
-          (case_) => case_._id === action.payload._id
+          (case_) => case_._id === updatedCase._id
         );
         if (index !== -1) {
-          state.cases[index] = action.payload;
+          state.cases[index] = updatedCase;
+        }
+        // Update caseDetails if it's the same case
+        if (state.caseDetails && state.caseDetails._id === updatedCase._id) {
+          state.caseDetails = updatedCase;
+        }
+        // Update currentCase if it's the same case
+        if (state.currentCase && state.currentCase._id === updatedCase._id) {
+          state.currentCase = updatedCase;
         }
       })
       .addCase(addCaseComment.fulfilled, (state, action) => {

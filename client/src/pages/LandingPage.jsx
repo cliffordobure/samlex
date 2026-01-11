@@ -538,7 +538,7 @@ const LandingPage = () => {
             The{" "}
             <span className="text-blue-300 font-semibold relative">
               all-in-one SaaS platform
-              <div className="absolute -bottom-1 left-0 w-full h-0.5 bg-gradient-to-r from-blue-500 to-indigo-500"></div>
+              <span className="absolute -bottom-1 left-0 w-full h-0.5 bg-gradient-to-r from-blue-500 to-indigo-500 block"></span>
             </span>{" "}
             for modern law firms. Manage cases, teams, payments, and analytics
             with
@@ -1380,7 +1380,7 @@ const LandingPage = () => {
       <FooterSection />
       
       {/* Custom Styles */}
-      <style jsx>{`
+      <style>{`
         @keyframes fade-in-up {
           from {
             opacity: 0;

@@ -267,11 +267,21 @@ const legalCaseSlice = createSlice({
         }
       })
       .addCase(assignLegalCase.fulfilled, (state, action) => {
+        const updatedCase = action.payload;
+        // Update in cases array
         const index = state.cases.findIndex(
-          (case_) => case_._id === action.payload._id
+          (case_) => case_._id === updatedCase._id
         );
         if (index !== -1) {
-          state.cases[index] = action.payload;
+          state.cases[index] = updatedCase;
+        }
+        // Update currentCase if it's the same case
+        if (state.currentCase && state.currentCase._id === updatedCase._id) {
+          state.currentCase = updatedCase;
+        }
+        // Also update if we have a caseDetails field (some components use this)
+        if (state.caseDetails && state.caseDetails._id === updatedCase._id) {
+          state.caseDetails = updatedCase;
         }
       })
       .addCase(updateLegalCaseStatus.fulfilled, (state, action) => {

@@ -7,6 +7,7 @@ import Document from "../models/Document.js";
 import mongoose from "mongoose";
 import { createNotification } from "../services/notificationService.js";
 import { getDepartmentForCase } from "../utils/departmentAssignment.js";
+import { sendSMS } from "../services/smsService.js";
 
 /**
  * @desc    Create a new legal case
@@ -476,6 +477,8 @@ export const createLegalCase = async (req, res) => {
       savedCase.assignedTo &&
       savedCase.assignedTo.toString() !== req.user._id.toString()
     ) {
+      const assignedUser = await User.findById(savedCase.assignedTo);
+      
       await createNotification({
         user: savedCase.assignedTo,
         title: `Case Assigned: ${savedCase.caseNumber}`,
@@ -491,6 +494,33 @@ export const createLegalCase = async (req, res) => {
         },
         sendEmail: true, // Enable email notification
       });
+
+      // Send SMS to assigned user if phone number is available
+      try {
+        if (assignedUser && assignedUser.phoneNumber) {
+          const smsMessage = `Hello ${assignedUser.firstName}, you have been assigned legal case "${savedCase.title}" (${savedCase.caseNumber}). Status: Assigned. Please check your dashboard for details.`;
+          await sendSMS(assignedUser.phoneNumber, smsMessage);
+          console.log(`✅ SMS sent to assigned user on case creation: ${assignedUser.phoneNumber}`);
+        }
+      } catch (smsError) {
+        console.error("❌ Error sending SMS to assigned user on case creation:", smsError);
+        // Don't fail the request if SMS fails
+      }
+
+      // Send SMS to client if phone number is available
+      try {
+        if (savedCase.client) {
+          const client = await Client.findById(savedCase.client);
+          if (client && client.phoneNumber) {
+            const smsMessage = `Dear ${client.firstName}, your legal case "${savedCase.title}" (${savedCase.caseNumber}) has been assigned to ${assignedUser.firstName} ${assignedUser.lastName}. Status: Assigned. We will keep you updated.`;
+            await sendSMS(client.phoneNumber, smsMessage);
+            console.log(`✅ SMS sent to client on case creation: ${client.phoneNumber}`);
+          }
+        }
+      } catch (smsError) {
+        console.error("❌ Error sending SMS to client on case creation:", smsError);
+        // Don't fail the request if SMS fails
+      }
     }
 
     // Emit socket event for real-time updates
@@ -770,6 +800,33 @@ export const assignLegalCase = async (req, res) => {
       sendEmail: true, // Enable email notification
     });
 
+    // Send SMS to assigned user if phone number is available
+    try {
+      if (assignedUser.phoneNumber) {
+        const smsMessage = `Hello ${assignedUser.firstName}, you have been assigned legal case "${legalCase.title}" (${legalCase.caseNumber}). Status: Assigned. Please check your dashboard for details.`;
+        await sendSMS(assignedUser.phoneNumber, smsMessage);
+        console.log(`✅ SMS sent to assigned user: ${assignedUser.phoneNumber}`);
+      }
+    } catch (smsError) {
+      console.error("❌ Error sending SMS to assigned user:", smsError);
+      // Don't fail the request if SMS fails
+    }
+
+    // Send SMS to client if phone number is available
+    try {
+      if (legalCase.client) {
+        const client = await Client.findById(legalCase.client);
+        if (client && client.phoneNumber) {
+          const smsMessage = `Dear ${client.firstName}, your legal case "${legalCase.title}" (${legalCase.caseNumber}) has been assigned to ${assignedUser.firstName} ${assignedUser.lastName}. Status: Assigned. We will keep you updated.`;
+          await sendSMS(client.phoneNumber, smsMessage);
+          console.log(`✅ SMS sent to client: ${client.phoneNumber}`);
+        }
+      }
+    } catch (smsError) {
+      console.error("❌ Error sending SMS to client:", smsError);
+      // Don't fail the request if SMS fails
+    }
+
     // Emit socket event
     req.app.get("io").emit("legalCaseAssigned", updatedCase);
 
@@ -849,6 +906,34 @@ export const updateLegalCaseStatus = async (req, res) => {
     }
 
     const updatedCase = await legalCase.save();
+
+    // Send SMS notifications for status update
+    try {
+      // Send SMS to assigned user if phone number is available
+      if (updatedCase.assignedTo) {
+        const assignedUser = await User.findById(updatedCase.assignedTo);
+        if (assignedUser && assignedUser.phoneNumber) {
+          const statusDisplay = status.replace(/_/g, ' ').toUpperCase();
+          const smsMessage = `Hello ${assignedUser.firstName}, the status of your assigned case "${updatedCase.title}" (${updatedCase.caseNumber}) has been updated to: ${statusDisplay}. Please check your dashboard for details.`;
+          await sendSMS(assignedUser.phoneNumber, smsMessage);
+          console.log(`✅ SMS sent to assigned user for status update: ${assignedUser.phoneNumber}`);
+        }
+      }
+
+      // Send SMS to client if phone number is available
+      if (updatedCase.client) {
+        const client = await Client.findById(updatedCase.client);
+        if (client && client.phoneNumber) {
+          const statusDisplay = status.replace(/_/g, ' ').toUpperCase();
+          const smsMessage = `Dear ${client.firstName}, the status of your legal case "${updatedCase.title}" (${updatedCase.caseNumber}) has been updated to: ${statusDisplay}. We will keep you updated.`;
+          await sendSMS(client.phoneNumber, smsMessage);
+          console.log(`✅ SMS sent to client for status update: ${client.phoneNumber}`);
+        }
+      }
+    } catch (smsError) {
+      console.error("❌ Error sending SMS for status update:", smsError);
+      // Don't fail the request if SMS fails
+    }
 
     // Emit socket event
     req.app.get("io").emit("legalCaseStatusUpdated", updatedCase);

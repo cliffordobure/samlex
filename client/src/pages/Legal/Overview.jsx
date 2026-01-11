@@ -4,6 +4,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { getLegalCases, getPendingAssignmentCases, getLegalCaseStatistics } from "../../store/slices/legalCaseSlice";
 import { getUsers } from "../../store/slices/userSlice";
 import reportsApi from "../../store/api/reportsApi";
+import socket from "../../utils/socket";
 import {
   FaGavel,
   FaBalanceScale,
@@ -125,6 +126,40 @@ const LegalOverview = () => {
         ]).finally(() => setIsLoading(false));
       }
     }
+  }, [dispatch, user?.lawFirm?._id, user?.role, user?._id]);
+
+  // Socket listeners for real-time updates
+  useEffect(() => {
+    if (!user?.lawFirm?._id) return;
+
+    const refetchCases = () => {
+      setIsLoading(true);
+      if (user.role === 'advocate') {
+        Promise.all([
+          dispatch(getLegalCases({ 
+            lawFirm: user.lawFirm._id, 
+            assignedTo: user._id,
+            limit: 100 
+          })),
+        ]).finally(() => setIsLoading(false));
+      } else {
+        Promise.all([
+          dispatch(getLegalCases({ lawFirm: user.lawFirm._id, limit: 100 })),
+          dispatch(getUsers({ lawFirm: user.lawFirm._id, role: "advocate", limit: 50 })),
+          dispatch(getPendingAssignmentCases()),
+        ]).finally(() => setIsLoading(false));
+      }
+    };
+
+    socket.on("legalCaseAssigned", refetchCases);
+    socket.on("legalCaseStatusUpdated", refetchCases);
+    socket.on("legalCaseCreated", refetchCases);
+
+    return () => {
+      socket.off("legalCaseAssigned", refetchCases);
+      socket.off("legalCaseStatusUpdated", refetchCases);
+      socket.off("legalCaseCreated", refetchCases);
+    };
   }, [dispatch, user?.lawFirm?._id, user?.role, user?._id]);
 
   useEffect(() => {

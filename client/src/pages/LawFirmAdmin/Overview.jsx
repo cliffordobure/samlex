@@ -634,101 +634,101 @@ const AdminOverview = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 md:gap-6 mb-6 md:mb-8">
         {/* Total Cases Card */}
         <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl hover:shadow-blue-500/25 transition-all duration-300 hover:scale-105 group cursor-pointer" onClick={() => navigate('/admin/cases')}>
-          <div className="flex items-center justify-between">
-            <div>
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1 min-w-0 pr-2">
               <p className="text-slate-400 text-xs sm:text-sm font-medium">Total Cases</p>
-              <p className="text-2xl sm:text-3xl font-bold text-white mt-2 group-hover:text-blue-400 transition-colors">{stats.totalCases}</p>
-              <div className="flex items-center mt-2">
-                <FaArrowUp className="w-3 h-3 sm:w-4 sm:h-4 text-green-500 mr-1" />
-                <span className="text-green-500 text-xs sm:text-sm font-medium">
+              <p className="text-2xl sm:text-3xl font-bold text-white mt-1 group-hover:text-blue-400 transition-colors">{stats.totalCases}</p>
+              <div className="flex items-center mt-1.5">
+                <FaArrowUp className="w-3 h-3 text-green-500 mr-1 flex-shrink-0" />
+                <span className="text-green-500 text-xs sm:text-sm font-medium break-words">
                   +{stats.caseGrowth}% from last month
                 </span>
               </div>
             </div>
-            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-blue-500/20 to-indigo-500/20 rounded-xl sm:rounded-2xl flex items-center justify-center group-hover:bg-blue-500/30 transition-all duration-300">
-              <FaFolderOpen className="w-6 h-6 sm:w-8 sm:h-8 text-blue-400 group-hover:text-blue-300 transition-colors" />
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500/20 to-indigo-500/20 rounded-lg sm:rounded-xl flex items-center justify-center group-hover:bg-blue-500/30 transition-all duration-300 flex-shrink-0">
+              <FaFolderOpen className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400 group-hover:text-blue-300 transition-colors" />
             </div>
           </div>
         </div>
 
         {/* Active Cases Card */}
         <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl hover:shadow-yellow-500/25 transition-all duration-300 hover:scale-105 group cursor-pointer" onClick={() => navigate('/admin/cases?status=active')}>
-          <div className="flex items-center justify-between">
-            <div>
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1 min-w-0 pr-2">
               <p className="text-slate-400 text-xs sm:text-sm font-medium">Active Cases</p>
-              <p className="text-2xl sm:text-3xl font-bold text-white mt-2 group-hover:text-yellow-400 transition-colors">{stats.activeCases}</p>
-              <div className="flex items-center mt-2">
-                <FaClock className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-500 mr-1" />
-                <span className="text-yellow-500 text-xs sm:text-sm font-medium">
+              <p className="text-2xl sm:text-3xl font-bold text-white mt-1 group-hover:text-yellow-400 transition-colors">{stats.activeCases}</p>
+              <div className="flex items-center mt-1.5">
+                <FaClock className="w-3 h-3 text-yellow-500 mr-1 flex-shrink-0" />
+                <span className="text-yellow-500 text-xs sm:text-sm font-medium break-words">
                   {stats.pendingCases} pending
                 </span>
               </div>
             </div>
-            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-yellow-500/20 to-orange-500/20 rounded-xl sm:rounded-2xl flex items-center justify-center group-hover:bg-yellow-500/30 transition-all duration-300">
-              <FaClock className="w-6 h-6 sm:w-8 sm:h-8 text-yellow-400 group-hover:text-yellow-300 transition-colors" />
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-yellow-500/20 to-orange-500/20 rounded-lg sm:rounded-xl flex items-center justify-center group-hover:bg-yellow-500/30 transition-all duration-300 flex-shrink-0">
+              <FaClock className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400 group-hover:text-yellow-300 transition-colors" />
             </div>
           </div>
         </div>
 
         {/* Resolved Cases Card */}
         <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl hover:shadow-green-500/25 transition-all duration-300 hover:scale-105 group cursor-pointer" onClick={() => navigate('/admin/cases?status=resolved')}>
-          <div className="flex items-center justify-between">
-            <div>
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1 min-w-0 pr-2">
               <p className="text-slate-400 text-xs sm:text-sm font-medium">Resolved Cases</p>
-              <p className="text-2xl sm:text-3xl font-bold text-white mt-2 group-hover:text-green-400 transition-colors">{stats.resolvedCases}</p>
-              <div className="flex items-center mt-2">
-                <FaCheckCircle className="w-3 h-3 sm:w-4 sm:h-4 text-green-500 mr-1" />
-                <span className="text-green-500 text-xs sm:text-sm font-medium">
+              <p className="text-2xl sm:text-3xl font-bold text-white mt-1 group-hover:text-green-400 transition-colors">{stats.resolvedCases}</p>
+              <div className="flex items-center mt-1.5">
+                <FaCheckCircle className="w-3 h-3 text-green-500 mr-1 flex-shrink-0" />
+                <span className="text-green-500 text-xs sm:text-sm font-medium break-words">
                   {stats.totalCases > 0 ? Math.round((stats.resolvedCases / stats.totalCases) * 100) : 0}% success rate
                 </span>
               </div>
             </div>
-            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-xl sm:rounded-2xl flex items-center justify-center group-hover:bg-green-500/30 transition-all duration-300">
-              <FaCheckCircle className="w-6 h-6 sm:w-8 sm:h-8 text-green-400 group-hover:text-green-300 transition-colors" />
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-lg sm:rounded-xl flex items-center justify-center group-hover:bg-green-500/30 transition-all duration-300 flex-shrink-0">
+              <FaCheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-green-400 group-hover:text-green-300 transition-colors" />
             </div>
           </div>
         </div>
 
         {/* Team Members Card */}
         <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl hover:shadow-purple-500/25 transition-all duration-300 hover:scale-105 group cursor-pointer" onClick={() => navigate('/admin/users')}>
-          <div className="flex items-center justify-between">
-            <div>
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1 min-w-0 pr-2">
               <p className="text-slate-400 text-xs sm:text-sm font-medium">Team Members</p>
-              <p className="text-2xl sm:text-3xl font-bold text-white mt-2 group-hover:text-purple-400 transition-colors">{stats.totalUsers}</p>
-              <div className="flex items-center mt-2">
-                <FaUsers className="w-3 h-3 sm:w-4 sm:h-4 text-purple-500 mr-1" />
-                <span className="text-purple-500 text-xs sm:text-sm font-medium">
+              <p className="text-2xl sm:text-3xl font-bold text-white mt-1 group-hover:text-purple-400 transition-colors">{stats.totalUsers}</p>
+              <div className="flex items-center mt-1.5">
+                <FaUsers className="w-3 h-3 text-purple-500 mr-1 flex-shrink-0" />
+                <span className="text-purple-500 text-xs sm:text-sm font-medium break-words">
                   {stats.totalDepartments} departments
                 </span>
               </div>
-              </div>
-            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-xl sm:rounded-2xl flex items-center justify-center group-hover:bg-purple-500/30 transition-all duration-300">
-              <FaUsers className="w-6 h-6 sm:w-8 sm:h-8 text-purple-400 group-hover:text-purple-300 transition-colors" />
-              </div>
+            </div>
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-lg sm:rounded-xl flex items-center justify-center group-hover:bg-purple-500/30 transition-all duration-300 flex-shrink-0">
+              <FaUsers className="w-4 h-4 sm:w-5 sm:h-5 text-purple-400 group-hover:text-purple-300 transition-colors" />
             </div>
           </div>
         </div>
 
         {/* Revenue Card */}
         <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl hover:shadow-green-500/25 transition-all duration-300 hover:scale-105 group cursor-pointer" onClick={() => navigate('/admin/reports')}>
-          <div className="flex items-center justify-between">
-            <div>
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1 min-w-0 pr-2">
               <p className="text-slate-400 text-xs sm:text-sm font-medium">Total Revenue</p>
-              <p className="text-2xl sm:text-3xl font-bold text-white mt-2 group-hover:text-green-400 transition-colors">
+              <p className="text-2xl sm:text-3xl font-bold text-white mt-1 group-hover:text-green-400 transition-colors">
                 KES {stats.totalRevenue?.toLocaleString() || '0'}
               </p>
-              <div className="flex items-center mt-2">
-                <FaChartLine className="w-3 h-3 sm:w-4 sm:h-4 text-green-500 mr-1" />
-                <span className="text-green-500 text-xs sm:text-sm font-medium">
+              <div className="flex items-center mt-1.5">
+                <FaChartLine className="w-3 h-3 text-green-500 mr-1 flex-shrink-0" />
+                <span className="text-green-500 text-xs sm:text-sm font-medium break-words">
                   {stats.escalationRevenue > 0 ? `KES ${stats.escalationRevenue.toLocaleString()} from escalations` : 'No escalations yet'}
                 </span>
               </div>
             </div>
-            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-xl sm:rounded-2xl flex items-center justify-center group-hover:bg-green-500/30 transition-all duration-300">
-              <FaChartLine className="w-6 h-6 sm:w-8 sm:h-8 text-green-400 group-hover:text-green-300 transition-colors" />
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-lg sm:rounded-xl flex items-center justify-center group-hover:bg-green-500/30 transition-all duration-300 flex-shrink-0">
+              <FaChartLine className="w-4 h-4 sm:w-5 sm:h-5 text-green-400 group-hover:text-green-300 transition-colors" />
             </div>
           </div>
         </div>
+      </div>
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 md:gap-8 mb-6 md:mb-8">

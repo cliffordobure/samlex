@@ -22,6 +22,7 @@ import {
   FaSms,
   FaPaperPlane,
   FaEnvelope,
+  FaBullseye,
 } from "react-icons/fa";
 
 const LawFirmAdminLayout = ({ children }) => {
@@ -72,6 +73,12 @@ const LawFirmAdminLayout = ({ children }) => {
       href: "/admin/reports",
       icon: <FaChartBar className="w-5 h-5" />,
       description: "Performance insights"
+    },
+    {
+      name: "Revenue Targets",
+      href: "/admin/revenue-targets",
+      icon: <FaBullseye className="w-5 h-5" />,
+      description: "Set and track revenue goals"
     },
     {
       name: "Bulk Import",

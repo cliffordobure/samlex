@@ -364,12 +364,16 @@ const CaseDetails = () => {
     try {
       const res = await creditCaseApi.assignCase(id, userId);
       if (res.data.success) {
-        // Assignment will be updated via socket event
+        toast.success("Case assigned successfully!");
+        // Immediately refresh case details
+        dispatch(getCreditCaseById(id));
+        // Assignment will also be updated via socket event
       } else {
         setAssignError(res.data.message || "Failed to assign case");
       }
     } catch (err) {
       setAssignError("Failed to assign case");
+      toast.error("Failed to assign case");
     } finally {
       setAssignLoading(false);
     }

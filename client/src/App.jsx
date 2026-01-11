@@ -32,6 +32,7 @@ import ClientManagement from "./pages/LawFirmAdmin/ClientManagement";
 import FirmSettings from "./pages/LawFirmAdmin/FirmSettings";
 import Reports from "./pages/LawFirmAdmin/Reports";
 import Profile from "./pages/LawFirmAdmin/Profile";
+import RevenueTargets from "./pages/LawFirmAdmin/RevenueTargets";
 import CreditCollectionDashboard from "./pages/CreditCollection/Dashboard";
 import LegalDashboard from "./pages/Legal/Dashboard";
 import ReceptionistDashboard from "./pages/Receptionist/Dashboard";
@@ -245,6 +246,7 @@ function App() {
           <Route path="clients/*" element={<ClientManagement />} />
           <Route path="settings" element={<FirmSettings />} />
           <Route path="reports" element={<Reports />} />
+          <Route path="revenue-targets" element={<RevenueTargets />} />
           <Route path="profile" element={<Profile />} />
           <Route path="bulk-import" element={<BulkImport />} />
           <Route path="bulk-sms" element={<BulkSMS />} />

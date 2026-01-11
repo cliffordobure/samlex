@@ -17,7 +17,8 @@ import {
   FaGavel,
   FaFileExcel,
   FaSms,
-  FaPaperPlane
+  FaPaperPlane,
+  FaBullseye
 } from "react-icons/fa";
 
 const CreditCollectionLayout = ({ children }) => {
@@ -75,6 +76,16 @@ const CreditCollectionLayout = ({ children }) => {
       icon: <FaChartBar className="w-5 h-5" />,
       description: "Analytics and performance reports"
     },
+    ...(user?.role === "credit_head"
+      ? [
+          {
+            name: "Revenue Targets",
+            href: "/credit-collection/revenue-targets",
+            icon: <FaBullseye className="w-5 h-5" />,
+            description: "Set and track revenue goals"
+          },
+        ]
+      : []),
   ];
 
   const navigate = useNavigate();

@@ -99,6 +99,12 @@ const AdminCaseManagement = () => {
   useEffect(() => {
     if (!user?.lawFirm?._id) return;
 
+    // Refetch cases when assignments occur
+    const refetchCases = () => {
+      dispatch(getCreditCases({ lawFirm: user.lawFirm._id }));
+      dispatch(getLegalCases({ lawFirm: user.lawFirm._id }));
+    };
+
     // Listen for case escalated events
     const handleCaseEscalated = (data) => {
       console.log("🔄 Case escalated event received:", data);
@@ -118,16 +124,24 @@ const AdminCaseManagement = () => {
     socket.emit("join-law-firm", user.lawFirm._id);
 
     // Add event listeners
+    socket.on("caseAssigned", refetchCases);
+    socket.on("legalCaseAssigned", refetchCases);
+    socket.on("caseMoved", refetchCases);
+    socket.on("legalCaseStatusUpdated", refetchCases);
     socket.on("caseEscalated", handleCaseEscalated);
     socket.on("creditCaseUpdated", handleCreditCaseUpdated);
 
     // Cleanup function
     return () => {
+      socket.off("caseAssigned", refetchCases);
+      socket.off("legalCaseAssigned", refetchCases);
+      socket.off("caseMoved", refetchCases);
+      socket.off("legalCaseStatusUpdated", refetchCases);
       socket.off("caseEscalated", handleCaseEscalated);
       socket.off("creditCaseUpdated", handleCreditCaseUpdated);
       socket.emit("leave-law-firm", user.lawFirm._id);
     };
-  }, [user?.lawFirm?._id]);
+  }, [dispatch, user?.lawFirm?._id]);
 
   // Fetch escalated cases
   const fetchEscalatedCases = async () => {
@@ -151,8 +165,12 @@ const AdminCaseManagement = () => {
     try {
       if (caseType === "credit") {
         await dispatch(assignCase({ id: caseId, userId })).unwrap();
+        // Refresh credit cases list
+        dispatch(getCreditCases({ lawFirm: user?.lawFirm?._id }));
       } else {
         await dispatch(assignLegalCase({ id: caseId, userId })).unwrap();
+        // Refresh legal cases list
+        dispatch(getLegalCases({ lawFirm: user?.lawFirm?._id }));
       }
       toast.success("Case assigned successfully!");
     } catch (error) {

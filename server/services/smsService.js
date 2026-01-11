@@ -81,7 +81,17 @@ export const sendSMS = async (phoneNumber, message) => {
     const encoding = hasUnicode ? 1 : 0;
     
     // Prepare Beem API request
-    const destAddr = cleanedPhone.replace('+', ''); // Beem expects numbers without +
+    // Beem expects phone numbers without + and without leading 0
+    let destAddr = cleanedPhone.replace('+', '');
+    // If it starts with 254, use as is. If it starts with 0, remove 0 and add 254
+    if (destAddr.startsWith('0')) {
+      destAddr = '254' + destAddr.substring(1);
+    }
+    // Ensure it starts with 254
+    if (!destAddr.startsWith('254')) {
+      destAddr = '254' + destAddr;
+    }
+    
     const requestData = {
       source_addr: beemConfig.sourceAddr,
       schedule_time: '',
@@ -96,7 +106,18 @@ export const sendSMS = async (phoneNumber, message) => {
     };
 
     // Create Basic Auth header
+    // Beem uses API Key as username and Secret Key as password
     const auth = Buffer.from(`${beemConfig.apiKey}:${beemConfig.secretKey}`).toString('base64');
+
+    // Log the request being sent for debugging
+    console.log('📤 Sending SMS Request:', {
+      url: BEEM_API_URL,
+      source_addr: beemConfig.sourceAddr,
+      dest_addr: destAddr,
+      message_length: message.length,
+      encoding: encoding,
+      hasUnicode: hasUnicode
+    });
 
     const response = await axios.post(BEEM_API_URL, requestData, {
       headers: {
@@ -108,6 +129,7 @@ export const sendSMS = async (phoneNumber, message) => {
     // Debug: Log the full response from Beem
     console.log('📱 Single SMS Response for', cleanedPhone, ':', JSON.stringify(response.data, null, 2));
     console.log('📱 Response Status:', response.status);
+    console.log('📱 Response Headers:', JSON.stringify(response.headers, null, 2));
     
     // Check if the SMS was successfully sent
     // Beem API typically returns: { "code": 100, "message": "Success", ... } for success
@@ -187,11 +209,48 @@ export const sendSMS = async (phoneNumber, message) => {
     }
   } catch (error) {
     console.error('❌ Error sending SMS:', error);
-    const errorMessage = error.response?.data?.message || error.message || 'Failed to send SMS';
+    console.error('❌ Error Details:', {
+      message: error.message,
+      response: error.response ? {
+        status: error.response.status,
+        statusText: error.response.statusText,
+        data: error.response.data,
+        headers: error.response.headers
+      } : 'No response',
+      config: error.config ? {
+        url: error.config.url,
+        method: error.config.method,
+        headers: error.config.headers
+      } : 'No config'
+    });
+    
+    const errorMessage = error.response?.data?.message || 
+                         error.response?.data?.error || 
+                         error.response?.data?.description ||
+                         error.message || 
+                         'Failed to send SMS';
+    
+    // Log specific Beem error codes if available
+    if (error.response?.data?.code) {
+      const beemErrorCodes = {
+        101: 'Invalid request parameters',
+        102: 'Authentication failed - check your API credentials',
+        103: 'Insufficient balance',
+        104: 'Invalid sender ID',
+        105: 'Invalid phone number format',
+        106: 'Message too long',
+        107: 'Rate limit exceeded',
+      };
+      const codeMessage = beemErrorCodes[error.response.data.code] || `Beem error code: ${error.response.data.code}`;
+      console.error(`❌ Beem Error Code ${error.response.data.code}: ${codeMessage}`);
+    }
+    
     return {
       success: false,
       error: errorMessage,
       phone: phoneNumber,
+      errorCode: error.response?.data?.code,
+      fullError: error.response?.data
     };
   }
 };
