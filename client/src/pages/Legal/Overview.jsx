@@ -647,13 +647,13 @@ const LegalOverview = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 md:gap-6 mb-6 md:mb-8">
         {/* Total Cases Card */}
         <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl hover:shadow-blue-500/25 transition-all duration-300 group">
-          <div className="flex items-center justify-between">
-            <div className="flex-1 min-w-0 pr-2">
-              <p className="text-slate-400 text-xs sm:text-sm font-medium">Total Cases</p>
-              <p className="text-[10px] sm:text-xs font-bold text-white mt-1 group-hover:text-blue-400 transition-colors break-words leading-tight">{stats.totalCases}</p>
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex-1 min-w-0 pr-1">
+              <p className="text-slate-400 text-xs font-medium mb-1">Total Cases</p>
+              <p className="text-[10px] sm:text-xs font-bold text-white group-hover:text-blue-400 transition-colors break-words leading-tight">{stats.totalCases}</p>
               <div className="flex items-center mt-1">
-                <FaArrowUp className="w-3 h-3 sm:w-4 sm:h-4 text-green-500 mr-1 flex-shrink-0" />
-                <span className="text-green-500 text-xs sm:text-sm font-medium break-words">
+                <FaArrowUp className="w-3 h-3 text-green-500 mr-1 flex-shrink-0" />
+                <span className="text-green-500 text-xs font-medium break-words">
                   +{stats.caseGrowth}% from last month
                 </span>
               </div>
@@ -666,13 +666,13 @@ const LegalOverview = () => {
 
         {/* Active Cases Card */}
         <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl hover:shadow-yellow-500/25 transition-all duration-300 group">
-          <div className="flex items-center justify-between">
-            <div className="flex-1 min-w-0 pr-2">
-              <p className="text-slate-400 text-xs sm:text-sm font-medium">Active Cases</p>
-              <p className="text-[10px] sm:text-xs font-bold text-white mt-1 group-hover:text-yellow-400 transition-colors break-words leading-tight">{stats.activeCases}</p>
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex-1 min-w-0 pr-1">
+              <p className="text-slate-400 text-xs font-medium mb-1">Active Cases</p>
+              <p className="text-[10px] sm:text-xs font-bold text-white group-hover:text-yellow-400 transition-colors break-words leading-tight">{stats.activeCases}</p>
               <div className="flex items-center mt-1">
-                <FaClock className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-500 mr-1 flex-shrink-0" />
-                <span className="text-yellow-500 text-xs sm:text-sm font-medium break-words">
+                <FaClock className="w-3 h-3 text-yellow-500 mr-1 flex-shrink-0" />
+                <span className="text-yellow-500 text-xs font-medium break-words">
                   {user?.role === 'advocate' ? `${stats.activeCases} in progress` : `${stats.pendingAssignment} pending assignment`}
                 </span>
               </div>
@@ -685,13 +685,13 @@ const LegalOverview = () => {
 
         {/* Resolved Cases Card */}
         <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl hover:shadow-green-500/25 transition-all duration-300 group">
-          <div className="flex items-center justify-between">
-            <div className="flex-1 min-w-0 pr-2">
-              <p className="text-slate-400 text-xs sm:text-sm font-medium">Resolved Cases</p>
-              <p className="text-[10px] sm:text-xs font-bold text-white mt-1 group-hover:text-green-400 transition-colors break-words leading-tight">{stats.resolvedCases}</p>
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex-1 min-w-0 pr-1">
+              <p className="text-slate-400 text-xs font-medium mb-1">Resolved Cases</p>
+              <p className="text-[10px] sm:text-xs font-bold text-white group-hover:text-green-400 transition-colors break-words leading-tight">{stats.resolvedCases}</p>
               <div className="flex items-center mt-1">
-                <FaCheckCircle className="w-3 h-3 sm:w-4 sm:h-4 text-green-500 mr-1 flex-shrink-0" />
-                <span className="text-green-500 text-xs sm:text-sm font-medium break-words">
+                <FaCheckCircle className="w-3 h-3 text-green-500 mr-1 flex-shrink-0" />
+                <span className="text-green-500 text-xs font-medium break-words">
                   {Math.round(stats.resolutionRate)}% success rate
                 </span>
               </div>
@@ -704,13 +704,13 @@ const LegalOverview = () => {
 
         {/* Revenue Card */}
         <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl hover:shadow-purple-500/25 transition-all duration-300 group">
-          <div className="flex items-center justify-between">
-            <div className="flex-1 min-w-0 pr-2">
-              <p className="text-slate-400 text-xs sm:text-sm font-medium">Total Revenue</p>
-              <p className="text-[10px] sm:text-xs font-bold text-white mt-1 group-hover:text-purple-400 transition-colors break-words leading-tight">{formatCurrency(stats.totalFilingFees)}</p>
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex-1 min-w-0 pr-1">
+              <p className="text-slate-400 text-xs font-medium mb-1">Total Revenue</p>
+              <p className="text-[10px] sm:text-xs font-bold text-white group-hover:text-purple-400 transition-colors break-words leading-tight">{formatCurrency(stats.totalFilingFees)}</p>
               <div className="flex items-center mt-1">
-                <FaMoneyBillWave className="w-3 h-3 sm:w-4 sm:h-4 text-purple-500 mr-1 flex-shrink-0" />
-                <span className="text-purple-500 text-xs sm:text-sm font-medium break-words">
+                <FaMoneyBillWave className="w-3 h-3 text-purple-500 mr-1 flex-shrink-0" />
+                <span className="text-purple-500 text-xs font-medium break-words">
                   Filing fees collected
                 </span>
               </div>
