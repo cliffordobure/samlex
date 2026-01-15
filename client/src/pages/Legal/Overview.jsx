@@ -570,7 +570,9 @@ const LegalOverview = () => {
     return new Intl.NumberFormat("en-KE", {
       style: "currency",
       currency: "KES",
-    }).format(amount || 0);
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(Math.round(amount || 0));
   };
 
   if (isLoading) {
@@ -648,17 +650,17 @@ const LegalOverview = () => {
         {/* Total Cases Card */}
         <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl hover:shadow-blue-500/25 transition-all duration-300 hover:scale-105 group cursor-pointer" onClick={() => navigate('/legal/cases')}>
           <div className="flex items-center justify-between">
-            <div>
+            <div className="flex-1 min-w-0 pr-2">
               <p className="text-slate-400 text-xs sm:text-sm font-medium">Total Cases</p>
-              <p className="text-2xl sm:text-3xl font-bold text-white mt-2 group-hover:text-blue-400 transition-colors">{stats.totalCases}</p>
-              <div className="flex items-center mt-2">
-                <FaArrowUp className="w-3 h-3 sm:w-4 sm:h-4 text-green-500 mr-1" />
-                <span className="text-green-500 text-xs sm:text-sm font-medium">
+              <p className="text-[10px] sm:text-xs font-bold text-white mt-1 group-hover:text-blue-400 transition-colors break-words leading-tight">{stats.totalCases}</p>
+              <div className="flex items-center mt-1">
+                <FaArrowUp className="w-3 h-3 sm:w-4 sm:h-4 text-green-500 mr-1 flex-shrink-0" />
+                <span className="text-green-500 text-xs sm:text-sm font-medium break-words">
                   +{stats.caseGrowth}% from last month
                 </span>
               </div>
             </div>
-            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-blue-500/20 to-indigo-500/20 rounded-xl sm:rounded-2xl flex items-center justify-center group-hover:bg-blue-500/30 transition-all duration-300">
+            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-blue-500/20 to-indigo-500/20 rounded-xl sm:rounded-2xl flex items-center justify-center group-hover:bg-blue-500/30 transition-all duration-300 flex-shrink-0">
               <FaGavel className="w-6 h-6 sm:w-8 sm:h-8 text-blue-400 group-hover:text-blue-300 transition-colors" />
             </div>
           </div>
@@ -667,17 +669,17 @@ const LegalOverview = () => {
         {/* Active Cases Card */}
         <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl hover:shadow-yellow-500/25 transition-all duration-300 hover:scale-105 group cursor-pointer" onClick={() => navigate('/legal/cases?status=active')}>
           <div className="flex items-center justify-between">
-            <div>
+            <div className="flex-1 min-w-0 pr-2">
               <p className="text-slate-400 text-xs sm:text-sm font-medium">Active Cases</p>
-              <p className="text-2xl sm:text-3xl font-bold text-white mt-2 group-hover:text-yellow-400 transition-colors">{stats.activeCases}</p>
-              <div className="flex items-center mt-2">
-                <FaClock className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-500 mr-1" />
-                <span className="text-yellow-500 text-xs sm:text-sm font-medium">
+              <p className="text-[10px] sm:text-xs font-bold text-white mt-1 group-hover:text-yellow-400 transition-colors break-words leading-tight">{stats.activeCases}</p>
+              <div className="flex items-center mt-1">
+                <FaClock className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-500 mr-1 flex-shrink-0" />
+                <span className="text-yellow-500 text-xs sm:text-sm font-medium break-words">
                   {user?.role === 'advocate' ? `${stats.activeCases} in progress` : `${stats.pendingAssignment} pending assignment`}
                 </span>
               </div>
             </div>
-            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-yellow-500/20 to-orange-500/20 rounded-xl sm:rounded-2xl flex items-center justify-center group-hover:bg-yellow-500/30 transition-all duration-300">
+            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-yellow-500/20 to-orange-500/20 rounded-xl sm:rounded-2xl flex items-center justify-center group-hover:bg-yellow-500/30 transition-all duration-300 flex-shrink-0">
               <FaClock className="w-6 h-6 sm:w-8 sm:h-8 text-yellow-400 group-hover:text-yellow-300 transition-colors" />
             </div>
           </div>
@@ -686,17 +688,17 @@ const LegalOverview = () => {
         {/* Resolved Cases Card */}
         <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl hover:shadow-green-500/25 transition-all duration-300 hover:scale-105 group cursor-pointer" onClick={() => navigate('/legal/cases?status=resolved')}>
           <div className="flex items-center justify-between">
-            <div>
+            <div className="flex-1 min-w-0 pr-2">
               <p className="text-slate-400 text-xs sm:text-sm font-medium">Resolved Cases</p>
-              <p className="text-2xl sm:text-3xl font-bold text-white mt-2 group-hover:text-green-400 transition-colors">{stats.resolvedCases}</p>
-              <div className="flex items-center mt-2">
-                <FaCheckCircle className="w-3 h-3 sm:w-4 sm:h-4 text-green-500 mr-1" />
-                <span className="text-green-500 text-xs sm:text-sm font-medium">
-                  {stats.resolutionRate}% success rate
+              <p className="text-[10px] sm:text-xs font-bold text-white mt-1 group-hover:text-green-400 transition-colors break-words leading-tight">{stats.resolvedCases}</p>
+              <div className="flex items-center mt-1">
+                <FaCheckCircle className="w-3 h-3 sm:w-4 sm:h-4 text-green-500 mr-1 flex-shrink-0" />
+                <span className="text-green-500 text-xs sm:text-sm font-medium break-words">
+                  {Math.round(stats.resolutionRate)}% success rate
                 </span>
               </div>
             </div>
-            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-xl sm:rounded-2xl flex items-center justify-center group-hover:bg-green-500/30 transition-all duration-300">
+            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-xl sm:rounded-2xl flex items-center justify-center group-hover:bg-green-500/30 transition-all duration-300 flex-shrink-0">
               <FaCheckCircle className="w-6 h-6 sm:w-8 sm:h-8 text-green-400 group-hover:text-green-300 transition-colors" />
             </div>
           </div>
@@ -705,17 +707,17 @@ const LegalOverview = () => {
         {/* Revenue Card */}
         <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl hover:shadow-purple-500/25 transition-all duration-300 hover:scale-105 group cursor-pointer" onClick={() => navigate('/legal/reports')}>
           <div className="flex items-center justify-between">
-            <div>
+            <div className="flex-1 min-w-0 pr-2">
               <p className="text-slate-400 text-xs sm:text-sm font-medium">Total Revenue</p>
-              <p className="text-lg sm:text-xl font-bold text-white mt-2 group-hover:text-purple-400 transition-colors">{formatCurrency(stats.totalFilingFees)}</p>
-              <div className="flex items-center mt-2">
-                <FaMoneyBillWave className="w-3 h-3 sm:w-4 sm:h-4 text-purple-500 mr-1" />
-                <span className="text-purple-500 text-xs sm:text-sm font-medium">
+              <p className="text-[10px] sm:text-xs font-bold text-white mt-1 group-hover:text-purple-400 transition-colors break-words leading-tight">{formatCurrency(stats.totalFilingFees)}</p>
+              <div className="flex items-center mt-1">
+                <FaMoneyBillWave className="w-3 h-3 sm:w-4 sm:h-4 text-purple-500 mr-1 flex-shrink-0" />
+                <span className="text-purple-500 text-xs sm:text-sm font-medium break-words">
                   Filing fees collected
                 </span>
               </div>
             </div>
-            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-xl sm:rounded-2xl flex items-center justify-center group-hover:bg-purple-500/30 transition-all duration-300">
+            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-xl sm:rounded-2xl flex items-center justify-center group-hover:bg-purple-500/30 transition-all duration-300 flex-shrink-0">
               <FaMoneyBillWave className="w-6 h-6 sm:w-8 sm:h-8 text-purple-400 group-hover:text-purple-300 transition-colors" />
             </div>
           </div>
@@ -729,12 +731,12 @@ const LegalOverview = () => {
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0 pr-1">
               <p className="text-slate-400 text-xs font-medium mb-1">Money Collected</p>
-              <p className="text-base sm:text-lg font-bold text-white group-hover:text-green-400 transition-colors truncate">
+              <p className="text-[10px] sm:text-xs font-bold text-white group-hover:text-green-400 transition-colors break-words leading-tight">
                 {formatCurrency(stats.totalMoneyCollected)}
               </p>
               <div className="flex items-center mt-1">
                 <FaCheckCircle className="w-3 h-3 text-green-500 mr-1 flex-shrink-0" />
-                <span className="text-green-500 text-xs font-medium truncate">
+                <span className="text-green-500 text-xs font-medium break-words">
                   {stats.totalPaymentsCount} payments
                 </span>
               </div>
@@ -750,12 +752,12 @@ const LegalOverview = () => {
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0 pr-1">
               <p className="text-slate-400 text-xs font-medium mb-1">Money Pending</p>
-              <p className="text-base sm:text-lg font-bold text-white group-hover:text-orange-400 transition-colors truncate">
+              <p className="text-[10px] sm:text-xs font-bold text-white group-hover:text-orange-400 transition-colors break-words leading-tight">
                 {formatCurrency(stats.totalMoneyPending)}
               </p>
               <div className="flex items-center mt-1">
                 <FaClock className="w-3 h-3 text-orange-500 mr-1 flex-shrink-0" />
-                <span className="text-orange-500 text-xs font-medium truncate">
+                <span className="text-orange-500 text-xs font-medium break-words">
                   Awaiting payment
                 </span>
               </div>
@@ -771,12 +773,12 @@ const LegalOverview = () => {
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0 pr-1">
               <p className="text-slate-400 text-xs font-medium mb-1">Total Fee Amount</p>
-              <p className="text-base sm:text-lg font-bold text-white group-hover:text-blue-400 transition-colors truncate">
+              <p className="text-[10px] sm:text-xs font-bold text-white group-hover:text-blue-400 transition-colors break-words leading-tight">
                 {formatCurrency(stats.totalFeeAmount)}
               </p>
               <div className="flex items-center mt-1">
                 <FaFileInvoiceDollar className="w-3 h-3 text-blue-500 mr-1 flex-shrink-0" />
-                <span className="text-blue-500 text-xs font-medium truncate">
+                <span className="text-blue-500 text-xs font-medium break-words">
                   Expected total
                 </span>
               </div>
@@ -792,12 +794,12 @@ const LegalOverview = () => {
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0 pr-1">
               <p className="text-slate-400 text-xs font-medium mb-1">Payment Progress</p>
-              <p className="text-base sm:text-lg font-bold text-white group-hover:text-teal-400 transition-colors truncate">
-                {stats.paymentCompletionRate.toFixed(1)}%
+              <p className="text-[10px] sm:text-xs font-bold text-white group-hover:text-teal-400 transition-colors break-words leading-tight">
+                {Math.round(stats.paymentCompletionRate)}%
               </p>
               <div className="flex items-center mt-1">
                 <FaChartLine className="w-3 h-3 text-teal-500 mr-1 flex-shrink-0" />
-                <span className="text-teal-500 text-xs font-medium truncate">
+                <span className="text-teal-500 text-xs font-medium break-words">
                   Collection rate
                 </span>
               </div>
@@ -813,12 +815,12 @@ const LegalOverview = () => {
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0 pr-1">
               <p className="text-slate-400 text-xs font-medium mb-1">Avg Payment</p>
-              <p className="text-base sm:text-lg font-bold text-white group-hover:text-indigo-400 transition-colors truncate">
+              <p className="text-[10px] sm:text-xs font-bold text-white group-hover:text-indigo-400 transition-colors break-words leading-tight">
                 {formatCurrency(stats.averagePaymentAmount)}
               </p>
               <div className="flex items-center mt-1">
                 <FaChartPie className="w-3 h-3 text-indigo-500 mr-1 flex-shrink-0" />
-                <span className="text-indigo-500 text-xs font-medium truncate">
+                <span className="text-indigo-500 text-xs font-medium break-words">
                   Per payment
                 </span>
               </div>
