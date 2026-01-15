@@ -702,18 +702,39 @@ const CaseDetails = () => {
 
   // Document viewer functions
   const handleDocumentClick = (doc) => {
-    let documentUrl = doc.path;
+    let documentUrl = doc.path || doc.url || "";
+    const filename = doc.name || doc.originalName || "Document";
+    
     // Handle Cloudinary URLs and other URL formats
-    if (doc.path.startsWith("http")) {
-      documentUrl = doc.path;
-    } else if (doc.path.startsWith("/uploads/")) {
-      documentUrl = `${FILE_BASE}${doc.path}`;
-    } else if (doc.path.startsWith("uploads/")) {
-      documentUrl = `${FILE_BASE}/${doc.path}`;
-    } else {
-      documentUrl = `${FILE_BASE}/uploads/general/${doc.path}`;
+    if (!documentUrl) {
+      toast.error("Document URL not available");
+      return;
     }
-    setSelectedDocument({ url: documentUrl, filename: doc.originalName });
+    
+    // If it's already a full URL (http/https), use it directly
+    if (documentUrl.startsWith("http://") || documentUrl.startsWith("https://")) {
+      // For Cloudinary URLs, ensure proper format for PDF viewing
+      if (documentUrl.includes("cloudinary.com")) {
+        // Cloudinary URLs work well with iframe for PDFs
+        setSelectedDocument({ url: documentUrl, filename });
+        setShowDocumentModal(true);
+        return;
+      }
+      setSelectedDocument({ url: documentUrl, filename });
+      setShowDocumentModal(true);
+      return;
+    }
+    
+    // Handle relative paths
+    if (documentUrl.startsWith("/uploads/")) {
+      documentUrl = `${FILE_BASE}${documentUrl}`;
+    } else if (documentUrl.startsWith("uploads/")) {
+      documentUrl = `${FILE_BASE}/${documentUrl}`;
+    } else {
+      documentUrl = `${FILE_BASE}/uploads/general/${documentUrl}`;
+    }
+    
+    setSelectedDocument({ url: documentUrl, filename });
     setShowDocumentModal(true);
   };
 
@@ -1854,7 +1875,9 @@ const CaseDetails = () => {
                             )}
                             {payment.recordedBy && (
                               <div className="text-xs text-dark-500 mt-1">
-                                Recorded by: {payment.recordedBy?.firstName || "Unknown"}
+                                Recorded by: {payment.recordedBy?.firstName && payment.recordedBy?.lastName 
+                                  ? `${payment.recordedBy.firstName} ${payment.recordedBy.lastName}`
+                                  : payment.recordedBy?.firstName || "Unknown"}
                               </div>
                             )}
                           </div>
@@ -2060,32 +2083,84 @@ const CaseDetails = () => {
 
       {/* Document Modal */}
       {showDocumentModal && selectedDocument && (
-        <div className="modal modal-open">
-          <div className="modal-box max-w-4xl">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="font-bold text-lg">{selectedDocument.filename}</h3>
-              <div className="flex gap-2">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-gradient-to-br from-slate-800/95 to-slate-700/95 backdrop-blur-xl rounded-2xl sm:rounded-3xl border border-slate-600/50 shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className="p-6 sm:p-8 border-b border-slate-600/50 flex items-center justify-between bg-slate-800/50">
+              <div className="flex items-center gap-4 flex-1 min-w-0">
+                <div className="w-12 h-12 bg-gradient-to-br from-orange-500/20 to-red-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <FaFileAlt className="w-6 h-6 text-orange-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-xl sm:text-2xl font-bold text-white truncate">
+                    {selectedDocument.filename}
+                  </h3>
+                  <p className="text-slate-400 text-sm mt-1 truncate">
+                    {selectedDocument.url}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
                 <button
                   onClick={handleDownloadDocument}
-                  className="btn btn-sm btn-outline"
+                  className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-all duration-200 flex items-center gap-2"
+                  title="Download document"
                 >
-                  <FaDownload />
-                  Download
+                  <FaDownload className="w-4 h-4" />
+                  <span className="hidden sm:inline">Download</span>
                 </button>
                 <button
                   onClick={closeDocumentModal}
-                  className="btn btn-sm btn-outline"
+                  className="p-2 hover:bg-slate-700/50 rounded-lg transition-all duration-200 hover:scale-105"
+                  title="Close"
                 >
-                  <FaTimes />
+                  <FaTimes className="w-5 h-5 text-slate-400 hover:text-white" />
                 </button>
               </div>
             </div>
-            <div className="h-96">
-              <iframe
-                src={selectedDocument.url}
-                className="w-full h-full border rounded"
-                title={selectedDocument.filename}
-              />
+
+            {/* Document Viewer */}
+            <div className="flex-1 overflow-hidden bg-slate-900/50">
+              {selectedDocument.url && (
+                <div className="w-full h-full">
+                  {/* Check if it's a PDF or image */}
+                  {selectedDocument.filename?.toLowerCase().endsWith('.pdf') || selectedDocument.url.includes('.pdf') ? (
+                    <iframe
+                      src={selectedDocument.url}
+                      className="w-full h-full border-0"
+                      title={selectedDocument.filename}
+                      style={{ minHeight: '600px' }}
+                    />
+                  ) : selectedDocument.filename?.toLowerCase().match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
+                    <div className="flex items-center justify-center h-full p-4">
+                      <img
+                        src={selectedDocument.url}
+                        alt={selectedDocument.filename}
+                        className="max-w-full max-h-full object-contain rounded-lg"
+                      />
+                    </div>
+                  ) : (
+                    <div className="h-full flex flex-col items-center justify-center p-8">
+                      <div className="text-center mb-6">
+                        <FaFileAlt className="w-16 h-16 text-slate-500 mx-auto mb-4" />
+                        <p className="text-slate-300 text-lg mb-2">Document Preview Not Available</p>
+                        <p className="text-slate-400 text-sm mb-4">
+                          This file type cannot be previewed in the browser
+                        </p>
+                        <a
+                          href={selectedDocument.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-all duration-200"
+                        >
+                          <FaEye className="w-4 h-4" />
+                          Open in New Tab
+                        </a>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>

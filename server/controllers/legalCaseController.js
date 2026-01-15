@@ -647,7 +647,9 @@ export const getLegalCaseById = async (req, res) => {
         path: "escalatedFrom.creditCaseId",
         select: "caseNumber title description debtorName debtorEmail debtorContact creditorName creditorEmail creditorContact debtAmount currency documents notes promisedPayments escalationPayment"
       })
-      .populate("documents.uploadedBy", "firstName lastName");
+      .populate("documents.uploadedBy", "firstName lastName")
+      .populate("payments.recordedBy", "firstName lastName email")
+      .populate("courtActivities.recordedBy", "firstName lastName email");
 
     if (!legalCase) {
       return res.status(404).json({
