@@ -568,8 +568,6 @@ const LegalOverview = () => {
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat("en-KE", {
-      style: "currency",
-      currency: "KES",
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(Math.round(amount || 0));
@@ -648,7 +646,7 @@ const LegalOverview = () => {
       {/* Key Metrics Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 md:gap-6 mb-6 md:mb-8">
         {/* Total Cases Card */}
-        <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl hover:shadow-blue-500/25 transition-all duration-300 hover:scale-105 group cursor-pointer" onClick={() => navigate('/legal/cases')}>
+        <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl hover:shadow-blue-500/25 transition-all duration-300 group">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0 pr-2">
               <p className="text-slate-400 text-xs sm:text-sm font-medium">Total Cases</p>
@@ -667,7 +665,7 @@ const LegalOverview = () => {
         </div>
 
         {/* Active Cases Card */}
-        <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl hover:shadow-yellow-500/25 transition-all duration-300 hover:scale-105 group cursor-pointer" onClick={() => navigate('/legal/cases?status=active')}>
+        <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl hover:shadow-yellow-500/25 transition-all duration-300 group">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0 pr-2">
               <p className="text-slate-400 text-xs sm:text-sm font-medium">Active Cases</p>
@@ -686,7 +684,7 @@ const LegalOverview = () => {
         </div>
 
         {/* Resolved Cases Card */}
-        <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl hover:shadow-green-500/25 transition-all duration-300 hover:scale-105 group cursor-pointer" onClick={() => navigate('/legal/cases?status=resolved')}>
+        <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl hover:shadow-green-500/25 transition-all duration-300 group">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0 pr-2">
               <p className="text-slate-400 text-xs sm:text-sm font-medium">Resolved Cases</p>
@@ -705,7 +703,7 @@ const LegalOverview = () => {
         </div>
 
         {/* Revenue Card */}
-        <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl hover:shadow-purple-500/25 transition-all duration-300 hover:scale-105 group cursor-pointer" onClick={() => navigate('/legal/reports')}>
+        <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl hover:shadow-purple-500/25 transition-all duration-300 group">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0 pr-2">
               <p className="text-slate-400 text-xs sm:text-sm font-medium">Total Revenue</p>
@@ -727,7 +725,7 @@ const LegalOverview = () => {
       {/* Payment Statistics Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4 md:gap-6 mb-6 md:mb-8">
         {/* Money Collected Card */}
-        <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl hover:shadow-green-500/25 transition-all duration-300 hover:scale-105 group cursor-pointer" onClick={() => navigate('/legal/reports')}>
+        <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl hover:shadow-green-500/25 transition-all duration-300 group">
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0 pr-1">
               <p className="text-slate-400 text-xs font-medium mb-1">Money Collected</p>
@@ -748,7 +746,7 @@ const LegalOverview = () => {
         </div>
 
         {/* Money Pending Card */}
-        <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl hover:shadow-orange-500/25 transition-all duration-300 hover:scale-105 group cursor-pointer" onClick={() => navigate('/legal/reports')}>
+        <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl hover:shadow-orange-500/25 transition-all duration-300 group">
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0 pr-1">
               <p className="text-slate-400 text-xs font-medium mb-1">Money Pending</p>
@@ -769,7 +767,7 @@ const LegalOverview = () => {
         </div>
 
         {/* Total Fee Amount Card */}
-        <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl hover:shadow-blue-500/25 transition-all duration-300 hover:scale-105 group cursor-pointer" onClick={() => navigate('/legal/reports')}>
+        <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl hover:shadow-blue-500/25 transition-all duration-300 group">
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0 pr-1">
               <p className="text-slate-400 text-xs font-medium mb-1">Total Fee Amount</p>
@@ -790,7 +788,7 @@ const LegalOverview = () => {
         </div>
 
         {/* Payment Completion Rate Card */}
-        <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl hover:shadow-teal-500/25 transition-all duration-300 hover:scale-105 group cursor-pointer" onClick={() => navigate('/legal/reports')}>
+        <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl hover:shadow-teal-500/25 transition-all duration-300 group">
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0 pr-1">
               <p className="text-slate-400 text-xs font-medium mb-1">Payment Progress</p>
@@ -811,7 +809,7 @@ const LegalOverview = () => {
         </div>
 
         {/* Average Payment Card */}
-        <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl hover:shadow-indigo-500/25 transition-all duration-300 hover:scale-105 group cursor-pointer" onClick={() => navigate('/legal/reports')}>
+        <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl hover:shadow-indigo-500/25 transition-all duration-300 group">
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0 pr-1">
               <p className="text-slate-400 text-xs font-medium mb-1">Avg Payment</p>
