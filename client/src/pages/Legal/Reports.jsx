@@ -584,13 +584,13 @@ const LegalReports = () => {
               </div>
             </div>
         <div>
-              <p className="text-slate-400 text-sm font-medium mb-1">
+              <p className="text-slate-400 text-xs font-medium mb-1">
                 {user?.role === "debt_collector" ? "Total Cases" : "Total Cases"}
               </p>
-              <p className="text-2xl sm:text-3xl font-bold text-white mb-2">
+              <p className="text-[10px] sm:text-xs font-bold text-white mb-2 break-words leading-tight">
                 {formatNumber(totalCases)}
               </p>
-              <p className="text-slate-400 text-sm">
+              <p className="text-slate-400 text-xs">
                 {user?.role === "debt_collector" ? "Active: " : "Active: "}{formatNumber(activeCases)}
           </p>
         </div>
@@ -606,13 +606,13 @@ const LegalReports = () => {
         </div>
       </div>
             <div>
-              <p className="text-slate-400 text-sm font-medium mb-1">
+              <p className="text-slate-400 text-xs font-medium mb-1">
                 {user?.role === "debt_collector" ? "Collected Cases" : "Resolved Cases"}
               </p>
-              <p className="text-2xl sm:text-3xl font-bold text-white mb-2">
+              <p className="text-[10px] sm:text-xs font-bold text-white mb-2 break-words leading-tight">
                 {formatNumber(resolvedCases)}
               </p>
-              <p className="text-slate-400 text-sm">
+              <p className="text-slate-400 text-xs">
                 {user?.role === "debt_collector" ? "Collection Rate: " : "Rate: "}{formatPercentage(resolutionRate)}
               </p>
                   </div>
@@ -628,13 +628,13 @@ const LegalReports = () => {
                   </div>
                 </div>
             <div>
-              <p className="text-slate-400 text-sm font-medium mb-1">
+              <p className="text-slate-400 text-xs font-medium mb-1">
                 {user?.role === "debt_collector" ? "Amount Collected" : "Total Revenue"}
               </p>
-              <p className="text-2xl sm:text-3xl font-bold text-white mb-2">
+              <p className="text-[10px] sm:text-xs font-bold text-white mb-2 break-words leading-tight">
                 {formatCurrency(totalFilingFees)}
               </p>
-              <p className="text-slate-400 text-sm">
+              <p className="text-slate-400 text-xs">
                 {user?.role === "debt_collector" ? "Avg per case: " : "Avg: "}{formatCurrency(avgFilingFee)}
               </p>
                   </div>
@@ -650,13 +650,13 @@ const LegalReports = () => {
                   </div>
                   </div>
             <div>
-              <p className="text-slate-400 text-sm font-medium mb-1">
+              <p className="text-slate-400 text-xs font-medium mb-1">
                 {user?.role === "debt_collector" ? "Collection Rate" : "Resolution Rate"}
               </p>
-              <p className="text-2xl sm:text-3xl font-bold text-white mb-2">
+              <p className="text-[10px] sm:text-xs font-bold text-white mb-2 break-words leading-tight">
                 {formatPercentage(resolutionRate)}
               </p>
-              <p className="text-slate-400 text-sm">
+              <p className="text-slate-400 text-xs">
                 {user?.role === "debt_collector" ? "Performance metric" : "Performance metric"}
               </p>
               </div>
@@ -962,18 +962,18 @@ const LegalReports = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div className="text-center p-4 bg-slate-700/30 rounded-xl">
                   <FaUserTie className="w-8 h-8 text-blue-400 mx-auto mb-2" />
-                  <h4 className="text-lg font-semibold text-white">Total Cases</h4>
-                  <p className="text-2xl font-bold text-blue-400">{legalPerformance.totalCases || 0}</p>
+                  <p className="text-slate-400 text-xs font-medium mb-1">Total Cases</p>
+                  <p className="text-[10px] sm:text-xs font-bold text-blue-400 break-words leading-tight">{legalPerformance.totalCases || 0}</p>
                 </div>
                 <div className="text-center p-4 bg-slate-700/30 rounded-xl">
                   <FaCheckCircle className="w-8 h-8 text-green-400 mx-auto mb-2" />
-                  <h4 className="text-lg font-semibold text-white">Resolution Rate</h4>
-                  <p className="text-2xl font-bold text-green-400">{formatPercentage(legalPerformance.resolutionRate || 0)}</p>
+                  <p className="text-slate-400 text-xs font-medium mb-1">Resolution Rate</p>
+                  <p className="text-[10px] sm:text-xs font-bold text-green-400 break-words leading-tight">{formatPercentage(legalPerformance.resolutionRate || 0)}</p>
                 </div>
                 <div className="text-center p-4 bg-slate-700/30 rounded-xl">
                   <FaMoneyBillWave className="w-8 h-8 text-yellow-400 mx-auto mb-2" />
-                  <h4 className="text-lg font-semibold text-white">Total Revenue</h4>
-                  <p className="text-2xl font-bold text-yellow-400">{formatCurrency(legalPerformance.totalFilingFees || 0)}</p>
+                  <p className="text-slate-400 text-xs font-medium mb-1">Total Revenue</p>
+                  <p className="text-[10px] sm:text-xs font-bold text-yellow-400 break-words leading-tight">{formatCurrency(legalPerformance.totalFilingFees || 0)}</p>
                 </div>
               </div>
             ) : (
@@ -1352,16 +1352,18 @@ const LegalReports = () => {
   };
 
   const renderFinancialTab = () => {
-    // Calculate payment data from installments (payments array) and totalFee
+    // Get all cases with totalFee set (for payment tracking)
+    const casesWithTotalFee = cases?.filter(c => c.totalFee && c.totalFee.amount > 0) || [];
     const casesWithPayments = cases?.filter(c => c.payments && c.payments.length > 0) || [];
+    const allCasesForTable = cases || [];
     
-    // Calculate total amount to be paid (from totalFee field)
-    const totalAmountToBePaid = cases?.reduce((sum, c) => {
+    // Calculate total amount to be paid (from totalFee field) - only cases with totalFee set
+    const totalAmountToBePaid = casesWithTotalFee.reduce((sum, c) => {
       const totalFee = c.totalFee?.amount || 0;
       return sum + totalFee;
-    }, 0) || 0;
+    }, 0);
     
-    // Calculate total amount collected from installments
+    // Calculate total amount collected from installments (all cases)
     const totalAmountCollected = cases?.reduce((sum, c) => {
       if (c.payments && c.payments.length > 0) {
         const casePayments = c.payments.reduce((paymentSum, p) => paymentSum + (p.amount || 0), 0);
@@ -1370,7 +1372,7 @@ const LegalReports = () => {
       return sum;
     }, 0) || 0;
     
-    // Calculate total amount pending
+    // Calculate total amount pending (only for cases with totalFee)
     const totalAmountPending = totalAmountToBePaid - totalAmountCollected;
     
     // Legacy filing fee calculations (for backward compatibility)
@@ -1385,10 +1387,10 @@ const LegalReports = () => {
     // Calculate average payment amount
     const avgPaymentAmount = totalPaymentsCount > 0 ? totalAmountCollected / totalPaymentsCount : 0;
     
-    // Calculate payment completion rate
+    // Calculate payment completion rate (only for cases with totalFee)
     const paymentCompletionRate = totalAmountToBePaid > 0 ? (totalAmountCollected / totalAmountToBePaid) * 100 : 0;
 
-    // Calculate monthly revenue trends
+    // Calculate monthly revenue trends from installment payments
     const calculateMonthlyRevenue = () => {
       if (!cases || cases.length === 0) return { labels: [], datasets: [] };
       
@@ -1405,12 +1407,19 @@ const LegalReports = () => {
         const monthStart = new Date(date.getFullYear(), date.getMonth(), 1);
         const monthEnd = new Date(date.getFullYear(), date.getMonth() + 1, 0);
         
-        const monthRevenue = cases
-          .filter(c => {
-            const caseDate = new Date(c.createdAt);
-            return caseDate >= monthStart && caseDate <= monthEnd;
-          })
-          .reduce((sum, c) => sum + (c.filingFee?.amount || 0), 0);
+        // Calculate revenue from payments made in this month
+        const monthRevenue = cases.reduce((sum, c) => {
+          if (c.payments && c.payments.length > 0) {
+            const monthPayments = c.payments
+              .filter(p => {
+                const paymentDate = new Date(p.paymentDate);
+                return paymentDate >= monthStart && paymentDate <= monthEnd;
+              })
+              .reduce((paymentSum, p) => paymentSum + (p.amount || 0), 0);
+            return sum + monthPayments;
+          }
+          return sum;
+        }, 0);
         
         revenueData.push(monthRevenue);
       }
@@ -1419,7 +1428,7 @@ const LegalReports = () => {
         labels: months,
         datasets: [
           {
-            label: 'Monthly Revenue',
+            label: 'Monthly Revenue (Installments)',
             data: revenueData,
             borderColor: '#f59e0b',
             backgroundColor: 'rgba(245, 158, 11, 0.1)',
@@ -1431,12 +1440,12 @@ const LegalReports = () => {
       };
     };
 
-    // Prepare payment status chart data
+    // Prepare payment status chart data (using installment payments)
     const paymentStatusData = {
-      labels: ['Paid', 'Pending'],
+      labels: ['Collected', 'Pending'],
       datasets: [
         {
-          data: [paidFilingFees, pendingFilingFees],
+          data: [totalAmountCollected, totalAmountPending],
           backgroundColor: ['#10b981', '#f59e0b'],
           borderColor: '#1e293b',
           borderWidth: 2,
@@ -1454,32 +1463,36 @@ const LegalReports = () => {
             <div className="flex items-center justify-between mb-4">
               <FaMoneyBillWave className="w-8 h-8 text-yellow-400" />
             </div>
-            <h3 className="text-lg font-semibold text-white mb-2">Total Revenue</h3>
-            <p className="text-3xl font-bold text-yellow-400">{formatCurrency(totalFilingFees)}</p>
+            <p className="text-slate-400 text-xs font-medium mb-1">Total Amount to Pay</p>
+            <p className="text-[10px] sm:text-xs font-bold text-yellow-400 break-words leading-tight">{formatCurrency(totalAmountToBePaid)}</p>
+            <p className="text-slate-400 text-xs mt-1">From cases with total fee set</p>
           </div>
 
           <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl p-6 border border-slate-600/50 shadow-xl">
             <div className="flex items-center justify-between mb-4">
               <FaCheckCircle className="w-8 h-8 text-green-400" />
             </div>
-            <h3 className="text-lg font-semibold text-white mb-2">Paid Revenue</h3>
-            <p className="text-3xl font-bold text-green-400">{formatCurrency(paidFilingFees)}</p>
+            <p className="text-slate-400 text-xs font-medium mb-1">Amount Collected</p>
+            <p className="text-[10px] sm:text-xs font-bold text-green-400 break-words leading-tight">{formatCurrency(totalAmountCollected)}</p>
+            <p className="text-slate-400 text-xs mt-1">From installment payments</p>
           </div>
 
           <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl p-6 border border-slate-600/50 shadow-xl">
             <div className="flex items-center justify-between mb-4">
               <FaClock className="w-8 h-8 text-orange-400" />
             </div>
-            <h3 className="text-lg font-semibold text-white mb-2">Pending Revenue</h3>
-            <p className="text-3xl font-bold text-orange-400">{formatCurrency(pendingFilingFees)}</p>
+            <p className="text-slate-400 text-xs font-medium mb-1">Amount Pending</p>
+            <p className="text-[10px] sm:text-xs font-bold text-orange-400 break-words leading-tight">{formatCurrency(totalAmountPending)}</p>
+            <p className="text-slate-400 text-xs mt-1">Outstanding balance</p>
           </div>
 
           <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl p-6 border border-slate-600/50 shadow-xl">
             <div className="flex items-center justify-between mb-4">
               <FaPercent className="w-8 h-8 text-purple-400" />
             </div>
-            <h3 className="text-lg font-semibold text-white mb-2">Average Fee</h3>
-            <p className="text-3xl font-bold text-purple-400">{formatCurrency(avgFilingFee)}</p>
+            <p className="text-slate-400 text-xs font-medium mb-1">Avg Payment</p>
+            <p className="text-[10px] sm:text-xs font-bold text-purple-400 break-words leading-tight">{formatCurrency(avgPaymentAmount)}</p>
+            <p className="text-slate-400 text-xs mt-1">Per installment</p>
           </div>
         </div>
 
@@ -1578,7 +1591,7 @@ const LegalReports = () => {
               <p className="text-slate-400 text-sm mt-1">Breakdown of paid vs pending revenue</p>
             </div>
             <div className="p-6">
-              {totalFilingFees > 0 ? (
+              {totalAmountToBePaid > 0 || totalAmountCollected > 0 ? (
                 <div className="h-80">
                   <Doughnut
                     data={paymentStatusData}
@@ -1645,25 +1658,25 @@ const LegalReports = () => {
             {/* Payment Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
               <div className="bg-slate-700/30 rounded-xl p-4">
-                <p className="text-slate-400 text-sm mb-1">Total Amount to Pay</p>
-                <p className="text-2xl font-bold text-white">{formatCurrency(totalAmountToBePaid)}</p>
+                <p className="text-slate-400 text-xs font-medium mb-1">Total Amount to Pay</p>
+                <p className="text-[10px] sm:text-xs font-bold text-white break-words leading-tight">{formatCurrency(totalAmountToBePaid)}</p>
               </div>
               <div className="bg-slate-700/30 rounded-xl p-4">
-                <p className="text-slate-400 text-sm mb-1">Amount Collected</p>
-                <p className="text-2xl font-bold text-green-400">{formatCurrency(totalAmountCollected)}</p>
+                <p className="text-slate-400 text-xs font-medium mb-1">Amount Collected</p>
+                <p className="text-[10px] sm:text-xs font-bold text-green-400 break-words leading-tight">{formatCurrency(totalAmountCollected)}</p>
               </div>
               <div className="bg-slate-700/30 rounded-xl p-4">
-                <p className="text-slate-400 text-sm mb-1">Amount Pending</p>
-                <p className="text-2xl font-bold text-orange-400">{formatCurrency(totalAmountPending)}</p>
+                <p className="text-slate-400 text-xs font-medium mb-1">Amount Pending</p>
+                <p className="text-[10px] sm:text-xs font-bold text-orange-400 break-words leading-tight">{formatCurrency(totalAmountPending)}</p>
               </div>
               <div className="bg-slate-700/30 rounded-xl p-4">
-                <p className="text-slate-400 text-sm mb-1">Payment Progress</p>
-                <p className="text-2xl font-bold text-blue-400">{formatPercentage(paymentCompletionRate)}</p>
+                <p className="text-slate-400 text-xs font-medium mb-1">Payment Progress</p>
+                <p className="text-[10px] sm:text-xs font-bold text-blue-400 break-words leading-tight">{formatPercentage(paymentCompletionRate)}</p>
               </div>
             </div>
 
-            {/* Detailed Payment Table */}
-            {casesWithPayments.length > 0 ? (
+            {/* Detailed Payment Table - Show all cases */}
+            {allCasesForTable.length > 0 ? (
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
@@ -1678,11 +1691,11 @@ const LegalReports = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {casesWithPayments.map((caseItem) => {
+                    {allCasesForTable.map((caseItem) => {
                       const totalFee = caseItem.totalFee?.amount || 0;
                       const collected = caseItem.payments?.reduce((sum, p) => sum + (p.amount || 0), 0) || 0;
-                      const pending = totalFee - collected;
-                      const progress = totalFee > 0 ? (collected / totalFee) * 100 : 0;
+                      const pending = totalFee > 0 ? totalFee - collected : 0;
+                      const progress = totalFee > 0 ? (collected / totalFee) * 100 : (collected > 0 ? 100 : 0);
                       const paymentCount = caseItem.payments?.length || 0;
                       
                       return (
@@ -1691,32 +1704,48 @@ const LegalReports = () => {
                             {caseItem.caseNumber || "N/A"}
                           </td>
                           <td className="py-3 px-4 text-sm text-slate-300">
-                            {caseItem.client?.firstName} {caseItem.client?.lastName}
+                            {caseItem.client?.firstName || ''} {caseItem.client?.lastName || ''}
                           </td>
-                          <td className="py-3 px-4 text-sm text-white text-right font-medium">
-                            {formatCurrency(totalFee)}
+                          <td className="py-3 px-4 text-sm text-right font-medium">
+                            {totalFee > 0 ? (
+                              <span className="text-white">{formatCurrency(totalFee)}</span>
+                            ) : (
+                              <span className="text-slate-500 italic">Not set</span>
+                            )}
                           </td>
                           <td className="py-3 px-4 text-sm text-green-400 text-right font-medium">
                             {formatCurrency(collected)}
                           </td>
-                          <td className="py-3 px-4 text-sm text-orange-400 text-right font-medium">
-                            {formatCurrency(pending)}
+                          <td className="py-3 px-4 text-sm text-right font-medium">
+                            {totalFee > 0 ? (
+                              <span className="text-orange-400">{formatCurrency(pending)}</span>
+                            ) : (
+                              <span className="text-slate-500 italic">-</span>
+                            )}
                           </td>
                           <td className="py-3 px-4 text-sm text-slate-300 text-center">
-                            {paymentCount} {paymentCount === 1 ? 'payment' : 'payments'}
+                            {paymentCount > 0 ? (
+                              <span>{paymentCount} {paymentCount === 1 ? 'payment' : 'payments'}</span>
+                            ) : (
+                              <span className="text-slate-500">No payments</span>
+                            )}
                           </td>
                           <td className="py-3 px-4 text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              <div className="w-24 h-2 bg-slate-700 rounded-full overflow-hidden">
-                                <div 
-                                  className="h-full bg-gradient-to-r from-blue-500 to-green-500 transition-all"
-                                  style={{ width: `${Math.min(progress, 100)}%` }}
-                                ></div>
+                            {totalFee > 0 ? (
+                              <div className="flex items-center justify-end gap-2">
+                                <div className="w-24 h-2 bg-slate-700 rounded-full overflow-hidden">
+                                  <div 
+                                    className="h-full bg-gradient-to-r from-blue-500 to-green-500 transition-all"
+                                    style={{ width: `${Math.min(progress, 100)}%` }}
+                                  ></div>
+                                </div>
+                                <span className="text-sm text-slate-300 w-12 text-right">
+                                  {progress.toFixed(0)}%
+                                </span>
                               </div>
-                              <span className="text-sm text-slate-300 w-12 text-right">
-                                {progress.toFixed(0)}%
-                              </span>
-                            </div>
+                            ) : (
+                              <span className="text-slate-500 text-sm">-</span>
+                            )}
                           </td>
                         </tr>
                       );
@@ -1727,15 +1756,15 @@ const LegalReports = () => {
             ) : (
               <div className="text-center py-12">
                 <FaMoneyBillWave className="w-16 h-16 text-slate-500 mx-auto mb-4" />
-                <p className="text-slate-400">No payment data available</p>
-                <p className="text-slate-500 text-sm mt-2">Payment installments will appear here once recorded</p>
+                <p className="text-slate-400">No cases available</p>
+                <p className="text-slate-500 text-sm mt-2">Cases will appear here once created</p>
               </div>
             )}
           </div>
         </div>
 
         {/* Payment History by Case */}
-        {casesWithPayments.length > 0 && (
+        {casesWithPayments.length > 0 ? (
           <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl border border-slate-600/50 shadow-xl">
             <div className="p-6 border-b border-slate-600/50">
               <h3 className="text-xl font-semibold text-white flex items-center gap-2">
@@ -1758,16 +1787,16 @@ const LegalReports = () => {
                     <div key={caseItem._id} className="bg-slate-700/30 rounded-xl p-4">
                       <div className="flex items-center justify-between mb-4">
                         <div>
-                          <h4 className="text-lg font-semibold text-white">
+                          <h4 className="text-xs font-semibold text-white">
                             {caseItem.caseNumber || "N/A"}
                           </h4>
-                          <p className="text-sm text-slate-400">
+                          <p className="text-xs text-slate-400">
                             {caseItem.client?.firstName} {caseItem.client?.lastName}
                           </p>
                         </div>
                         <div className="text-right">
-                          <p className="text-sm text-slate-400">Total Fee</p>
-                          <p className="text-lg font-bold text-white">{formatCurrency(totalFee)}</p>
+                          <p className="text-xs text-slate-400">Total Fee</p>
+                          <p className="text-[10px] sm:text-xs font-bold text-white break-words leading-tight">{formatCurrency(totalFee)}</p>
                           <div className="flex items-center gap-4 mt-2">
                             <div>
                               <p className="text-xs text-green-400">Collected: {formatCurrency(collected)}</p>
@@ -1779,16 +1808,16 @@ const LegalReports = () => {
                       
                       {sortedPayments.length > 0 && (
                         <div className="mt-4">
-                          <p className="text-sm font-semibold text-slate-300 mb-2">Installment Payments:</p>
+                          <p className="text-xs font-semibold text-slate-300 mb-2">Installment Payments:</p>
                           <div className="space-y-2">
                             {sortedPayments.map((payment, index) => (
                               <div key={payment._id || index} className="flex items-center justify-between p-3 bg-slate-800/50 rounded-lg">
                                 <div className="flex items-center gap-3">
                                   <div className="w-8 h-8 bg-green-500/20 rounded-lg flex items-center justify-center">
-                                    <span className="text-green-400 font-bold text-sm">#{sortedPayments.length - index}</span>
+                                    <span className="text-green-400 font-bold text-xs">#{sortedPayments.length - index}</span>
                                   </div>
                                   <div>
-                                    <p className="text-sm font-medium text-white">
+                                    <p className="text-xs font-medium text-white break-words leading-tight">
                                       {formatCurrency(payment.amount)} {payment.currency || 'KES'}
                                     </p>
                                     <p className="text-xs text-slate-400">
@@ -1821,6 +1850,23 @@ const LegalReports = () => {
               </div>
             </div>
           </div>
+        ) : (
+          <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl border border-slate-600/50 shadow-xl">
+            <div className="p-6 border-b border-slate-600/50">
+              <h3 className="text-xl font-semibold text-white flex items-center gap-2">
+                <FaCalendarCheck className="text-purple-400" />
+                Payment History & Installments
+              </h3>
+              <p className="text-slate-400 text-sm mt-1">Detailed installment payment history for each case</p>
+            </div>
+            <div className="p-6">
+              <div className="text-center py-12">
+                <FaCalendarCheck className="w-16 h-16 text-slate-500 mx-auto mb-4" />
+                <p className="text-slate-400">No payment history available</p>
+                <p className="text-slate-500 text-sm mt-2">Payment installments will appear here once recorded</p>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Financial Summary */}
@@ -1834,28 +1880,28 @@ const LegalReports = () => {
           <div className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               <div className="text-center p-4 bg-slate-700/30 rounded-xl">
-                <h4 className="text-lg font-semibold text-white mb-2">Payment Rate</h4>
-                <p className="text-2xl font-bold text-green-400">
+                <p className="text-slate-400 text-xs font-medium mb-1">Payment Rate</p>
+                <p className="text-[10px] sm:text-xs font-bold text-green-400 break-words leading-tight">
                   {formatPercentage(paymentCompletionRate)}
                 </p>
-                <p className="text-slate-400 text-sm">of total amount collected</p>
+                <p className="text-slate-400 text-xs">of total amount collected</p>
               </div>
               <div className="text-center p-4 bg-slate-700/30 rounded-xl">
-                <h4 className="text-lg font-semibold text-white mb-2">Total Payments</h4>
-                <p className="text-2xl font-bold text-blue-400">
+                <p className="text-slate-400 text-xs font-medium mb-1">Total Payments</p>
+                <p className="text-[10px] sm:text-xs font-bold text-blue-400 break-words leading-tight">
                   {totalPaymentsCount}
                 </p>
-                <p className="text-slate-400 text-sm">installment payments</p>
+                <p className="text-slate-400 text-xs">installment payments</p>
               </div>
               <div className="text-center p-4 bg-slate-700/30 rounded-xl">
-                <h4 className="text-lg font-semibold text-white mb-2">Avg Payment</h4>
-                <p className="text-2xl font-bold text-purple-400">{formatCurrency(avgPaymentAmount)}</p>
-                <p className="text-slate-400 text-sm">per installment</p>
+                <p className="text-slate-400 text-xs font-medium mb-1">Avg Payment</p>
+                <p className="text-[10px] sm:text-xs font-bold text-purple-400 break-words leading-tight">{formatCurrency(avgPaymentAmount)}</p>
+                <p className="text-slate-400 text-xs">per installment</p>
               </div>
               <div className="text-center p-4 bg-slate-700/30 rounded-xl">
-                <h4 className="text-lg font-semibold text-white mb-2">Outstanding Amount</h4>
-                <p className="text-2xl font-bold text-orange-400">{formatCurrency(totalAmountPending)}</p>
-                <p className="text-slate-400 text-sm">awaiting collection</p>
+                <p className="text-slate-400 text-xs font-medium mb-1">Outstanding Amount</p>
+                <p className="text-[10px] sm:text-xs font-bold text-orange-400 break-words leading-tight">{formatCurrency(totalAmountPending)}</p>
+                <p className="text-slate-400 text-xs">awaiting collection</p>
               </div>
             </div>
           </div>

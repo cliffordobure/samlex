@@ -602,6 +602,7 @@ export const getLegalCases = async (req, res) => {
       .populate("createdBy", "firstName lastName email")
       .populate("department", "name code")
       .populate("escalatedFrom.creditCaseId", "caseNumber title")
+      .populate("payments.recordedBy", "firstName lastName email")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit));
