@@ -658,8 +658,8 @@ const LegalOverview = () => {
                 </span>
               </div>
             </div>
-            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-blue-500/20 to-indigo-500/20 rounded-xl sm:rounded-2xl flex items-center justify-center group-hover:bg-blue-500/30 transition-all duration-300 flex-shrink-0">
-              <FaGavel className="w-6 h-6 sm:w-8 sm:h-8 text-blue-400 group-hover:text-blue-300 transition-colors" />
+            <div className="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-br from-blue-500/20 to-indigo-500/20 rounded-lg flex items-center justify-center group-hover:bg-blue-500/30 transition-all duration-300 flex-shrink-0">
+              <FaGavel className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-400 group-hover:text-blue-300 transition-colors" />
             </div>
           </div>
         </div>
@@ -677,8 +677,8 @@ const LegalOverview = () => {
                 </span>
               </div>
             </div>
-            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-yellow-500/20 to-orange-500/20 rounded-xl sm:rounded-2xl flex items-center justify-center group-hover:bg-yellow-500/30 transition-all duration-300 flex-shrink-0">
-              <FaClock className="w-6 h-6 sm:w-8 sm:h-8 text-yellow-400 group-hover:text-yellow-300 transition-colors" />
+            <div className="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-br from-yellow-500/20 to-orange-500/20 rounded-lg flex items-center justify-center group-hover:bg-yellow-500/30 transition-all duration-300 flex-shrink-0">
+              <FaClock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-yellow-400 group-hover:text-yellow-300 transition-colors" />
             </div>
           </div>
         </div>
@@ -696,8 +696,8 @@ const LegalOverview = () => {
                 </span>
               </div>
             </div>
-            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-xl sm:rounded-2xl flex items-center justify-center group-hover:bg-green-500/30 transition-all duration-300 flex-shrink-0">
-              <FaCheckCircle className="w-6 h-6 sm:w-8 sm:h-8 text-green-400 group-hover:text-green-300 transition-colors" />
+            <div className="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-lg flex items-center justify-center group-hover:bg-green-500/30 transition-all duration-300 flex-shrink-0">
+              <FaCheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-400 group-hover:text-green-300 transition-colors" />
             </div>
           </div>
         </div>
@@ -715,8 +715,8 @@ const LegalOverview = () => {
                 </span>
               </div>
             </div>
-            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-xl sm:rounded-2xl flex items-center justify-center group-hover:bg-purple-500/30 transition-all duration-300 flex-shrink-0">
-              <FaMoneyBillWave className="w-6 h-6 sm:w-8 sm:h-8 text-purple-400 group-hover:text-purple-300 transition-colors" />
+            <div className="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-lg flex items-center justify-center group-hover:bg-purple-500/30 transition-all duration-300 flex-shrink-0">
+              <FaMoneyBillWave className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-purple-400 group-hover:text-purple-300 transition-colors" />
             </div>
           </div>
         </div>
@@ -739,8 +739,8 @@ const LegalOverview = () => {
                 </span>
               </div>
             </div>
-            <div className="w-10 h-10 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-lg flex items-center justify-center group-hover:bg-green-500/30 transition-all duration-300 flex-shrink-0">
-              <FaCheckCircle className="w-4 h-4 text-green-400 group-hover:text-green-300 transition-colors" />
+            <div className="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-lg flex items-center justify-center group-hover:bg-green-500/30 transition-all duration-300 flex-shrink-0">
+              <FaCheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-400 group-hover:text-green-300 transition-colors" />
             </div>
           </div>
         </div>
@@ -760,8 +760,8 @@ const LegalOverview = () => {
                 </span>
               </div>
             </div>
-            <div className="w-10 h-10 bg-gradient-to-br from-orange-500/20 to-red-500/20 rounded-lg flex items-center justify-center group-hover:bg-orange-500/30 transition-all duration-300 flex-shrink-0">
-              <FaClock className="w-4 h-4 text-orange-400 group-hover:text-orange-300 transition-colors" />
+            <div className="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-br from-orange-500/20 to-red-500/20 rounded-lg flex items-center justify-center group-hover:bg-orange-500/30 transition-all duration-300 flex-shrink-0">
+              <FaClock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-orange-400 group-hover:text-orange-300 transition-colors" />
             </div>
           </div>
         </div>
@@ -781,8 +781,8 @@ const LegalOverview = () => {
                 </span>
               </div>
             </div>
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-500/20 to-indigo-500/20 rounded-lg flex items-center justify-center group-hover:bg-blue-500/30 transition-all duration-300 flex-shrink-0">
-              <FaFileInvoiceDollar className="w-4 h-4 text-blue-400 group-hover:text-blue-300 transition-colors" />
+            <div className="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-br from-blue-500/20 to-indigo-500/20 rounded-lg flex items-center justify-center group-hover:bg-blue-500/30 transition-all duration-300 flex-shrink-0">
+              <FaFileInvoiceDollar className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-400 group-hover:text-blue-300 transition-colors" />
             </div>
           </div>
         </div>
@@ -802,8 +802,8 @@ const LegalOverview = () => {
                 </span>
               </div>
             </div>
-            <div className="w-10 h-10 bg-gradient-to-br from-teal-500/20 to-cyan-500/20 rounded-lg flex items-center justify-center group-hover:bg-teal-500/30 transition-all duration-300 flex-shrink-0">
-              <FaChartLine className="w-4 h-4 text-teal-400 group-hover:text-teal-300 transition-colors" />
+            <div className="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-br from-teal-500/20 to-cyan-500/20 rounded-lg flex items-center justify-center group-hover:bg-teal-500/30 transition-all duration-300 flex-shrink-0">
+              <FaChartLine className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-teal-400 group-hover:text-teal-300 transition-colors" />
             </div>
           </div>
         </div>
@@ -823,8 +823,8 @@ const LegalOverview = () => {
                 </span>
               </div>
             </div>
-            <div className="w-10 h-10 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 rounded-lg flex items-center justify-center group-hover:bg-indigo-500/30 transition-all duration-300 flex-shrink-0">
-              <FaChartPie className="w-4 h-4 text-indigo-400 group-hover:text-indigo-300 transition-colors" />
+            <div className="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 rounded-lg flex items-center justify-center group-hover:bg-indigo-500/30 transition-all duration-300 flex-shrink-0">
+              <FaChartPie className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-400 group-hover:text-indigo-300 transition-colors" />
             </div>
           </div>
         </div>
