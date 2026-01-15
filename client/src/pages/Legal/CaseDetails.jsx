@@ -762,14 +762,29 @@ const CaseDetails = () => {
       return;
     }
 
+    if (!paymentData.paymentDate) {
+      toast.error("Please select a payment date");
+      return;
+    }
+
     setPaymentLoading(true);
     try {
+      // Convert datetime-local format to ISO string for backend
+      const paymentDateISO = paymentData.paymentDate 
+        ? new Date(paymentData.paymentDate).toISOString()
+        : new Date().toISOString();
+
       await legalCaseApi.addPayment(id, {
-        ...paymentData,
         amount: parseFloat(paymentData.amount),
+        currency: paymentData.currency || "KES",
+        paymentDate: paymentDateISO,
+        paymentMethod: paymentData.paymentMethod || "bank_transfer",
+        paymentReference: paymentData.paymentReference || "",
+        notes: paymentData.notes || "",
       });
       toast.success("Payment added successfully");
       setShowPaymentModal(false);
+      // Reset form data
       setPaymentData({
         amount: "",
         currency: "KES",
@@ -780,7 +795,9 @@ const CaseDetails = () => {
       });
       dispatch(getLegalCase(id)); // Refresh case details
     } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to add payment");
+      console.error("Payment error:", error);
+      const errorMessage = error.response?.data?.message || error.response?.data?.error || error.message || "Failed to add payment";
+      toast.error(errorMessage);
     } finally {
       setPaymentLoading(false);
     }
@@ -1371,7 +1388,7 @@ const CaseDetails = () => {
                           </tr>
                         </thead>
                         <tbody>
-                          {currentCase.courtActivities
+                          {[...(currentCase.courtActivities || [])]
                             .sort((a, b) => new Date(b.activityDate) - new Date(a.activityDate))
                             .map((activity, index) => (
                               <tr key={activity._id || index} className="border-b border-dark-600/50 hover:bg-dark-900/30">
@@ -1843,7 +1860,7 @@ const CaseDetails = () => {
                   )}
                   {currentCase.payments && currentCase.payments.length > 0 ? (
                     <div className="space-y-2 max-h-64 overflow-y-auto">
-                      {currentCase.payments
+                      {[...(currentCase.payments || [])]
                         .sort((a, b) => new Date(b.paymentDate) - new Date(a.paymentDate))
                         .map((payment, index) => (
                           <div

@@ -1779,11 +1779,43 @@ export const addPaymentToCase = async (req, res) => {
       });
     }
 
+    // Validate payment method
+    const validPaymentMethods = ["cash", "bank_transfer", "mobile_money", "cheque", "other"];
+    if (paymentMethod && !validPaymentMethods.includes(paymentMethod)) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid payment method. Must be one of: ${validPaymentMethods.join(", ")}`,
+      });
+    }
+
+    // Validate currency
+    const validCurrencies = ["KES", "USD", "EUR", "GBP"];
+    if (currency && !validCurrencies.includes(currency)) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid currency. Must be one of: ${validCurrencies.join(", ")}`,
+      });
+    }
+
+    // Validate and parse payment date
+    let parsedPaymentDate;
+    if (paymentDate) {
+      parsedPaymentDate = new Date(paymentDate);
+      if (isNaN(parsedPaymentDate.getTime())) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid payment date format",
+        });
+      }
+    } else {
+      parsedPaymentDate = new Date();
+    }
+
     // Add payment
     const newPayment = {
-      amount,
+      amount: parseFloat(amount),
       currency: currency || "KES",
-      paymentDate: paymentDate ? new Date(paymentDate) : new Date(),
+      paymentDate: parsedPaymentDate,
       paymentMethod: paymentMethod || "bank_transfer",
       paymentReference: paymentReference || "",
       notes: notes || "",
