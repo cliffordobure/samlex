@@ -1352,10 +1352,41 @@ const LegalReports = () => {
   };
 
   const renderFinancialTab = () => {
+    // Calculate payment data from installments (payments array) and totalFee
+    const casesWithPayments = cases?.filter(c => c.payments && c.payments.length > 0) || [];
+    
+    // Calculate total amount to be paid (from totalFee field)
+    const totalAmountToBePaid = cases?.reduce((sum, c) => {
+      const totalFee = c.totalFee?.amount || 0;
+      return sum + totalFee;
+    }, 0) || 0;
+    
+    // Calculate total amount collected from installments
+    const totalAmountCollected = cases?.reduce((sum, c) => {
+      if (c.payments && c.payments.length > 0) {
+        const casePayments = c.payments.reduce((paymentSum, p) => paymentSum + (p.amount || 0), 0);
+        return sum + casePayments;
+      }
+      return sum;
+    }, 0) || 0;
+    
+    // Calculate total amount pending
+    const totalAmountPending = totalAmountToBePaid - totalAmountCollected;
+    
+    // Legacy filing fee calculations (for backward compatibility)
     const totalFilingFees = cases?.reduce((sum, c) => sum + (c.filingFee?.amount || 0), 0) || 0;
     const paidFilingFees = cases?.reduce((sum, c) => sum + (c.filingFee?.paid ? (c.filingFee?.amount || 0) : 0), 0) || 0;
     const pendingFilingFees = totalFilingFees - paidFilingFees;
     const avgFilingFee = cases?.length > 0 ? totalFilingFees / cases.length : 0;
+    
+    // Calculate total number of payments
+    const totalPaymentsCount = cases?.reduce((sum, c) => sum + (c.payments?.length || 0), 0) || 0;
+    
+    // Calculate average payment amount
+    const avgPaymentAmount = totalPaymentsCount > 0 ? totalAmountCollected / totalPaymentsCount : 0;
+    
+    // Calculate payment completion rate
+    const paymentCompletionRate = totalAmountToBePaid > 0 ? (totalAmountCollected / totalAmountToBePaid) * 100 : 0;
 
     // Calculate monthly revenue trends
     const calculateMonthlyRevenue = () => {
@@ -1601,6 +1632,197 @@ const LegalReports = () => {
           </div>
         </div>
 
+        {/* Payment Tracking Section */}
+        <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl border border-slate-600/50 shadow-xl">
+          <div className="p-6 border-b border-slate-600/50">
+            <h3 className="text-xl font-semibold text-white flex items-center gap-2">
+              <FaMoneyBillWave className="text-green-400" />
+              Payment Tracking & Installments
+            </h3>
+            <p className="text-slate-400 text-sm mt-1">Detailed breakdown of installment payments per case</p>
+          </div>
+          <div className="p-6">
+            {/* Payment Summary Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+              <div className="bg-slate-700/30 rounded-xl p-4">
+                <p className="text-slate-400 text-sm mb-1">Total Amount to Pay</p>
+                <p className="text-2xl font-bold text-white">{formatCurrency(totalAmountToBePaid)}</p>
+              </div>
+              <div className="bg-slate-700/30 rounded-xl p-4">
+                <p className="text-slate-400 text-sm mb-1">Amount Collected</p>
+                <p className="text-2xl font-bold text-green-400">{formatCurrency(totalAmountCollected)}</p>
+              </div>
+              <div className="bg-slate-700/30 rounded-xl p-4">
+                <p className="text-slate-400 text-sm mb-1">Amount Pending</p>
+                <p className="text-2xl font-bold text-orange-400">{formatCurrency(totalAmountPending)}</p>
+              </div>
+              <div className="bg-slate-700/30 rounded-xl p-4">
+                <p className="text-slate-400 text-sm mb-1">Payment Progress</p>
+                <p className="text-2xl font-bold text-blue-400">{formatPercentage(paymentCompletionRate)}</p>
+              </div>
+            </div>
+
+            {/* Detailed Payment Table */}
+            {casesWithPayments.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-slate-600/50">
+                      <th className="text-left py-3 px-4 text-sm font-semibold text-white">Case Number</th>
+                      <th className="text-left py-3 px-4 text-sm font-semibold text-white">Client</th>
+                      <th className="text-right py-3 px-4 text-sm font-semibold text-white">Total Fee</th>
+                      <th className="text-right py-3 px-4 text-sm font-semibold text-white">Collected</th>
+                      <th className="text-right py-3 px-4 text-sm font-semibold text-white">Pending</th>
+                      <th className="text-center py-3 px-4 text-sm font-semibold text-white">Payments</th>
+                      <th className="text-right py-3 px-4 text-sm font-semibold text-white">Progress</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {casesWithPayments.map((caseItem) => {
+                      const totalFee = caseItem.totalFee?.amount || 0;
+                      const collected = caseItem.payments?.reduce((sum, p) => sum + (p.amount || 0), 0) || 0;
+                      const pending = totalFee - collected;
+                      const progress = totalFee > 0 ? (collected / totalFee) * 100 : 0;
+                      const paymentCount = caseItem.payments?.length || 0;
+                      
+                      return (
+                        <tr key={caseItem._id} className="border-b border-slate-600/30 hover:bg-slate-700/30">
+                          <td className="py-3 px-4 text-sm text-white font-medium">
+                            {caseItem.caseNumber || "N/A"}
+                          </td>
+                          <td className="py-3 px-4 text-sm text-slate-300">
+                            {caseItem.client?.firstName} {caseItem.client?.lastName}
+                          </td>
+                          <td className="py-3 px-4 text-sm text-white text-right font-medium">
+                            {formatCurrency(totalFee)}
+                          </td>
+                          <td className="py-3 px-4 text-sm text-green-400 text-right font-medium">
+                            {formatCurrency(collected)}
+                          </td>
+                          <td className="py-3 px-4 text-sm text-orange-400 text-right font-medium">
+                            {formatCurrency(pending)}
+                          </td>
+                          <td className="py-3 px-4 text-sm text-slate-300 text-center">
+                            {paymentCount} {paymentCount === 1 ? 'payment' : 'payments'}
+                          </td>
+                          <td className="py-3 px-4 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <div className="w-24 h-2 bg-slate-700 rounded-full overflow-hidden">
+                                <div 
+                                  className="h-full bg-gradient-to-r from-blue-500 to-green-500 transition-all"
+                                  style={{ width: `${Math.min(progress, 100)}%` }}
+                                ></div>
+                              </div>
+                              <span className="text-sm text-slate-300 w-12 text-right">
+                                {progress.toFixed(0)}%
+                              </span>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <FaMoneyBillWave className="w-16 h-16 text-slate-500 mx-auto mb-4" />
+                <p className="text-slate-400">No payment data available</p>
+                <p className="text-slate-500 text-sm mt-2">Payment installments will appear here once recorded</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Payment History by Case */}
+        {casesWithPayments.length > 0 && (
+          <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl border border-slate-600/50 shadow-xl">
+            <div className="p-6 border-b border-slate-600/50">
+              <h3 className="text-xl font-semibold text-white flex items-center gap-2">
+                <FaCalendarCheck className="text-purple-400" />
+                Payment History & Installments
+              </h3>
+              <p className="text-slate-400 text-sm mt-1">Detailed installment payment history for each case</p>
+            </div>
+            <div className="p-6">
+              <div className="space-y-6">
+                {casesWithPayments.map((caseItem) => {
+                  const totalFee = caseItem.totalFee?.amount || 0;
+                  const collected = caseItem.payments?.reduce((sum, p) => sum + (p.amount || 0), 0) || 0;
+                  const pending = totalFee - collected;
+                  const sortedPayments = [...(caseItem.payments || [])].sort((a, b) => 
+                    new Date(b.paymentDate) - new Date(a.paymentDate)
+                  );
+                  
+                  return (
+                    <div key={caseItem._id} className="bg-slate-700/30 rounded-xl p-4">
+                      <div className="flex items-center justify-between mb-4">
+                        <div>
+                          <h4 className="text-lg font-semibold text-white">
+                            {caseItem.caseNumber || "N/A"}
+                          </h4>
+                          <p className="text-sm text-slate-400">
+                            {caseItem.client?.firstName} {caseItem.client?.lastName}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm text-slate-400">Total Fee</p>
+                          <p className="text-lg font-bold text-white">{formatCurrency(totalFee)}</p>
+                          <div className="flex items-center gap-4 mt-2">
+                            <div>
+                              <p className="text-xs text-green-400">Collected: {formatCurrency(collected)}</p>
+                              <p className="text-xs text-orange-400">Pending: {formatCurrency(pending)}</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {sortedPayments.length > 0 && (
+                        <div className="mt-4">
+                          <p className="text-sm font-semibold text-slate-300 mb-2">Installment Payments:</p>
+                          <div className="space-y-2">
+                            {sortedPayments.map((payment, index) => (
+                              <div key={payment._id || index} className="flex items-center justify-between p-3 bg-slate-800/50 rounded-lg">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-8 h-8 bg-green-500/20 rounded-lg flex items-center justify-center">
+                                    <span className="text-green-400 font-bold text-sm">#{sortedPayments.length - index}</span>
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-medium text-white">
+                                      {formatCurrency(payment.amount)} {payment.currency || 'KES'}
+                                    </p>
+                                    <p className="text-xs text-slate-400">
+                                      {new Date(payment.paymentDate).toLocaleDateString('en-US', {
+                                        year: 'numeric',
+                                        month: 'short',
+                                        day: 'numeric'
+                                      })}
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-xs text-slate-400 capitalize">
+                                    {payment.paymentMethod?.replace('_', ' ')}
+                                  </p>
+                                  {payment.recordedBy && (
+                                    <p className="text-xs text-slate-500">
+                                      by {payment.recordedBy.firstName} {payment.recordedBy.lastName}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Financial Summary */}
         <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl border border-slate-600/50 shadow-xl">
           <div className="p-6 border-b border-slate-600/50">
@@ -1610,24 +1832,29 @@ const LegalReports = () => {
             </h3>
           </div>
           <div className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               <div className="text-center p-4 bg-slate-700/30 rounded-xl">
                 <h4 className="text-lg font-semibold text-white mb-2">Payment Rate</h4>
                 <p className="text-2xl font-bold text-green-400">
-                  {totalFilingFees > 0 ? formatPercentage(paidFilingFees / totalFilingFees) : "0%"}
+                  {formatPercentage(paymentCompletionRate)}
                 </p>
-                <p className="text-slate-400 text-sm">of total revenue collected</p>
+                <p className="text-slate-400 text-sm">of total amount collected</p>
               </div>
               <div className="text-center p-4 bg-slate-700/30 rounded-xl">
-                <h4 className="text-lg font-semibold text-white mb-2">Collection Efficiency</h4>
+                <h4 className="text-lg font-semibold text-white mb-2">Total Payments</h4>
                 <p className="text-2xl font-bold text-blue-400">
-                  {cases?.length > 0 ? Math.round((paidFilingFees / totalFilingFees) * 100) : 0}%
+                  {totalPaymentsCount}
                 </p>
-                <p className="text-slate-400 text-sm">payment collection rate</p>
+                <p className="text-slate-400 text-sm">installment payments</p>
+              </div>
+              <div className="text-center p-4 bg-slate-700/30 rounded-xl">
+                <h4 className="text-lg font-semibold text-white mb-2">Avg Payment</h4>
+                <p className="text-2xl font-bold text-purple-400">{formatCurrency(avgPaymentAmount)}</p>
+                <p className="text-slate-400 text-sm">per installment</p>
               </div>
               <div className="text-center p-4 bg-slate-700/30 rounded-xl">
                 <h4 className="text-lg font-semibold text-white mb-2">Outstanding Amount</h4>
-                <p className="text-2xl font-bold text-orange-400">{formatCurrency(pendingFilingFees)}</p>
+                <p className="text-2xl font-bold text-orange-400">{formatCurrency(totalAmountPending)}</p>
                 <p className="text-slate-400 text-sm">awaiting collection</p>
               </div>
             </div>
