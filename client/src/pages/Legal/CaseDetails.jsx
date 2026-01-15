@@ -39,6 +39,11 @@ import {
   FaInfoCircle,
   FaPaperPlane,
   FaUserCircle,
+  FaMoneyBillWave,
+  FaHistory,
+  FaTable,
+  FaPencilAlt,
+  FaTimesCircle,
 } from "react-icons/fa";
 
 const API_BASE = API_URL;
@@ -131,6 +136,36 @@ const CaseDetails = () => {
     judgeAssigned: "",
   });
   const [courtDatesLoading, setCourtDatesLoading] = useState(false);
+
+  // Payment tracking state
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentData, setPaymentData] = useState({
+    amount: "",
+    currency: "KES",
+    paymentDate: new Date().toISOString().slice(0, 16),
+    paymentMethod: "bank_transfer",
+    paymentReference: "",
+    notes: "",
+  });
+  const [paymentLoading, setPaymentLoading] = useState(false);
+
+  // Court activity state
+  const [showCourtActivityModal, setShowCourtActivityModal] = useState(false);
+  const [courtActivityData, setCourtActivityData] = useState({
+    activityType: "hearing",
+    activityDate: new Date().toISOString().slice(0, 16),
+    nextHearingDate: "",
+    outcome: "",
+    notes: "",
+    judgeName: "",
+    courtRoom: "",
+  });
+  const [courtActivityLoading, setCourtActivityLoading] = useState(false);
+
+  // Document renaming state
+  const [renamingDocId, setRenamingDocId] = useState(null);
+  const [newDocName, setNewDocName] = useState("");
+  const [renameLoading, setRenameLoading] = useState(false);
 
   // Function to open court dates modal with existing data
   const handleOpenCourtDatesModal = async () => {
@@ -698,6 +733,89 @@ const CaseDetails = () => {
     setSelectedDocument(null);
   };
 
+  // Handle adding payment (installment)
+  const handleAddPayment = async (e) => {
+    e.preventDefault();
+    if (!paymentData.amount || parseFloat(paymentData.amount) <= 0) {
+      toast.error("Please enter a valid payment amount");
+      return;
+    }
+
+    setPaymentLoading(true);
+    try {
+      await legalCaseApi.addPayment(id, {
+        ...paymentData,
+        amount: parseFloat(paymentData.amount),
+      });
+      toast.success("Payment added successfully");
+      setShowPaymentModal(false);
+      setPaymentData({
+        amount: "",
+        currency: "KES",
+        paymentDate: new Date().toISOString().slice(0, 16),
+        paymentMethod: "bank_transfer",
+        paymentReference: "",
+        notes: "",
+      });
+      dispatch(getLegalCase(id)); // Refresh case details
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to add payment");
+    } finally {
+      setPaymentLoading(false);
+    }
+  };
+
+  // Handle adding court activity
+  const handleAddCourtActivity = async (e) => {
+    e.preventDefault();
+    if (!courtActivityData.activityType || !courtActivityData.activityDate) {
+      toast.error("Please provide activity type and date");
+      return;
+    }
+
+    setCourtActivityLoading(true);
+    try {
+      await legalCaseApi.addCourtActivity(id, courtActivityData);
+      toast.success("Court activity added successfully");
+      setShowCourtActivityModal(false);
+      setCourtActivityData({
+        activityType: "hearing",
+        activityDate: new Date().toISOString().slice(0, 16),
+        nextHearingDate: "",
+        outcome: "",
+        notes: "",
+        judgeName: "",
+        courtRoom: "",
+      });
+      dispatch(getLegalCase(id)); // Refresh case details
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to add court activity");
+    } finally {
+      setCourtActivityLoading(false);
+    }
+  };
+
+  // Handle document renaming
+  const handleRenameDocument = async (docId, currentName) => {
+    if (!newDocName.trim()) {
+      toast.error("Please enter a document name");
+      return;
+    }
+
+    setRenameLoading(true);
+    try {
+      await legalCaseApi.renameDocument(id, docId, newDocName.trim());
+      toast.success("Document renamed successfully");
+      setRenamingDocId(null);
+      setNewDocName("");
+      dispatch(getLegalCase(id)); // Refresh case details
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to rename document");
+    } finally {
+      setRenameLoading(false);
+    }
+  };
+
   // Handle payment status update
   const handlePaymentStatusUpdate = async (paid) => {
     try {
@@ -1187,6 +1305,90 @@ const CaseDetails = () => {
               </div>
             )}
 
+            {/* Court Activities Card */}
+            {(user?.role === "advocate" || user?.role === "legal_head" || user?.role === "law_firm_admin") && (
+              <div className="bg-gradient-to-br from-dark-800/50 to-dark-700/50 border border-dark-600 rounded-2xl shadow-2xl backdrop-blur-sm overflow-hidden">
+                <div className="bg-gradient-to-r from-dark-700 to-dark-600 px-8 py-6 border-b border-dark-600">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center">
+                        <FaHistory className="w-5 h-5 text-purple-400" />
+                      </div>
+                      <div>
+                        <h2 className="text-2xl font-bold text-white">
+                          Court Activities
+                        </h2>
+                        <p className="text-dark-300">
+                          Track court proceedings, hearings, and outcomes
+                        </p>
+                      </div>
+                    </div>
+                    {(user?.role === "advocate" && currentCase.assignedTo?._id === user._id) || 
+                     (user?.role === "legal_head" || user?.role === "law_firm_admin") ? (
+                      <button
+                        onClick={() => setShowCourtActivityModal(true)}
+                        className="px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg font-medium transition-all duration-200 flex items-center gap-2"
+                      >
+                        <FaEdit className="w-4 h-4" />
+                        Add Activity
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+                <div className="p-8">
+                  {currentCase.courtActivities && currentCase.courtActivities.length > 0 ? (
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b border-dark-600">
+                            <th className="text-left py-3 px-4 text-sm font-semibold text-white">Date</th>
+                            <th className="text-left py-3 px-4 text-sm font-semibold text-white">Type</th>
+                            <th className="text-left py-3 px-4 text-sm font-semibold text-white">Outcome</th>
+                            <th className="text-left py-3 px-4 text-sm font-semibold text-white">Judge</th>
+                            <th className="text-left py-3 px-4 text-sm font-semibold text-white">Next Hearing</th>
+                            <th className="text-left py-3 px-4 text-sm font-semibold text-white">Notes</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {currentCase.courtActivities
+                            .sort((a, b) => new Date(b.activityDate) - new Date(a.activityDate))
+                            .map((activity, index) => (
+                              <tr key={activity._id || index} className="border-b border-dark-600/50 hover:bg-dark-900/30">
+                                <td className="py-3 px-4 text-sm text-white">
+                                  {new Date(activity.activityDate).toLocaleDateString()}
+                                </td>
+                                <td className="py-3 px-4">
+                                  <span className="px-2 py-1 bg-purple-500/20 text-purple-300 rounded text-xs font-medium">
+                                    {activity.activityType?.replace("_", " ").toUpperCase()}
+                                  </span>
+                                </td>
+                                <td className="py-3 px-4 text-sm text-dark-300">
+                                  {activity.outcome || "-"}
+                                </td>
+                                <td className="py-3 px-4 text-sm text-dark-300">
+                                  {activity.judgeName || "-"}
+                                </td>
+                                <td className="py-3 px-4 text-sm text-dark-300">
+                                  {activity.nextHearingDate ? new Date(activity.nextHearingDate).toLocaleDateString() : "-"}
+                                </td>
+                                <td className="py-3 px-4 text-sm text-dark-300 max-w-xs truncate">
+                                  {activity.notes || "-"}
+                                </td>
+                              </tr>
+                            ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-dark-400">
+                      <FaHistory className="mx-auto text-4xl mb-4 opacity-50" />
+                      <p>No court activities recorded yet</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Documents Card */}
             <div className="bg-gradient-to-br from-dark-800/50 to-dark-700/50 border border-dark-600 rounded-2xl shadow-2xl backdrop-blur-sm overflow-hidden">
               <div className="bg-gradient-to-r from-dark-700 to-dark-600 px-8 py-6 border-b border-dark-600">
@@ -1236,22 +1438,81 @@ const CaseDetails = () => {
                       {validDocuments.map((doc, index) => (
                         <div
                           key={doc._id || doc.path || index}
-                          className="bg-dark-900/30 border border-dark-600 rounded-lg p-4 hover:bg-dark-900/50 transition-all duration-200 cursor-pointer"
-                          onClick={() => handleDocumentClick(doc)}
+                          className="bg-dark-900/30 border border-dark-600 rounded-lg p-4 hover:bg-dark-900/50 transition-all duration-200"
                         >
                           <div className="flex items-center gap-3">
                             <FaFileAlt className="w-5 h-5 text-primary-400" />
                             <div className="flex-1">
-                              <div className="font-medium text-white truncate">
-                                {doc.originalName ||
-                                  doc.name ||
-                                  (doc.path ? doc.path.split("/").pop() : `Document ${index + 1}`)}
-                              </div>
-                              <div className="text-sm text-dark-400">
-                                {doc.uploadedBy?.firstName || doc.uploadedBy ? `${doc.uploadedBy.firstName || ''} ${doc.uploadedBy.lastName || ''}`.trim() : 'Unknown'}
-                              </div>
+                              {renamingDocId === doc._id ? (
+                                <div className="flex items-center gap-2">
+                                  <input
+                                    type="text"
+                                    value={newDocName}
+                                    onChange={(e) => setNewDocName(e.target.value)}
+                                    className="flex-1 px-2 py-1 bg-dark-800 border border-dark-600 rounded text-white text-sm"
+                                    placeholder="Enter new name"
+                                    autoFocus
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") {
+                                        handleRenameDocument(doc._id, doc.name);
+                                      } else if (e.key === "Escape") {
+                                        setRenamingDocId(null);
+                                        setNewDocName("");
+                                      }
+                                    }}
+                                  />
+                                  <button
+                                    onClick={() => handleRenameDocument(doc._id, doc.name)}
+                                    disabled={renameLoading}
+                                    className="p-1 text-green-400 hover:text-green-300"
+                                  >
+                                    <FaSave className="w-4 h-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setRenamingDocId(null);
+                                      setNewDocName("");
+                                    }}
+                                    className="p-1 text-red-400 hover:text-red-300"
+                                  >
+                                    <FaTimesCircle className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              ) : (
+                                <>
+                                  <div className="font-medium text-white truncate">
+                                    {doc.name ||
+                                      doc.originalName ||
+                                      (doc.path ? doc.path.split("/").pop() : `Document ${index + 1}`)}
+                                  </div>
+                                  <div className="text-sm text-dark-400">
+                                    {doc.uploadedBy?.firstName || doc.uploadedBy ? `${doc.uploadedBy.firstName || ''} ${doc.uploadedBy.lastName || ''}`.trim() : 'Unknown'}
+                                  </div>
+                                </>
+                              )}
                             </div>
-                            <FaEye className="w-4 h-4 text-dark-400 hover:text-primary-400 transition-colors" />
+                            <div className="flex items-center gap-2">
+                              {(user?.role === "advocate" || user?.role === "legal_head" || user?.role === "law_firm_admin") && renamingDocId !== doc._id && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setRenamingDocId(doc._id);
+                                    setNewDocName(doc.name || doc.originalName || "");
+                                  }}
+                                  className="p-1.5 text-blue-400 hover:text-blue-300 transition-colors"
+                                  title="Rename document"
+                                >
+                                  <FaPencilAlt className="w-4 h-4" />
+                                </button>
+                              )}
+                              <button
+                                onClick={() => handleDocumentClick(doc)}
+                                className="p-1.5 text-dark-400 hover:text-primary-400 transition-colors"
+                                title="View document"
+                              >
+                                <FaEye className="w-4 h-4" />
+                              </button>
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -1517,6 +1778,94 @@ const CaseDetails = () => {
                       </p>
                     )}
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* Payment Tracking Card (Installments) */}
+            {(user?.role === "advocate" || user?.role === "legal_head" || user?.role === "law_firm_admin") && (
+              <div className="bg-gradient-to-br from-dark-800/50 to-dark-700/50 border border-dark-600 rounded-2xl shadow-2xl backdrop-blur-sm overflow-hidden">
+                <div className="bg-gradient-to-r from-dark-700 to-dark-600 px-6 py-4 border-b border-dark-600 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <FaMoneyBillWave className="w-5 h-5 text-green-400" />
+                    <h3 className="text-lg font-bold text-white">Payment Tracking</h3>
+                  </div>
+                  {(user?.role === "advocate" && currentCase.assignedTo?._id === user._id) || 
+                   (user?.role === "legal_head" || user?.role === "law_firm_admin") ? (
+                    <button
+                      onClick={() => setShowPaymentModal(true)}
+                      className="px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-1"
+                    >
+                      <FaEdit className="w-3 h-3" />
+                      Add Payment
+                    </button>
+                  ) : null}
+                </div>
+                <div className="p-6">
+                  {currentCase.totalFee && (
+                    <div className="mb-4 p-3 bg-dark-900/50 rounded-lg border border-dark-600">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-dark-300">Total Fee:</span>
+                        <span className="text-lg font-bold text-white">
+                          {currentCase.totalFee.currency || "KES"} {currentCase.totalFee.amount?.toLocaleString() || "0"}
+                        </span>
+                      </div>
+                      {currentCase.payments && currentCase.payments.length > 0 && (
+                        <div className="flex justify-between items-center mt-2">
+                          <span className="text-sm text-dark-300">Total Paid:</span>
+                          <span className="text-lg font-bold text-green-400">
+                            {currentCase.payments[0]?.currency || "KES"} {currentCase.payments.reduce((sum, p) => sum + (p.amount || 0), 0).toLocaleString()}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {currentCase.payments && currentCase.payments.length > 0 ? (
+                    <div className="space-y-2 max-h-64 overflow-y-auto">
+                      {currentCase.payments
+                        .sort((a, b) => new Date(b.paymentDate) - new Date(a.paymentDate))
+                        .map((payment, index) => (
+                          <div
+                            key={payment._id || index}
+                            className="bg-dark-900/30 border border-dark-600 rounded-lg p-3"
+                          >
+                            <div className="flex justify-between items-start mb-1">
+                              <div>
+                                <div className="text-white font-medium">
+                                  {payment.currency} {payment.amount?.toLocaleString()}
+                                </div>
+                                <div className="text-xs text-dark-400">
+                                  {new Date(payment.paymentDate).toLocaleDateString()}
+                                </div>
+                              </div>
+                              <span className="text-xs px-2 py-1 bg-green-500/20 text-green-400 rounded">
+                                {payment.paymentMethod?.replace("_", " ")}
+                              </span>
+                            </div>
+                            {payment.paymentReference && (
+                              <div className="text-xs text-dark-400 mt-1">
+                                Ref: {payment.paymentReference}
+                              </div>
+                            )}
+                            {payment.notes && (
+                              <div className="text-xs text-dark-300 mt-1">
+                                {payment.notes}
+                              </div>
+                            )}
+                            {payment.recordedBy && (
+                              <div className="text-xs text-dark-500 mt-1">
+                                Recorded by: {payment.recordedBy?.firstName || "Unknown"}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-4 text-dark-400">
+                      <FaMoneyBillWave className="mx-auto text-3xl mb-2 opacity-50" />
+                      <p className="text-sm">No payments recorded yet</p>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -2089,6 +2438,297 @@ const CaseDetails = () => {
                       <FaCalendar className="w-4 h-4" />
                     )}
                     {courtDatesLoading ? "Updating..." : "Update Court Dates"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Payment Modal */}
+      {showPaymentModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-gradient-to-br from-slate-800/95 to-slate-700/95 backdrop-blur-xl rounded-2xl sm:rounded-3xl border border-slate-600/50 shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 sm:p-8 border-b border-slate-600/50">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-xl flex items-center justify-center">
+                    <FaMoneyBillWave className="w-6 h-6 text-green-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-green-400 via-emerald-500 to-teal-500 bg-clip-text text-transparent">
+                      Add Payment
+                    </h3>
+                    <p className="text-slate-300 text-lg mt-1">
+                      Record an installment payment for this case
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowPaymentModal(false)}
+                  className="p-2 hover:bg-slate-700/50 rounded-lg transition-all duration-200 hover:scale-105"
+                >
+                  <FaTimes className="w-5 h-5 text-slate-400 hover:text-white" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 sm:p-8">
+              <form onSubmit={handleAddPayment} className="space-y-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-semibold text-white mb-2">
+                      Amount *
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      required
+                      className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:border-green-500/50"
+                      value={paymentData.amount}
+                      onChange={(e) => setPaymentData({ ...paymentData, amount: e.target.value })}
+                      placeholder="0.00"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-white mb-2">
+                      Currency
+                    </label>
+                    <select
+                      className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-green-500/50"
+                      value={paymentData.currency}
+                      onChange={(e) => setPaymentData({ ...paymentData, currency: e.target.value })}
+                    >
+                      <option value="KES">KES</option>
+                      <option value="USD">USD</option>
+                      <option value="EUR">EUR</option>
+                      <option value="GBP">GBP</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-white mb-2">
+                      Payment Date *
+                    </label>
+                    <input
+                      type="datetime-local"
+                      required
+                      className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-green-500/50"
+                      value={paymentData.paymentDate}
+                      onChange={(e) => setPaymentData({ ...paymentData, paymentDate: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-white mb-2">
+                      Payment Method
+                    </label>
+                    <select
+                      className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-green-500/50"
+                      value={paymentData.paymentMethod}
+                      onChange={(e) => setPaymentData({ ...paymentData, paymentMethod: e.target.value })}
+                    >
+                      <option value="bank_transfer">Bank Transfer</option>
+                      <option value="cash">Cash</option>
+                      <option value="mobile_money">Mobile Money</option>
+                      <option value="cheque">Cheque</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="block text-sm font-semibold text-white mb-2">
+                      Payment Reference
+                    </label>
+                    <input
+                      type="text"
+                      className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-green-500/50"
+                      value={paymentData.paymentReference}
+                      onChange={(e) => setPaymentData({ ...paymentData, paymentReference: e.target.value })}
+                      placeholder="Transaction ID, Receipt Number, etc."
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="block text-sm font-semibold text-white mb-2">
+                      Notes
+                    </label>
+                    <textarea
+                      rows={3}
+                      className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-green-500/50 resize-none"
+                      value={paymentData.notes}
+                      onChange={(e) => setPaymentData({ ...paymentData, notes: e.target.value })}
+                      placeholder="Additional notes about this payment..."
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-4 pt-6 border-t border-slate-600/50">
+                  <button
+                    type="button"
+                    onClick={() => setShowPaymentModal(false)}
+                    className="px-6 py-3 bg-slate-700/50 hover:bg-slate-600/50 text-slate-300 rounded-xl font-medium transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={paymentLoading}
+                    className="px-8 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-xl font-semibold transition-all disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {paymentLoading ? (
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    ) : (
+                      <FaMoneyBillWave className="w-4 h-4" />
+                    )}
+                    {paymentLoading ? "Adding..." : "Add Payment"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Court Activity Modal */}
+      {showCourtActivityModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-gradient-to-br from-slate-800/95 to-slate-700/95 backdrop-blur-xl rounded-2xl sm:rounded-3xl border border-slate-600/50 shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 sm:p-8 border-b border-slate-600/50">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-gradient-to-br from-purple-500/20 to-indigo-500/20 rounded-xl flex items-center justify-center">
+                    <FaHistory className="w-6 h-6 text-purple-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-purple-400 via-indigo-500 to-pink-500 bg-clip-text text-transparent">
+                      Add Court Activity
+                    </h3>
+                    <p className="text-slate-300 text-lg mt-1">
+                      Record a court proceeding, hearing, or activity
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowCourtActivityModal(false)}
+                  className="p-2 hover:bg-slate-700/50 rounded-lg transition-all duration-200 hover:scale-105"
+                >
+                  <FaTimes className="w-5 h-5 text-slate-400 hover:text-white" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 sm:p-8">
+              <form onSubmit={handleAddCourtActivity} className="space-y-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-semibold text-white mb-2">
+                      Activity Type *
+                    </label>
+                    <select
+                      required
+                      className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                      value={courtActivityData.activityType}
+                      onChange={(e) => setCourtActivityData({ ...courtActivityData, activityType: e.target.value })}
+                    >
+                      <option value="hearing">Hearing</option>
+                      <option value="mention">Mention</option>
+                      <option value="ruling">Ruling</option>
+                      <option value="adjournment">Adjournment</option>
+                      <option value="settlement_meeting">Settlement Meeting</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-white mb-2">
+                      Activity Date *
+                    </label>
+                    <input
+                      type="datetime-local"
+                      required
+                      className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                      value={courtActivityData.activityDate}
+                      onChange={(e) => setCourtActivityData({ ...courtActivityData, activityDate: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-white mb-2">
+                      Next Hearing Date
+                    </label>
+                    <input
+                      type="datetime-local"
+                      className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                      value={courtActivityData.nextHearingDate}
+                      onChange={(e) => setCourtActivityData({ ...courtActivityData, nextHearingDate: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-white mb-2">
+                      Judge Name
+                    </label>
+                    <input
+                      type="text"
+                      className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                      value={courtActivityData.judgeName}
+                      onChange={(e) => setCourtActivityData({ ...courtActivityData, judgeName: e.target.value })}
+                      placeholder="Judge's name"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-white mb-2">
+                      Court Room
+                    </label>
+                    <input
+                      type="text"
+                      className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                      value={courtActivityData.courtRoom}
+                      onChange={(e) => setCourtActivityData({ ...courtActivityData, courtRoom: e.target.value })}
+                      placeholder="Court room number"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-white mb-2">
+                      Outcome
+                    </label>
+                    <input
+                      type="text"
+                      className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                      value={courtActivityData.outcome}
+                      onChange={(e) => setCourtActivityData({ ...courtActivityData, outcome: e.target.value })}
+                      placeholder="Case outcome or result"
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="block text-sm font-semibold text-white mb-2">
+                      Notes
+                    </label>
+                    <textarea
+                      rows={4}
+                      className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50 resize-none"
+                      value={courtActivityData.notes}
+                      onChange={(e) => setCourtActivityData({ ...courtActivityData, notes: e.target.value })}
+                      placeholder="Detailed notes about the court activity..."
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-4 pt-6 border-t border-slate-600/50">
+                  <button
+                    type="button"
+                    onClick={() => setShowCourtActivityModal(false)}
+                    className="px-6 py-3 bg-slate-700/50 hover:bg-slate-600/50 text-slate-300 rounded-xl font-medium transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={courtActivityLoading}
+                    className="px-8 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl font-semibold transition-all disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {courtActivityLoading ? (
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    ) : (
+                      <FaHistory className="w-4 h-4" />
+                    )}
+                    {courtActivityLoading ? "Adding..." : "Add Activity"}
                   </button>
                 </div>
               </form>

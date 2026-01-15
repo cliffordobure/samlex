@@ -62,6 +62,12 @@ const legalCaseApi = {
     api.put(`/legal-cases/${id}/complete-info`, data),
   updateFilingFeePayment: (id, paymentData) =>
     api.patch(`/legal-cases/${id}/filing-fee-payment`, paymentData),
+  addPayment: (id, paymentData) =>
+    api.post(`/legal-cases/${id}/payments`, paymentData),
+  addCourtActivity: (id, activityData) =>
+    api.post(`/legal-cases/${id}/court-activities`, activityData),
+  renameDocument: (id, docId, newName) =>
+    api.put(`/legal-cases/${id}/documents/${docId}/rename`, { name: newName }),
 };
 
 export default legalCaseApi;

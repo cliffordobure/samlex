@@ -223,6 +223,102 @@ const legalCaseSchema = new mongoose.Schema(
       type: [String],
       default: [],
     },
+    // Payment tracking for installment payments
+    payments: [
+      {
+        amount: {
+          type: Number,
+          required: true,
+          min: [0, "Payment amount cannot be negative"],
+        },
+        currency: {
+          type: String,
+          default: "KES",
+          enum: ["KES", "USD", "EUR", "GBP"],
+        },
+        paymentDate: {
+          type: Date,
+          required: true,
+          default: Date.now,
+        },
+        paymentMethod: {
+          type: String,
+          enum: ["cash", "bank_transfer", "mobile_money", "cheque", "other"],
+          default: "bank_transfer",
+        },
+        paymentReference: {
+          type: String,
+          trim: true,
+        },
+        notes: {
+          type: String,
+          trim: true,
+        },
+        recordedBy: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+          required: true,
+        },
+        createdAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
+    // Total fee for the case (for tracking against payments)
+    totalFee: {
+      amount: {
+        type: Number,
+        min: [0, "Total fee cannot be negative"],
+      },
+      currency: {
+        type: String,
+        default: "KES",
+        enum: ["KES", "USD", "EUR", "GBP"],
+      },
+    },
+    // Court activities tracking
+    courtActivities: [
+      {
+        activityType: {
+          type: String,
+          enum: ["hearing", "mention", "ruling", "adjournment", "settlement_meeting", "other"],
+          required: true,
+        },
+        activityDate: {
+          type: Date,
+          required: true,
+        },
+        nextHearingDate: {
+          type: Date,
+        },
+        outcome: {
+          type: String,
+          trim: true,
+        },
+        notes: {
+          type: String,
+          trim: true,
+        },
+        judgeName: {
+          type: String,
+          trim: true,
+        },
+        courtRoom: {
+          type: String,
+          trim: true,
+        },
+        recordedBy: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+          required: true,
+        },
+        createdAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
   },
   {
     timestamps: true,

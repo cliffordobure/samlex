@@ -1740,3 +1740,248 @@ export const updateFilingFeePayment = async (req, res) => {
     });
   }
 };
+
+/**
+ * @desc    Add payment to legal case (for installment tracking)
+ * @route   POST /api/legal-cases/:id/payments
+ * @access  Private (advocate, legal_head)
+ */
+export const addPaymentToCase = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { amount, currency, paymentDate, paymentMethod, paymentReference, notes } = req.body;
+
+    if (!amount || amount <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Payment amount is required and must be greater than 0",
+      });
+    }
+
+    const legalCase = await LegalCase.findById(id);
+    if (!legalCase) {
+      return res.status(404).json({
+        success: false,
+        message: "Legal case not found",
+      });
+    }
+
+    // Check permissions - only advocates assigned to the case or legal heads can add payments
+    if (
+      req.user.role === "advocate" &&
+      legalCase.assignedTo?.toString() !== req.user._id.toString()
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "You can only add payments to cases assigned to you",
+      });
+    }
+
+    // Add payment
+    const newPayment = {
+      amount,
+      currency: currency || "KES",
+      paymentDate: paymentDate ? new Date(paymentDate) : new Date(),
+      paymentMethod: paymentMethod || "bank_transfer",
+      paymentReference: paymentReference || "",
+      notes: notes || "",
+      recordedBy: req.user._id,
+    };
+
+    legalCase.payments.push(newPayment);
+    legalCase.lastActivity = new Date();
+    const updatedCase = await legalCase.save();
+
+    // Populate the payment data
+    await updatedCase.populate("payments.recordedBy", "firstName lastName email");
+    await updatedCase.populate("assignedTo", "firstName lastName email");
+
+    // Emit socket event
+    const io = req.app.get("io");
+    if (io) {
+      io.to(`case-${id}`).emit("legalCaseUpdated", updatedCase);
+    }
+
+    res.json({
+      success: true,
+      data: updatedCase,
+      message: "Payment added successfully",
+    });
+  } catch (error) {
+    console.error("Error in addPaymentToCase:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error adding payment",
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * @desc    Add court activity to legal case
+ * @route   POST /api/legal-cases/:id/court-activities
+ * @access  Private (advocate, legal_head)
+ */
+export const addCourtActivityToCase = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      activityType,
+      activityDate,
+      nextHearingDate,
+      outcome,
+      notes,
+      judgeName,
+      courtRoom,
+    } = req.body;
+
+    if (!activityType || !activityDate) {
+      return res.status(400).json({
+        success: false,
+        message: "Activity type and date are required",
+      });
+    }
+
+    const legalCase = await LegalCase.findById(id);
+    if (!legalCase) {
+      return res.status(404).json({
+        success: false,
+        message: "Legal case not found",
+      });
+    }
+
+    // Check permissions
+    if (
+      req.user.role === "advocate" &&
+      legalCase.assignedTo?.toString() !== req.user._id.toString()
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "You can only add court activities to cases assigned to you",
+      });
+    }
+
+    // Add court activity
+    const newActivity = {
+      activityType,
+      activityDate: new Date(activityDate),
+      nextHearingDate: nextHearingDate ? new Date(nextHearingDate) : undefined,
+      outcome: outcome || "",
+      notes: notes || "",
+      judgeName: judgeName || "",
+      courtRoom: courtRoom || "",
+      recordedBy: req.user._id,
+    };
+
+    legalCase.courtActivities.push(newActivity);
+    
+    // Update next hearing date in courtDetails if provided
+    if (nextHearingDate) {
+      legalCase.courtDetails = {
+        ...legalCase.courtDetails,
+        nextHearingDate: new Date(nextHearingDate),
+      };
+    }
+    
+    legalCase.lastActivity = new Date();
+    const updatedCase = await legalCase.save();
+
+    // Populate the activity data
+    await updatedCase.populate("courtActivities.recordedBy", "firstName lastName email");
+    await updatedCase.populate("assignedTo", "firstName lastName email");
+
+    // Emit socket event
+    const io = req.app.get("io");
+    if (io) {
+      io.to(`case-${id}`).emit("legalCaseUpdated", updatedCase);
+    }
+
+    res.json({
+      success: true,
+      data: updatedCase,
+      message: "Court activity added successfully",
+    });
+  } catch (error) {
+    console.error("Error in addCourtActivityToCase:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error adding court activity",
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * @desc    Rename document in legal case
+ * @route   PUT /api/legal-cases/:id/documents/:docId/rename
+ * @access  Private (advocate, legal_head)
+ */
+export const renameDocument = async (req, res) => {
+  try {
+    const { id, docId } = req.params;
+    const { name } = req.body;
+
+    if (!name || !name.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Document name is required",
+      });
+    }
+
+    const legalCase = await LegalCase.findById(id);
+    if (!legalCase) {
+      return res.status(404).json({
+        success: false,
+        message: "Legal case not found",
+      });
+    }
+
+    // Check permissions - only lawyers (advocates or legal heads) can rename documents
+    if (
+      req.user.role !== "advocate" &&
+      req.user.role !== "legal_head" &&
+      req.user.role !== "law_firm_admin"
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "Only lawyers can rename documents",
+      });
+    }
+
+    // Find and update the document
+    const document = legalCase.documents.id(docId);
+    if (!document) {
+      return res.status(404).json({
+        success: false,
+        message: "Document not found",
+      });
+    }
+
+    // Update document name (keep originalName for reference)
+    document.name = name.trim();
+    legalCase.lastActivity = new Date();
+    const updatedCase = await legalCase.save();
+
+    // Populate document data
+    await updatedCase.populate("documents.uploadedBy", "firstName lastName email");
+
+    // Emit socket event
+    const io = req.app.get("io");
+    if (io) {
+      io.to(`case-${id}`).emit("legalCaseUpdated", updatedCase);
+    }
+
+    res.json({
+      success: true,
+      data: updatedCase,
+      message: "Document renamed successfully",
+    });
+  } catch (error) {
+    console.error("Error in renameDocument:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error renaming document",
+      error: error.message,
+    });
+  }
+};

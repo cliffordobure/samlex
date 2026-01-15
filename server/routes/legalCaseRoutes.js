@@ -14,6 +14,9 @@ import {
   updateCourtDates,
   completeCaseInfo,
   updateFilingFeePayment,
+  addPaymentToCase,
+  addCourtActivityToCase,
+  renameDocument,
 } from "../controllers/legalCaseController.js";
 import { protect } from "../middleware/auth.js";
 import { validateLegalCase } from "../middleware/validation.js";
@@ -70,5 +73,14 @@ router.put("/:id/complete-info", completeCaseInfo);
 
 // Update filing fee payment status
 router.patch("/:id/filing-fee-payment", updateFilingFeePayment);
+
+// Add payment to case (for installment tracking)
+router.post("/:id/payments", addPaymentToCase);
+
+// Add court activity to case
+router.post("/:id/court-activities", addCourtActivityToCase);
+
+// Rename document (lawyers only)
+router.put("/:id/documents/:docId/rename", renameDocument);
 
 export default router;
