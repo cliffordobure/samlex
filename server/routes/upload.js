@@ -1,7 +1,7 @@
 import express from "express";
 import { uploadSingle, handleUploadError } from "../middleware/upload.js";
 import { protect } from "../middleware/auth.js";
-import { uploadToStorage } from "../utils/storage.js";
+import { uploadToStorage, getAccessibleUrl, getStorageIdentifierFromUrl } from "../utils/storage.js";
 import config from "../config/config.js";
 
 const router = express.Router();
@@ -177,6 +177,36 @@ router.post(
     }
   }
 );
+
+// GET /api/upload/signed-url - Get signed URL for S3 file (or return Cloudinary URL)
+router.get("/signed-url", protect, async (req, res) => {
+  try {
+    const { url } = req.query;
+    
+    if (!url) {
+      return res.status(400).json({
+        success: false,
+        message: "URL parameter is required",
+      });
+    }
+
+    // Get accessible URL (signed URL for S3, direct URL for Cloudinary)
+    const accessibleUrl = await getAccessibleUrl(url, 3600); // 1 hour expiration
+
+    res.json({
+      success: true,
+      url: accessibleUrl,
+      expiresIn: 3600, // seconds
+    });
+  } catch (error) {
+    console.error("Error generating signed URL:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to generate signed URL",
+      error: error.message,
+    });
+  }
+});
 
 // GET /api/upload/health - health check for upload service
 router.get("/health", (req, res) => {

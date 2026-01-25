@@ -40,8 +40,9 @@ export const uploadToS3 = async (fileBuffer, folder = "general", originalName, m
       Key: key,
       Body: fileBuffer,
       ContentType: mimetype || "application/octet-stream",
-      // Make file publicly readable (optional - remove if using signed URLs only)
-      // ACL: "public-read",
+      // Make file publicly readable - REQUIRED if bucket blocks public access
+      // Remove this line if you want to use signed URLs instead
+      ACL: "public-read",
     });
 
     await s3Client.send(command);
