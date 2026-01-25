@@ -2,7 +2,6 @@
  * Utility function to get accessible URL for documents
  * Automatically handles S3 signed URLs and Cloudinary URLs
  */
-import { API_URL } from "../config/api.js";
 
 /**
  * Get accessible URL for a document
@@ -21,6 +20,22 @@ export const getAccessibleDocumentUrl = async (url) => {
   
   if (isS3Url) {
     try {
+      // Get API URL dynamically to avoid import issues
+      const getApiUrl = () => {
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+          return '/api';
+        }
+        if (window.location.hostname.includes('vercel.app')) {
+          return 'https://samlex.onrender.com/api';
+        }
+        if (import.meta.env.VITE_API_URL) {
+          return import.meta.env.VITE_API_URL;
+        }
+        return 'https://samlex.onrender.com/api';
+      };
+      
+      const API_URL = getApiUrl();
+      
       // Fetch signed URL from backend
       const token = localStorage.getItem("token");
       const response = await fetch(
