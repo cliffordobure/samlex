@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { getLegalCases } from "../../store/slices/legalCaseSlice";
 import { getAccessibleDocumentUrl } from "../../utils/documentUrl.js";
+import { getDocumentViewerUrl, isImage, canPreviewInBrowser } from "../../utils/documentViewer.js";
 import {
   FaFileAlt,
   FaDownload,
@@ -29,7 +30,7 @@ import {
   FaFileAudio,
   FaFileVideo,
 } from "react-icons/fa";
-import toast from "react-hot-toast";
+import { getDocumentViewerUrl, isImage, canPreviewInBrowser } from "../../utils/documentViewer.js";
 
 const Documents = () => {
   const dispatch = useDispatch();
@@ -651,12 +652,33 @@ const Documents = () => {
             
             {/* Document Viewer */}
             <div className="h-96 bg-slate-900">
-              <iframe
-                src={selectedDocument.url}
-                className="w-full h-full border-0"
-                title={selectedDocument.filename}
-                style={{ backgroundColor: '#0f172a' }}
-              />
+              {canPreviewInBrowser(selectedDocument.filename) ? (
+                isImage(selectedDocument.filename) ? (
+                  // Image viewer
+                  <div className="flex items-center justify-center h-full p-4">
+                    <img
+                      src={selectedDocument.url}
+                      alt={selectedDocument.filename}
+                      className="max-w-full max-h-full object-contain rounded-lg"
+                    />
+                  </div>
+                ) : (
+                  // PDF, Word, Excel, PowerPoint viewer
+                  <iframe
+                    src={getDocumentViewerUrl(selectedDocument.url, selectedDocument.filename)}
+                    className="w-full h-full border-0"
+                    title={selectedDocument.filename}
+                    style={{ backgroundColor: '#0f172a' }}
+                  />
+                )
+              ) : (
+                // Unsupported file type
+                <div className="h-full flex flex-col items-center justify-center p-8">
+                  <FaFileAlt className="w-16 h-16 text-slate-500 mb-4" />
+                  <p className="text-slate-300 mb-2">Preview not available</p>
+                  <p className="text-slate-400 text-sm mb-4">Please download to view</p>
+                </div>
+              )}
             </div>
           </div>
         </div>

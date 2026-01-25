@@ -8,6 +8,7 @@ import creditCaseApi from "../../store/api/creditCaseApi";
 import userApi from "../../store/api/userApi";
 import toast from "react-hot-toast";
 import { getAccessibleDocumentUrl } from "../../utils/documentUrl.js";
+import { getDocumentViewerUrl, isImage, canPreviewInBrowser } from "../../utils/documentViewer.js";
 import { API_URL } from "../../config/api.js";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -1417,11 +1418,32 @@ const CaseDetails = () => {
 
               {/* Document Viewer */}
               <div className="flex-1 p-4 overflow-hidden">
-                <iframe
-                  src={selectedDocument.url}
-                  className="w-full h-full border-0 rounded"
-                  title={selectedDocument.filename}
-                />
+                {canPreviewInBrowser(selectedDocument.filename) ? (
+                  isImage(selectedDocument.filename) ? (
+                    // Image viewer
+                    <div className="flex items-center justify-center h-full">
+                      <img
+                        src={selectedDocument.url}
+                        alt={selectedDocument.filename}
+                        className="max-w-full max-h-full object-contain rounded"
+                      />
+                    </div>
+                  ) : (
+                    // PDF, Word, Excel, PowerPoint viewer
+                    <iframe
+                      src={getDocumentViewerUrl(selectedDocument.url, selectedDocument.filename)}
+                      className="w-full h-full border-0 rounded"
+                      title={selectedDocument.filename}
+                    />
+                  )
+                ) : (
+                  // Unsupported file type
+                  <div className="h-full flex flex-col items-center justify-center">
+                    <FaFileAlt className="w-16 h-16 text-slate-500 mb-4" />
+                    <p className="text-slate-300 mb-2">Preview not available</p>
+                    <p className="text-slate-400 text-sm mb-4">Please download to view</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>

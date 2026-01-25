@@ -8,6 +8,7 @@ import legalCaseApi from "../../store/api/legalCaseApi";
 import socket from "../../utils/socket";
 import toast from "react-hot-toast";
 import { getAccessibleDocumentUrl } from "../../utils/documentUrl.js";
+import { getDocumentViewerUrl, isImage, isPDF, canPreviewInBrowser } from "../../utils/documentViewer.js";
 import { API_URL } from "../../config/api.js";
 import {
   FaArrowLeft,
@@ -2152,23 +2153,27 @@ const CaseDetails = () => {
             <div className="flex-1 overflow-hidden bg-slate-900/50">
               {selectedDocument.url && (
                 <div className="w-full h-full">
-                  {/* Check if it's a PDF or image */}
-                  {selectedDocument.filename?.toLowerCase().endsWith('.pdf') || selectedDocument.url.includes('.pdf') ? (
-                    <iframe
-                      src={selectedDocument.url}
-                      className="w-full h-full border-0"
-                      title={selectedDocument.filename}
-                      style={{ minHeight: '600px' }}
-                    />
-                  ) : selectedDocument.filename?.toLowerCase().match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
-                    <div className="flex items-center justify-center h-full p-4">
-                      <img
-                        src={selectedDocument.url}
-                        alt={selectedDocument.filename}
-                        className="max-w-full max-h-full object-contain rounded-lg"
+                  {canPreviewInBrowser(selectedDocument.filename) ? (
+                    isImage(selectedDocument.filename) ? (
+                      // Image viewer
+                      <div className="flex items-center justify-center h-full p-4">
+                        <img
+                          src={selectedDocument.url}
+                          alt={selectedDocument.filename}
+                          className="max-w-full max-h-full object-contain rounded-lg"
+                        />
+                      </div>
+                    ) : (
+                      // PDF, Word, Excel, PowerPoint viewer
+                      <iframe
+                        src={getDocumentViewerUrl(selectedDocument.url, selectedDocument.filename)}
+                        className="w-full h-full border-0"
+                        title={selectedDocument.filename}
+                        style={{ minHeight: '600px' }}
                       />
-                    </div>
+                    )
                   ) : (
+                    // Unsupported file type
                     <div className="h-full flex flex-col items-center justify-center p-8">
                       <div className="text-center mb-6">
                         <FaFileAlt className="w-16 h-16 text-slate-500 mx-auto mb-4" />
