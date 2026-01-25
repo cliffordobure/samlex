@@ -589,13 +589,13 @@ const AdminOverview = () => {
       <div className="mb-6 md:mb-8">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
       <div>
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-400 via-indigo-500 to-purple-500 bg-clip-text text-transparent">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-400 via-indigo-500 to-purple-500 bg-clip-text text-transparent">
               Welcome back, {user?.firstName}! 👋
         </h1>
-            <p className="text-slate-300 text-lg sm:text-xl mt-2">
+            <p className="text-slate-300 text-sm sm:text-base mt-2">
               Here's what's happening at {user?.lawFirm?.firmName || "your law firm"} today
             </p>
-            <p className="text-slate-400 mt-1 text-sm sm:text-base">
+            <p className="text-slate-400 mt-1 text-xs sm:text-sm">
               {new Date().toLocaleDateString('en-US', { 
                 weekday: 'long', 
                 year: 'numeric', 
@@ -621,7 +621,7 @@ const AdminOverview = () => {
             </button>
             <button 
               onClick={handleQuickAction}
-              className="px-3 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl sm:rounded-2xl font-semibold transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-blue-500/25 text-sm sm:text-base"
+              className="px-3 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl sm:rounded-2xl font-semibold transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-blue-500/25 text-xs sm:text-sm"
             >
               <FaPlus className="w-3 h-3 sm:w-4 sm:h-4 inline mr-1 sm:mr-2" />
               Quick Action
@@ -636,8 +636,8 @@ const AdminOverview = () => {
         <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl hover:shadow-blue-500/25 transition-all duration-300 hover:scale-105 group cursor-pointer" onClick={() => navigate('/admin/cases')}>
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1 min-w-0 pr-2">
-              <p className="text-slate-400 text-xs sm:text-sm font-medium">Total Cases</p>
-              <p className="text-2xl sm:text-3xl font-bold text-white mt-1 group-hover:text-blue-400 transition-colors">{stats.totalCases}</p>
+              <p className="text-slate-400 text-xs font-medium">Total Cases</p>
+              <p className="text-xl sm:text-2xl font-bold text-white mt-1 group-hover:text-blue-400 transition-colors">{stats.totalCases}</p>
               <div className="flex items-center mt-1.5">
                 <FaArrowUp className="w-3 h-3 text-green-500 mr-1 flex-shrink-0" />
                 <span className="text-green-500 text-xs sm:text-sm font-medium break-words">
@@ -655,8 +655,8 @@ const AdminOverview = () => {
         <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl hover:shadow-yellow-500/25 transition-all duration-300 hover:scale-105 group cursor-pointer" onClick={() => navigate('/admin/cases?status=active')}>
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1 min-w-0 pr-2">
-              <p className="text-slate-400 text-xs sm:text-sm font-medium">Active Cases</p>
-              <p className="text-2xl sm:text-3xl font-bold text-white mt-1 group-hover:text-yellow-400 transition-colors">{stats.activeCases}</p>
+              <p className="text-slate-400 text-xs font-medium">Active Cases</p>
+              <p className="text-xl sm:text-2xl font-bold text-white mt-1 group-hover:text-yellow-400 transition-colors">{stats.activeCases}</p>
               <div className="flex items-center mt-1.5">
                 <FaClock className="w-3 h-3 text-yellow-500 mr-1 flex-shrink-0" />
                 <span className="text-yellow-500 text-xs sm:text-sm font-medium break-words">
@@ -674,8 +674,8 @@ const AdminOverview = () => {
         <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl hover:shadow-green-500/25 transition-all duration-300 hover:scale-105 group cursor-pointer" onClick={() => navigate('/admin/cases?status=resolved')}>
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1 min-w-0 pr-2">
-              <p className="text-slate-400 text-xs sm:text-sm font-medium">Resolved Cases</p>
-              <p className="text-2xl sm:text-3xl font-bold text-white mt-1 group-hover:text-green-400 transition-colors">{stats.resolvedCases}</p>
+              <p className="text-slate-400 text-xs font-medium">Resolved Cases</p>
+              <p className="text-xl sm:text-2xl font-bold text-white mt-1 group-hover:text-green-400 transition-colors">{stats.resolvedCases}</p>
               <div className="flex items-center mt-1.5">
                 <FaCheckCircle className="w-3 h-3 text-green-500 mr-1 flex-shrink-0" />
                 <span className="text-green-500 text-xs sm:text-sm font-medium break-words">
@@ -693,8 +693,8 @@ const AdminOverview = () => {
         <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl hover:shadow-purple-500/25 transition-all duration-300 hover:scale-105 group cursor-pointer" onClick={() => navigate('/admin/users')}>
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1 min-w-0 pr-2">
-              <p className="text-slate-400 text-xs sm:text-sm font-medium">Team Members</p>
-              <p className="text-2xl sm:text-3xl font-bold text-white mt-1 group-hover:text-purple-400 transition-colors">{stats.totalUsers}</p>
+              <p className="text-slate-400 text-xs font-medium">Team Members</p>
+              <p className="text-xl sm:text-2xl font-bold text-white mt-1 group-hover:text-purple-400 transition-colors">{stats.totalUsers}</p>
               <div className="flex items-center mt-1.5">
                 <FaUsers className="w-3 h-3 text-purple-500 mr-1 flex-shrink-0" />
                 <span className="text-purple-500 text-xs sm:text-sm font-medium break-words">
@@ -712,8 +712,8 @@ const AdminOverview = () => {
         <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl hover:shadow-green-500/25 transition-all duration-300 hover:scale-105 group cursor-pointer" onClick={() => navigate('/admin/reports')}>
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1 min-w-0 pr-2">
-              <p className="text-slate-400 text-xs sm:text-sm font-medium">Total Revenue</p>
-              <p className="text-2xl sm:text-3xl font-bold text-white mt-1 group-hover:text-green-400 transition-colors">
+              <p className="text-slate-400 text-xs font-medium">Total Revenue</p>
+              <p className="text-xl sm:text-2xl font-bold text-white mt-1 group-hover:text-green-400 transition-colors">
                 KES {stats.totalRevenue?.toLocaleString() || '0'}
               </p>
               <div className="flex items-center mt-1.5">
@@ -735,7 +735,7 @@ const AdminOverview = () => {
         {/* Case Trends Chart */}
         <div className="lg:col-span-2 bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6 gap-3">
-            <h3 className="text-lg sm:text-xl font-bold text-white">Case Trends</h3>
+            <h3 className="text-base sm:text-lg font-bold text-white">Case Trends</h3>
             <div className="flex items-center gap-2">
               <button className="px-2 sm:px-3 py-1 bg-slate-700/50 hover:bg-slate-600/50 text-slate-300 rounded-lg text-xs sm:text-sm transition-colors">
                 Last 6 Months
@@ -805,7 +805,7 @@ const AdminOverview = () => {
 
         {/* Quick Actions */}
         <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl">
-          <h3 className="text-lg sm:text-xl font-bold text-white mb-4 sm:mb-6">Quick Actions</h3>
+          <h3 className="text-base sm:text-lg font-bold text-white mb-4 sm:mb-6">Quick Actions</h3>
           <div className="space-y-2 sm:space-y-3">
             <button 
               onClick={handleNewCase}
@@ -816,8 +816,8 @@ const AdminOverview = () => {
                   <FaPlus className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400" />
                 </div>
                 <div>
-                  <p className="font-semibold text-white text-sm sm:text-base">New Case</p>
-                  <p className="text-xs sm:text-sm text-slate-400">Create a new case file</p>
+                  <p className="font-semibold text-white text-xs sm:text-sm">New Case</p>
+                  <p className="text-xs text-slate-400">Create a new case file</p>
                 </div>
               </div>
             </button>
@@ -831,8 +831,8 @@ const AdminOverview = () => {
                   <FaUserPlus className="w-4 h-4 sm:w-5 sm:h-5 text-green-400" />
                 </div>
                 <div>
-                  <p className="font-semibold text-white text-sm sm:text-base">Add User</p>
-                  <p className="text-xs sm:text-sm text-slate-400">Invite team member</p>
+                  <p className="font-semibold text-white text-xs sm:text-sm">Add User</p>
+                  <p className="text-xs text-slate-400">Invite team member</p>
                 </div>
               </div>
             </button>
@@ -846,8 +846,8 @@ const AdminOverview = () => {
                   <FaBuilding className="w-4 h-4 sm:w-5 sm:h-5 text-purple-400" />
                 </div>
                 <div>
-                  <p className="font-semibold text-white text-sm sm:text-base">New Department</p>
-                  <p className="text-xs sm:text-sm text-slate-400">Create department</p>
+                  <p className="font-semibold text-white text-xs sm:text-sm">New Department</p>
+                  <p className="text-xs text-slate-400">Create department</p>
                 </div>
               </div>
             </button>
@@ -861,8 +861,8 @@ const AdminOverview = () => {
                   <FaChartLine className="w-4 h-4 sm:w-5 sm:h-5 text-orange-400" />
               </div>
                 <div>
-                  <p className="font-semibold text-white text-sm sm:text-base">Generate Report</p>
-                  <p className="text-xs sm:text-sm text-slate-400">View analytics</p>
+                  <p className="font-semibold text-white text-xs sm:text-sm">Generate Report</p>
+                  <p className="text-xs text-slate-400">View analytics</p>
               </div>
             </div>
             </button>
@@ -876,8 +876,8 @@ const AdminOverview = () => {
                   <FaFileExcel className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-400" />
               </div>
                 <div>
-                  <p className="font-semibold text-white text-sm sm:text-base">Bulk Import</p>
-                  <p className="text-xs sm:text-sm text-slate-400">Import cases from Excel</p>
+                  <p className="font-semibold text-white text-xs sm:text-sm">Bulk Import</p>
+                  <p className="text-xs text-slate-400">Import cases from Excel</p>
               </div>
             </div>
             </button>
@@ -890,7 +890,7 @@ const AdminOverview = () => {
         {/* Top Performers */}
         <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl">
           <div className="flex items-center justify-between mb-4 sm:mb-6">
-            <h3 className="text-lg sm:text-xl font-bold text-white">Top Performers</h3>
+            <h3 className="text-base sm:text-lg font-bold text-white">Top Performers</h3>
             <button 
               onClick={() => navigate('/admin/users')}
               className="text-blue-400 hover:text-blue-300 text-xs sm:text-sm font-medium transition-colors"
@@ -907,8 +907,8 @@ const AdminOverview = () => {
                     {performer.name.split(' ').map(n => n[0]).join('')}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-semibold text-white group-hover:text-blue-300 transition-colors text-sm sm:text-base">{performer.name}</h4>
-                    <p className="text-xs sm:text-sm text-slate-400 truncate">{performer.email}</p>
+                    <h4 className="font-semibold text-white group-hover:text-blue-300 transition-colors text-xs sm:text-sm">{performer.name}</h4>
+                    <p className="text-xs text-slate-400 truncate">{performer.email}</p>
                     {performer.role && (
                       <p className="text-xs text-blue-300 capitalize">{performer.role.replace('_', ' ')}</p>
                     )}
@@ -943,7 +943,7 @@ const AdminOverview = () => {
         {/* Recent Activity */}
         <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl">
           <div className="flex items-center justify-between mb-4 sm:mb-6">
-            <h3 className="text-lg sm:text-xl font-bold text-white">Recent Activity</h3>
+            <h3 className="text-base sm:text-lg font-bold text-white">Recent Activity</h3>
             <button 
               onClick={() => navigate('/admin/cases')}
               className="text-blue-400 hover:text-blue-300 text-xs sm:text-sm font-medium transition-colors"
@@ -959,8 +959,8 @@ const AdminOverview = () => {
                   <activity.icon className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
           </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-white truncate group-hover:text-blue-300 transition-colors text-sm sm:text-base">{activity.title}</p>
-                  <p className="text-xs sm:text-sm text-slate-400">{activity.description}</p>
+                  <p className="font-medium text-white truncate group-hover:text-blue-300 transition-colors text-xs sm:text-sm">{activity.title}</p>
+                  <p className="text-xs text-slate-400">{activity.description}</p>
                   <p className="text-xs text-slate-500 mt-1">
                     {activity.timestamp.toLocaleTimeString('en-US', { 
                       hour: '2-digit', 
@@ -980,7 +980,7 @@ const AdminOverview = () => {
       {/* Department Overview */}
       <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6 gap-3">
-          <h3 className="text-lg sm:text-xl font-bold text-white">Department Overview</h3>
+          <h3 className="text-base sm:text-lg font-bold text-white">Department Overview</h3>
           <div className="flex items-center gap-2">
             <button 
               onClick={() => navigate('/admin/departments')}
@@ -1016,7 +1016,7 @@ const AdminOverview = () => {
             <div className="col-span-full text-center py-12">
               <div className="bg-gradient-to-r from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl p-8 border border-slate-600/50 shadow-2xl">
                 <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                <h3 className="text-xl font-semibold text-white mb-2">Loading Department Data</h3>
+                <h3 className="text-base font-semibold text-white mb-2">Loading Department Data</h3>
                 <p className="text-slate-400">
                   Please wait while we fetch your department information...
                 </p>
@@ -1026,7 +1026,7 @@ const AdminOverview = () => {
             <div className="col-span-full text-center py-12">
               <div className="bg-gradient-to-r from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl p-8 border border-slate-600/50 shadow-2xl">
                 <FaBuilding className="w-16 h-16 text-slate-400 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-white mb-2">No Departments Found</h3>
+                <h3 className="text-base font-semibold text-white mb-2">No Departments Found</h3>
                 <p className="text-slate-400 mb-6">
                   Create your first department to start organizing your team and cases.
                 </p>
@@ -1152,7 +1152,7 @@ const AdminOverview = () => {
                       )}
                     </div>
                     <div>
-                      <h4 className="font-semibold text-white group-hover:text-blue-300 transition-colors text-base sm:text-lg">
+                      <h4 className="font-semibold text-white group-hover:text-blue-300 transition-colors text-sm sm:text-base">
                         {dept.name}
                       </h4>
                       <p className="text-xs sm:text-sm text-slate-400">
@@ -1176,7 +1176,7 @@ const AdminOverview = () => {
                       <FaUsers className="w-3 h-3 text-blue-400" />
                       <span className="text-xs text-slate-400">Members</span>
                     </div>
-                    <div className="text-lg font-bold text-white">{deptUsers.length}</div>
+                    <div className="text-base font-bold text-white">{deptUsers.length}</div>
                   </div>
                   
                   <div className="bg-slate-700/50 rounded-xl p-3 border border-slate-600/30">
@@ -1184,7 +1184,7 @@ const AdminOverview = () => {
                       <FaFolderOpen className="w-3 h-3 text-green-400" />
                       <span className="text-xs text-slate-400">Total Cases</span>
                     </div>
-                    <div className="text-lg font-bold text-white">{allDeptCases.length}</div>
+                    <div className="text-base font-bold text-white">{allDeptCases.length}</div>
                   </div>
                 </div>
 
