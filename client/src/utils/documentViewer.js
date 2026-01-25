@@ -76,3 +76,12 @@ export const isPDF = (filename) => {
   if (!filename) return false;
   return filename.toLowerCase().endsWith('.pdf');
 };
+
+// Default export for compatibility
+export default {
+  getDocumentViewerUrl,
+  canPreviewInBrowser,
+  isWordDocument,
+  isImage,
+  isPDF,
+};

@@ -33,6 +33,7 @@ export default defineConfig({
   build: {
     minify: 'esbuild',
     target: 'es2015',
+    chunkSizeWarningLimit: 1000,
     rollupOptions: {
       output: {
         manualChunks: undefined,
