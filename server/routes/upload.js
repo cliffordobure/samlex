@@ -1,7 +1,8 @@
 import express from "express";
 import { uploadSingle, handleUploadError } from "../middleware/upload.js";
 import { protect } from "../middleware/auth.js";
-import { uploadToCloud } from "../utils/cloudinary.js";
+import { uploadToStorage } from "../utils/storage.js";
+import config from "../config/config.js";
 
 const router = express.Router();
 
@@ -97,42 +98,59 @@ router.post(
           .json({ success: false, message: "No file uploaded" });
       }
 
-      // Check if Cloudinary is configured
-      if (!process.env.CLOUDINARY_CLOUD_NAME || 
-          !process.env.CLOUDINARY_API_KEY || 
-          !process.env.CLOUDINARY_API_SECRET) {
-        console.error("❌ Cloudinary not configured");
+      // Determine storage provider
+      const storageProvider = config.STORAGE_PROVIDER || "s3";
+      
+      // Check if storage is configured
+      let storageConfigured = false;
+      if (storageProvider === "s3") {
+        storageConfigured = !!(config.AWS_S3_BUCKET_NAME && 
+                               config.AWS_ACCESS_KEY_ID && 
+                               config.AWS_SECRET_ACCESS_KEY);
+      } else {
+        storageConfigured = !!(config.CLOUDINARY_CLOUD_NAME && 
+                               config.CLOUDINARY_API_KEY && 
+                               config.CLOUDINARY_API_SECRET);
+      }
+      
+      if (!storageConfigured) {
+        console.error(`❌ ${storageProvider.toUpperCase()} not configured`);
         return res.status(500).json({
           success: false,
           message: "File upload service not configured. Please contact administrator.",
-          error: "Cloudinary credentials missing"
+          error: `${storageProvider} credentials missing`
         });
       }
 
-      console.log("Uploading file to Cloudinary...");
+      console.log(`Uploading file to ${storageProvider.toUpperCase()}...`);
       console.log("File buffer size:", req.file.buffer.length);
       console.log("File mimetype:", req.file.mimetype);
       console.log("File originalname:", req.file.originalname);
 
-      // Upload file to Cloudinary
-      const uploadResult = await uploadToCloud(req.file.buffer, "documents");
+      // Upload file to storage (S3 or Cloudinary)
+      const uploadResult = await uploadToStorage(
+        req.file.buffer,
+        "documents",
+        req.file.originalname,
+        req.file.mimetype
+      );
 
-      console.log("File uploaded successfully to Cloudinary");
-      console.log("Cloudinary URL:", uploadResult.secure_url);
-      console.log("Cloudinary public_id:", uploadResult.public_id);
+      console.log(`File uploaded successfully to ${storageProvider.toUpperCase()}`);
+      console.log("File URL:", uploadResult.url || uploadResult.secure_url);
+      console.log("File Key/Public ID:", uploadResult.key || uploadResult.public_id);
 
       // Set CORS headers for successful upload
       res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
       res.header('Access-Control-Allow-Credentials', 'true');
       
-      // Return Cloudinary URL and public_id
+      // Return upload result (compatible with both S3 and Cloudinary)
       res.json({
         success: true,
-        url: uploadResult.secure_url, // Cloudinary URL
-        public_id: uploadResult.public_id, // Cloudinary public_id
-        resource_type: uploadResult.resource_type,
+        url: uploadResult.url || uploadResult.secure_url,
+        public_id: uploadResult.key || uploadResult.public_id, // S3 key or Cloudinary public_id
+        resource_type: uploadResult.resource_type || req.file.mimetype,
         originalName: req.file.originalname,
-        size: uploadResult.bytes,
+        size: uploadResult.bytes || uploadResult.size || req.file.size,
       });
     } catch (error) {
       console.error("Upload error:", error);
@@ -162,17 +180,39 @@ router.post(
 
 // GET /api/upload/health - health check for upload service
 router.get("/health", (req, res) => {
-  const cloudinaryConfigured = !!(process.env.CLOUDINARY_CLOUD_NAME && 
-                                 process.env.CLOUDINARY_API_KEY && 
-                                 process.env.CLOUDINARY_API_SECRET);
+  const storageProvider = config.STORAGE_PROVIDER || "s3";
+  
+  let storageConfigured = false;
+  let storageInfo = {};
+  
+  if (storageProvider === "s3") {
+    storageConfigured = !!(config.AWS_S3_BUCKET_NAME && 
+                           config.AWS_ACCESS_KEY_ID && 
+                           config.AWS_SECRET_ACCESS_KEY);
+    storageInfo = {
+      provider: "AWS S3",
+      bucket: config.AWS_S3_BUCKET_NAME || "Not configured",
+      region: config.AWS_REGION || "Not configured",
+    };
+  } else {
+    storageConfigured = !!(config.CLOUDINARY_CLOUD_NAME && 
+                           config.CLOUDINARY_API_KEY && 
+                           config.CLOUDINARY_API_SECRET);
+    storageInfo = {
+      provider: "Cloudinary",
+      cloudName: config.CLOUDINARY_CLOUD_NAME || "Not configured",
+    };
+  }
   
   res.json({
     success: true,
     message: "Upload service is running",
-    cloudinaryConfigured: cloudinaryConfigured,
+    storageProvider: storageProvider,
+    storageConfigured: storageConfigured,
+    storageInfo: storageInfo,
     timestamp: new Date().toISOString(),
-    ...(cloudinaryConfigured ? {} : { 
-      warning: "Cloudinary not configured - file uploads will fail" 
+    ...(storageConfigured ? {} : { 
+      warning: `${storageProvider} not configured - file uploads will fail` 
     })
   });
 });

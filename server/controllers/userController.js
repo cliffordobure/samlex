@@ -6,7 +6,7 @@ import mongoose from "mongoose";
 import emailService from "../utils/emailService.js";
 // import { validateObjectId } from "../utils/validation.js";
 // import AppError from "../utils/appError.js";
-import { uploadToCloud, deleteFromCloud } from "../utils/cloudinary.js";
+import { uploadToCloud, deleteFromCloud } from "../utils/storage.js";
 import { generatePassword } from "../utils/generatePassword.js";
 import { getDepartmentForUser } from "../utils/departmentAssignment.js";
 
@@ -746,7 +746,12 @@ export const uploadProfileImage = async (req, res) => {
     }
 
     // Upload new image
-    const result = await uploadToCloud(req.file.buffer, "profiles");
+    const result = await uploadToCloud(
+      req.file.buffer,
+      "profiles",
+      req.file.originalname,
+      req.file.mimetype
+    );
 
     console.log("☁️ Image uploaded to cloud storage:", result.secure_url);
 

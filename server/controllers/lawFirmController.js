@@ -9,7 +9,7 @@ import {
   uploadToCloud,
   deleteFromCloud,
   getPublicIdFromUrl,
-} from "../utils/cloudinary.js";
+} from "../utils/storage.js";
 
 /**
  * @desc    Get all law firms (with pagination, filtering, and sorting)
@@ -1057,24 +1057,27 @@ export const uploadLawFirmLogo = async (req, res) => {
     }
 
     // Delete old logo from Cloudinary if exists
+    // Delete old logo from storage if it exists
     if (lawFirm.logo) {
       try {
-        const publicId = getPublicIdFromUrl(lawFirm.logo);
-        if (publicId) {
-          await deleteFromCloud(publicId);
-          console.log("🗑️ Previous logo deleted from Cloudinary");
-        }
+        await deleteFromCloud(lawFirm.logo);
+        console.log("🗑️ Previous logo deleted from storage");
       } catch (cloudError) {
         console.error(
-          "❌ Error deleting previous logo from Cloudinary:",
+          "❌ Error deleting previous logo from storage:",
           cloudError
         );
         // Continue with upload even if deletion fails
       }
     }
 
-    // Upload new logo to Cloudinary
-    const uploadResult = await uploadToCloud(req.file.buffer, "logos");
+    // Upload new logo to storage (S3 or Cloudinary)
+    const uploadResult = await uploadToCloud(
+      req.file.buffer,
+      "logos",
+      req.file.originalname,
+      req.file.mimetype
+    );
 
     console.log("☁️ Logo uploaded to Cloudinary:", uploadResult.secure_url);
 
@@ -1139,16 +1142,13 @@ export const removeLogo = async (req, res) => {
       });
     }
 
-    // Remove old logo from Cloudinary if it exists
+    // Remove old logo from storage if it exists
     if (lawFirm.logo) {
       try {
-        const publicId = getPublicIdFromUrl(lawFirm.logo);
-        if (publicId) {
-          await deleteFromCloud(publicId);
-          console.log("🗑️ Logo deleted from Cloudinary");
-        }
+        await deleteFromCloud(lawFirm.logo);
+        console.log("🗑️ Logo deleted from storage");
       } catch (cloudError) {
-        console.error("❌ Error deleting logo from Cloudinary:", cloudError);
+        console.error("❌ Error deleting logo from storage:", cloudError);
         // Continue with removal even if deletion fails
       }
     }
