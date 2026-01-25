@@ -35,14 +35,13 @@ export const uploadToS3 = async (fileBuffer, folder = "general", originalName, m
     const key = `${FOLDER_PREFIX}/${folder}/${uniqueFileName}`;
 
     // Upload to S3
+    // Note: ACL is not set because modern S3 buckets often have ACLs disabled
+    // Use bucket policy for public access OR use signed URLs (recommended)
     const command = new PutObjectCommand({
       Bucket: BUCKET_NAME,
       Key: key,
       Body: fileBuffer,
       ContentType: mimetype || "application/octet-stream",
-      // Make file publicly readable - REQUIRED if bucket blocks public access
-      // Remove this line if you want to use signed URLs instead
-      ACL: "public-read",
     });
 
     await s3Client.send(command);

@@ -7,7 +7,7 @@ import socket from "../../utils/socket";
 import creditCaseApi from "../../store/api/creditCaseApi";
 import userApi from "../../store/api/userApi";
 import toast from "react-hot-toast";
-import { API_URL } from "../../config/api.js";
+import { getAccessibleDocumentUrl } from "../../utils/documentUrl.js";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import PromisedPaymentsList from "../../components/credit-collection/PromisedPaymentsList";
@@ -179,7 +179,7 @@ const CaseDetails = () => {
   }
 
   // Document viewer functions
-  const handleDocumentClick = (doc, filename) => {
+  const handleDocumentClick = async (doc, filename) => {
     let documentUrl = doc;
     if (doc.startsWith("http")) {
       documentUrl = doc;
@@ -190,6 +190,18 @@ const CaseDetails = () => {
     } else {
       documentUrl = `${FILE_BASE}/uploads/general/${doc}`;
     }
+    
+    // For S3 URLs, get signed URL
+    if (documentUrl.includes('.s3.') || documentUrl.includes('s3.amazonaws.com')) {
+      try {
+        documentUrl = await getAccessibleDocumentUrl(documentUrl);
+      } catch (error) {
+        console.error("Error getting signed URL:", error);
+        toast.error("Failed to load document");
+        return;
+      }
+    }
+    
     setSelectedDocument({ url: documentUrl, filename });
     setShowDocumentModal(true);
   };

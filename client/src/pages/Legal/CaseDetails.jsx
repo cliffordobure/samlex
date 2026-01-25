@@ -7,7 +7,7 @@ import { getLegalCase, setCurrentCase } from "../../store/slices/legalCaseSlice"
 import legalCaseApi from "../../store/api/legalCaseApi";
 import socket from "../../utils/socket";
 import toast from "react-hot-toast";
-import { API_URL } from "../../config/api.js";
+import { getAccessibleDocumentUrl } from "../../utils/documentUrl.js";
 import {
   FaArrowLeft,
   FaEye,
@@ -701,7 +701,7 @@ const CaseDetails = () => {
   };
 
   // Document viewer functions
-  const handleDocumentClick = (doc) => {
+  const handleDocumentClick = async (doc) => {
     let documentUrl = doc.path || doc.url || "";
     const filename = doc.name || doc.originalName || "Document";
     
@@ -711,8 +711,19 @@ const CaseDetails = () => {
       return;
     }
     
-    // If it's already a full URL (http/https), use it directly
+    // If it's already a full URL (http/https), check if it's S3
     if (documentUrl.startsWith("http://") || documentUrl.startsWith("https://")) {
+      // For S3 URLs, get signed URL
+      if (documentUrl.includes('.s3.') || documentUrl.includes('s3.amazonaws.com')) {
+        try {
+          documentUrl = await getAccessibleDocumentUrl(documentUrl);
+        } catch (error) {
+          console.error("Error getting signed URL:", error);
+          toast.error("Failed to load document");
+          return;
+        }
+      }
+      
       // For Cloudinary URLs, ensure proper format for PDF viewing
       if (documentUrl.includes("cloudinary.com")) {
         // Cloudinary URLs work well with iframe for PDFs

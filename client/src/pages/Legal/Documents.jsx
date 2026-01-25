@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { getLegalCases } from "../../store/slices/legalCaseSlice";
+import { getAccessibleDocumentUrl } from "../../utils/documentUrl.js";
 import {
   FaFileAlt,
   FaDownload,
@@ -214,7 +215,7 @@ const Documents = () => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
 
-  const handleDocumentClick = (doc) => {
+  const handleDocumentClick = async (doc) => {
     let documentUrl = doc.path;
     if (doc.path.startsWith("http")) {
       documentUrl = doc.path;
@@ -225,6 +226,18 @@ const Documents = () => {
     } else {
       documentUrl = `${FILE_BASE}/uploads/general/${doc.path}`;
     }
+    
+    // For S3 URLs, get signed URL
+    if (documentUrl.includes('.s3.') || documentUrl.includes('s3.amazonaws.com')) {
+      try {
+        documentUrl = await getAccessibleDocumentUrl(documentUrl);
+      } catch (error) {
+        console.error("Error getting signed URL:", error);
+        toast.error("Failed to load document");
+        return;
+      }
+    }
+    
     setSelectedDocument({ url: documentUrl, filename: doc.originalName });
     setShowDocumentModal(true);
   };
