@@ -30,7 +30,6 @@ import {
   FaFileAudio,
   FaFileVideo,
 } from "react-icons/fa";
-import { getDocumentViewerUrl, isImage, canPreviewInBrowser } from "../../utils/documentViewer.js";
 
 const Documents = () => {
   const dispatch = useDispatch();

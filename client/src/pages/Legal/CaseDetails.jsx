@@ -8,7 +8,7 @@ import legalCaseApi from "../../store/api/legalCaseApi";
 import socket from "../../utils/socket";
 import toast from "react-hot-toast";
 import { getAccessibleDocumentUrl } from "../../utils/documentUrl.js";
-import { getDocumentViewerUrl, isImage, isPDF, canPreviewInBrowser } from "../../utils/documentViewer.js";
+import { getDocumentViewerUrl, isImage, canPreviewInBrowser } from "../../utils/documentViewer.js";
 import { API_URL } from "../../config/api.js";
 import {
   FaArrowLeft,
