@@ -8,6 +8,7 @@ import creditCaseApi from "../../store/api/creditCaseApi";
 import userApi from "../../store/api/userApi";
 import toast from "react-hot-toast";
 import { getAccessibleDocumentUrl } from "../../utils/documentUrl.js";
+import { API_URL } from "../../config/api.js";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import PromisedPaymentsList from "../../components/credit-collection/PromisedPaymentsList";
