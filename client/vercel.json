@@ -1,8 +1,9 @@
 {
-  "buildCommand": "npm run build",
+  "buildCommand": "NODE_OPTIONS=--max-old-space-size=4096 npm run build",
   "outputDirectory": "dist",
   "installCommand": "npm install",
   "rewrites": [{ "source": "/(.*)", "destination": "/" }],
+  "framework": "vite",
   "env": {
     "VITE_API_URL": "https://samlex.onrender.com/api",
     "VITE_SOCKET_URL": "https://samlex.onrender.com",

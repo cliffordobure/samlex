@@ -15,7 +15,7 @@ export default defineConfig({
   },
   server: {
     port: 5001,
-    host: true, // This allows external connections
+    host: true,
     proxy: {
       "/api": {
         target: "http://localhost:5000",
@@ -31,30 +31,8 @@ export default defineConfig({
     },
   },
   build: {
-    minify: 'esbuild',
+    // Minimal configuration - let Vite handle everything
     target: 'es2015',
-    chunkSizeWarningLimit: 2000,
     sourcemap: false,
-    cssCodeSplit: false, // Disable CSS code splitting to reduce complexity
-    rollupOptions: {
-      output: {
-        // Simplified output without manual chunks
-        format: 'es',
-      },
-      onwarn(warning, warn) {
-        // Suppress specific warnings
-        if (warning.code === 'MODULE_LEVEL_DIRECTIVE') return;
-        if (warning.code === 'CIRCULAR_DEPENDENCY') return;
-        warn(warning);
-      },
-    },
-    // Simplified esbuild config
-    esbuild: {
-      target: 'es2015',
-    },
   },
-  // If you need to expose environment variables, use import.meta.env in your code instead of process.env
-  // define: {
-  //   "process.env": process.env,
-  // },
 });
