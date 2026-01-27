@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import creditCaseApi from "../../store/api/creditCaseApi";
 import { getUsers } from "../../store/slices/userSlice";
+import { fetchActiveClients } from "../../store/slices/clientSlice";
 import { validateFile } from "../../utils/cloudinary";
 import { API_URL } from "../../config/api.js";
 
@@ -12,6 +13,7 @@ const CreateCase = () => {
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
   const { users } = useSelector((state) => state.users);
+  const { activeClients } = useSelector((state) => state.clients);
   const navigate = useNavigate();
 
   const [form, setForm] = useState({
@@ -33,11 +35,20 @@ const CreateCase = () => {
   const [uploadingFiles, setUploadingFiles] = useState(false);
   const [uploadProgress, setUploadProgress] = useState({});
   const [error, setError] = useState("");
+  const [debtorSelectionMode, setDebtorSelectionMode] = useState("new"); // "existing" or "new"
+  const [selectedDebtorId, setSelectedDebtorId] = useState("");
 
   // Load users for assignment
   useEffect(() => {
     if (user?.lawFirm?._id) {
       dispatch(getUsers({ lawFirm: user.lawFirm._id }));
+    }
+  }, [dispatch, user?.lawFirm?._id]);
+
+  // Load active clients for selection
+  useEffect(() => {
+    if (user?.lawFirm?._id) {
+      dispatch(fetchActiveClients({ lawFirm: user.lawFirm._id }));
     }
   }, [dispatch, user?.lawFirm?._id]);
 
@@ -132,10 +143,35 @@ const CreateCase = () => {
         }
       }
 
-      // 2. Create the case with Cloudinary URLs
+      // 2. Prepare debtor data based on selection mode
+      let debtorData = {};
+      if (debtorSelectionMode === "existing" && selectedDebtorId) {
+        // If existing client is selected, we'll send the client ID
+        // The backend will handle mapping it to debtor fields
+        const selectedClient = activeClients.find(
+          (c) => c._id === selectedDebtorId
+        );
+        if (selectedClient) {
+          debtorData = {
+            debtorName: `${selectedClient.firstName} ${selectedClient.lastName}`,
+            debtorEmail: selectedClient.email || "",
+            debtorContact: selectedClient.phoneNumber || "",
+          };
+        }
+      } else {
+        // Use form data for new debtor
+        debtorData = {
+          debtorName: form.debtorName,
+          debtorEmail: form.debtorEmail,
+          debtorContact: form.debtorContact,
+        };
+      }
+
+      // 3. Create the case with Cloudinary URLs
       console.log("📋 Creating case with document URLs:", documentUrls);
       await creditCaseApi.createCreditCase({
         ...form,
+        ...debtorData,
         debtAmount: Number(form.debtAmount),
         assignedTo: form.assignedTo || undefined,
         documents: documentUrls, // Send Cloudinary URLs instead of files
@@ -227,7 +263,116 @@ const CreateCase = () => {
                   Debtor Information
                 </h3>
                 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* Debtor Selection Mode Toggle */}
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-slate-300 mb-3">
+                    Debtor Selection <span className="text-red-400">*</span>
+                  </label>
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="debtorMode"
+                        value="existing"
+                        checked={debtorSelectionMode === "existing"}
+                        onChange={(e) => {
+                          setDebtorSelectionMode(e.target.value);
+                          setSelectedDebtorId("");
+                          setForm((prev) => ({
+                            ...prev,
+                            debtorName: "",
+                            debtorEmail: "",
+                            debtorContact: "",
+                          }));
+                        }}
+                        className="w-4 h-4 text-red-500 bg-slate-700 border-slate-600 focus:ring-red-500 focus:ring-2"
+                      />
+                      <span className="text-slate-300">Select Existing Client</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="debtorMode"
+                        value="new"
+                        checked={debtorSelectionMode === "new"}
+                        onChange={(e) => {
+                          setDebtorSelectionMode(e.target.value);
+                          setSelectedDebtorId("");
+                        }}
+                        className="w-4 h-4 text-red-500 bg-slate-700 border-slate-600 focus:ring-red-500 focus:ring-2"
+                      />
+                      <span className="text-slate-300">Create New Debtor</span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Existing Client Selection */}
+                {debtorSelectionMode === "existing" && (
+                  <div className="mb-6">
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Select Client <span className="text-red-400">*</span>
+                    </label>
+                    <select
+                      className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-200"
+                      value={selectedDebtorId}
+                      onChange={(e) => {
+                        setSelectedDebtorId(e.target.value);
+                        const selectedClient = activeClients.find(
+                          (c) => c._id === e.target.value
+                        );
+                        if (selectedClient) {
+                          setForm((prev) => ({
+                            ...prev,
+                            debtorName: `${selectedClient.firstName} ${selectedClient.lastName}`,
+                            debtorEmail: selectedClient.email || "",
+                            debtorContact: selectedClient.phoneNumber || "",
+                          }));
+                        }
+                      }}
+                    >
+                      <option value="">Choose a client...</option>
+                      {activeClients.map((client) => (
+                        <option key={client._id} value={client._id}>
+                          {client.firstName} {client.lastName}
+                          {client.email ? ` - ${client.email}` : ""}
+                          {client.clientType === "corporate" && client.companyName
+                            ? ` (${client.companyName})`
+                            : ""}
+                        </option>
+                      ))}
+                    </select>
+                    {selectedDebtorId && (
+                      <div className="mt-3 p-3 bg-slate-700/30 border border-slate-600/50 rounded-lg">
+                        {(() => {
+                          const selectedClient = activeClients.find(
+                            (c) => c._id === selectedDebtorId
+                          );
+                          return selectedClient ? (
+                            <div className="text-sm text-slate-300">
+                              <p className="text-white font-medium">
+                                {selectedClient.firstName} {selectedClient.lastName}
+                              </p>
+                              {selectedClient.email && (
+                                <p>Email: {selectedClient.email}</p>
+                              )}
+                              {selectedClient.phoneNumber && (
+                                <p>Phone: {selectedClient.phoneNumber}</p>
+                              )}
+                              {selectedClient.clientType === "corporate" &&
+                                selectedClient.companyName && (
+                                  <p>Company: {selectedClient.companyName}</p>
+                                )}
+                            </div>
+                          ) : null;
+                        })()}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* New Debtor Form Fields */}
+                {debtorSelectionMode === "new" && (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-2">
                       Debtor Name
@@ -267,6 +412,7 @@ const CreateCase = () => {
                     />
                   </div>
                 </div>
+                )}
               </div>
 
               {/* Creditor Information Section */}

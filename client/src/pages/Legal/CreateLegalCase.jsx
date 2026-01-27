@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useLocation } from "react-router-dom";
 import { createLegalCase } from "../../store/slices/legalCaseSlice";
 import { getUsers } from "../../store/slices/userSlice";
+import { fetchActiveClients } from "../../store/slices/clientSlice";
 import toast from "react-hot-toast";
 import { API_URL } from "../../config/api.js";
 
@@ -31,6 +32,7 @@ const CreateLegalCase = () => {
   const location = useLocation();
   const { user } = useSelector((state) => state.auth);
   const { users } = useSelector((state) => state.users);
+  const { activeClients } = useSelector((state) => state.clients);
 
   // Get escalated credit case from location state
   const escalatedCreditCase = location.state?.escalatedCreditCase;
@@ -80,6 +82,8 @@ const CreateLegalCase = () => {
   const [uploadingFiles, setUploadingFiles] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
+  const [clientSelectionMode, setClientSelectionMode] = useState("new"); // "existing" or "new"
+  const [selectedClientId, setSelectedClientId] = useState("");
 
   // Load users for assignment
   useEffect(() => {
@@ -88,26 +92,59 @@ const CreateLegalCase = () => {
     }
   }, [dispatch, user?.lawFirm?._id]);
 
+  // Load active clients for selection
+  useEffect(() => {
+    if (user?.lawFirm?._id) {
+      dispatch(fetchActiveClients({ lawFirm: user.lawFirm._id }));
+    }
+  }, [dispatch, user?.lawFirm?._id]);
+
   // Pre-fill form if escalated from credit case
   useEffect(() => {
     if (escalatedCreditCase) {
+      // If escalated case has a client, try to find it in active clients
+      if (escalatedCreditCase.client?._id) {
+        const existingClient = activeClients.find(
+          (c) => c._id === escalatedCreditCase.client._id
+        );
+        if (existingClient) {
+          setClientSelectionMode("existing");
+          setSelectedClientId(existingClient._id);
+        } else {
+          setFormData((prev) => ({
+            ...prev,
+            client: {
+              name:
+                escalatedCreditCase.client?.firstName +
+                  " " +
+                  escalatedCreditCase.client?.lastName || "",
+              email: escalatedCreditCase.client?.email || "",
+              phone: escalatedCreditCase.client?.phoneNumber || "",
+            },
+          }));
+        }
+      } else {
+        setFormData((prev) => ({
+          ...prev,
+          client: {
+            name:
+              escalatedCreditCase.client?.firstName +
+                " " +
+                escalatedCreditCase.client?.lastName || "",
+            email: escalatedCreditCase.client?.email || "",
+            phone: escalatedCreditCase.client?.phoneNumber || "",
+          },
+        }));
+      }
       setFormData((prev) => ({
         ...prev,
         title: `Legal Case - ${escalatedCreditCase.title}`,
         description: `Escalated from credit collection case: ${escalatedCreditCase.caseNumber}`,
         caseType: "debt_collection",
-        client: {
-          name:
-            escalatedCreditCase.client?.firstName +
-              " " +
-              escalatedCreditCase.client?.lastName || "",
-          email: escalatedCreditCase.client?.email || "",
-          phone: escalatedCreditCase.client?.phone || "",
-        },
         escalatedFromCreditCase: escalatedCreditCase._id,
       }));
     }
-  }, [escalatedCreditCase]);
+  }, [escalatedCreditCase, activeClients]);
 
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({
@@ -183,18 +220,25 @@ const CreateLegalCase = () => {
       newErrors.caseType = "Case type is required";
     }
 
-    if (!formData.client.name.trim()) {
-      newErrors.clientName = "Client name is required";
-    }
+    // Validate client based on selection mode
+    if (clientSelectionMode === "existing") {
+      if (!selectedClientId) {
+        newErrors.selectedClient = "Please select a client";
+      }
+    } else {
+      if (!formData.client.name.trim()) {
+        newErrors.clientName = "Client name is required";
+      }
 
-    if (!formData.client.email.trim()) {
-      newErrors.clientEmail = "Client email is required";
-    } else if (!/\S+@\S+\.\S+/.test(formData.client.email)) {
-      newErrors.clientEmail = "Please enter a valid email address";
-    }
+      if (!formData.client.email.trim()) {
+        newErrors.clientEmail = "Client email is required";
+      } else if (!/\S+@\S+\.\S+/.test(formData.client.email)) {
+        newErrors.clientEmail = "Please enter a valid email address";
+      }
 
-    if (!formData.client.phone.trim()) {
-      newErrors.clientPhone = "Client phone is required";
+      if (!formData.client.phone.trim()) {
+        newErrors.clientPhone = "Client phone is required";
+      }
     }
 
     if (!formData.description.trim()) {
@@ -265,9 +309,20 @@ const CreateLegalCase = () => {
         setUploadingFiles(false);
       }
 
+      // Prepare client data based on selection mode
+      let clientData;
+      if (clientSelectionMode === "existing" && selectedClientId) {
+        // Send client ID if existing client is selected
+        clientData = selectedClientId;
+      } else {
+        // Send client object if creating new client
+        clientData = formData.client;
+      }
+
       // Create case with Cloudinary URLs (or empty array if upload failed)
       const caseData = {
         ...formData,
+        client: clientData,
         filingFee: {
           ...formData.filingFee,
           amount: formData.filingFee.amount === "" ? 0 : parseFloat(formData.filingFee.amount) || 0,
@@ -529,7 +584,126 @@ const CreateLegalCase = () => {
               </div>
             </div>
             <div className="p-8">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Client Selection Mode Toggle */}
+              <div className="mb-6">
+                <label className="block text-sm font-semibold text-white mb-3">
+                  Client Selection <span className="text-red-400">*</span>
+                </label>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="clientMode"
+                      value="existing"
+                      checked={clientSelectionMode === "existing"}
+                      onChange={(e) => {
+                        setClientSelectionMode(e.target.value);
+                        setSelectedClientId("");
+                        setErrors((prev) => ({
+                          ...prev,
+                          selectedClient: "",
+                          clientName: "",
+                          clientEmail: "",
+                          clientPhone: "",
+                        }));
+                      }}
+                      className="w-4 h-4 text-primary-500 bg-dark-900 border-dark-600 focus:ring-primary-500 focus:ring-2"
+                    />
+                    <span className="text-white">Select Existing Client</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="clientMode"
+                      value="new"
+                      checked={clientSelectionMode === "new"}
+                      onChange={(e) => {
+                        setClientSelectionMode(e.target.value);
+                        setSelectedClientId("");
+                        setErrors((prev) => ({
+                          ...prev,
+                          selectedClient: "",
+                        }));
+                      }}
+                      className="w-4 h-4 text-primary-500 bg-dark-900 border-dark-600 focus:ring-primary-500 focus:ring-2"
+                    />
+                    <span className="text-white">Create New Client</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Existing Client Selection */}
+              {clientSelectionMode === "existing" && (
+                <div className="mb-6">
+                  <label className="block text-sm font-semibold text-white mb-2">
+                    Select Client <span className="text-red-400">*</span>
+                  </label>
+                  <select
+                    className={`w-full px-4 py-3 bg-dark-900/50 border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all duration-200 ${
+                      errors.selectedClient
+                        ? "border-red-500 focus:ring-red-500/50"
+                        : "border-dark-600"
+                    }`}
+                    value={selectedClientId}
+                    onChange={(e) => {
+                      setSelectedClientId(e.target.value);
+                      if (errors.selectedClient) {
+                        setErrors((prev) => ({
+                          ...prev,
+                          selectedClient: "",
+                        }));
+                      }
+                    }}
+                  >
+                    <option value="">Choose a client...</option>
+                    {activeClients.map((client) => (
+                      <option key={client._id} value={client._id}>
+                        {client.firstName} {client.lastName}
+                        {client.email ? ` - ${client.email}` : ""}
+                        {client.clientType === "corporate" && client.companyName
+                          ? ` (${client.companyName})`
+                          : ""}
+                      </option>
+                    ))}
+                  </select>
+                  {errors.selectedClient && (
+                    <p className="text-sm text-red-400 flex items-center gap-1 mt-1">
+                      <FaExclamationTriangle className="w-3 h-3" />
+                      {errors.selectedClient}
+                    </p>
+                  )}
+                  {selectedClientId && (
+                    <div className="mt-3 p-3 bg-dark-900/30 border border-dark-600 rounded-lg">
+                      {(() => {
+                        const selectedClient = activeClients.find(
+                          (c) => c._id === selectedClientId
+                        );
+                        return selectedClient ? (
+                          <div className="text-sm text-dark-300">
+                            <p className="text-white font-medium">
+                              {selectedClient.firstName} {selectedClient.lastName}
+                            </p>
+                            {selectedClient.email && (
+                              <p>Email: {selectedClient.email}</p>
+                            )}
+                            {selectedClient.phoneNumber && (
+                              <p>Phone: {selectedClient.phoneNumber}</p>
+                            )}
+                            {selectedClient.clientType === "corporate" &&
+                              selectedClient.companyName && (
+                                <p>Company: {selectedClient.companyName}</p>
+                              )}
+                          </div>
+                        ) : null;
+                      })()}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* New Client Form Fields */}
+              {clientSelectionMode === "new" && (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Client Name */}
                 <div className="space-y-2">
                   <label className="block text-sm font-semibold text-white">
@@ -616,7 +790,7 @@ const CreateLegalCase = () => {
                     </p>
                   )}
                 </div>
-              </div>
+              )}
             </div>
           </div>
 
