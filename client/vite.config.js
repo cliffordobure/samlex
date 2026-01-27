@@ -33,34 +33,24 @@ export default defineConfig({
   build: {
     minify: 'esbuild',
     target: 'es2015',
-    chunkSizeWarningLimit: 1000,
-    sourcemap: false, // Disable sourcemaps in production to reduce build time
+    chunkSizeWarningLimit: 2000,
+    sourcemap: false,
+    cssCodeSplit: false, // Disable CSS code splitting to reduce complexity
     rollupOptions: {
       output: {
-        manualChunks: (id) => {
-          // Split node_modules into separate chunks to reduce memory usage
-          if (id.includes('node_modules')) {
-            if (id.includes('react') || id.includes('react-dom')) {
-              return 'vendor-react';
-            }
-            if (id.includes('@reduxjs')) {
-              return 'vendor-redux';
-            }
-            if (id.includes('react-router')) {
-              return 'vendor-router';
-            }
-            if (id.includes('chart.js') || id.includes('react-chartjs')) {
-              return 'vendor-charts';
-            }
-            return 'vendor';
-          }
-        },
+        // Simplified output without manual chunks
+        format: 'es',
+      },
+      onwarn(warning, warn) {
+        // Suppress specific warnings
+        if (warning.code === 'MODULE_LEVEL_DIRECTIVE') return;
+        if (warning.code === 'CIRCULAR_DEPENDENCY') return;
+        warn(warning);
       },
     },
-    // Optimize esbuild settings
+    // Simplified esbuild config
     esbuild: {
       target: 'es2015',
-      drop: ['console', 'debugger'], // Remove console and debugger in production
     },
   },
   // If you need to expose environment variables, use import.meta.env in your code instead of process.env
