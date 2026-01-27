@@ -1,7 +1,11 @@
 {
+  "buildCommand": "NODE_OPTIONS=--max-old-space-size=4096 npm run build",
+  "outputDirectory": "dist",
+  "installCommand": "npm install",
   "rewrites": [{ "source": "/(.*)", "destination": "/" }],
   "env": {
     "VITE_API_URL": "https://samlex.onrender.com/api",
-    "VITE_SOCKET_URL": "https://samlex.onrender.com"
+    "VITE_SOCKET_URL": "https://samlex.onrender.com",
+    "NODE_OPTIONS": "--max-old-space-size=4096"
   }
 }
