@@ -1367,7 +1367,14 @@ const LandingPage = () => {
 
   // Main render
   return (
-    <div className="min-h-screen bg-slate-900 relative overflow-hidden">
+    <div 
+      className="min-h-screen bg-slate-900 relative overflow-hidden"
+      style={{
+        minHeight: '100vh',
+        backgroundColor: '#0f172a',
+        width: '100%'
+      }}
+    >
       <FloatingElements />
       <Navigation />
       <HeroSection />
