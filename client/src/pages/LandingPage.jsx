@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
 
 const LandingPage = () => {
+  console.log("🏠 LandingPage component rendering...");
+  
   // State declarations
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [scrollY, setScrollY] = useState(0);

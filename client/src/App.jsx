@@ -230,6 +230,8 @@ function App() {
   }
 
   console.log("✅ Rendering main app content...");
+  console.log("📍 Current pathname:", location.pathname);
+  console.log("🔐 Auth state:", { user: !!user, isLoading, isAuthenticated });
 
   return (
     <div 
@@ -238,14 +240,54 @@ function App() {
         minHeight: '100vh',
         backgroundColor: '#0f172a',
         color: '#f8fafc',
-        width: '100%'
+        width: '100%',
+        position: 'relative',
+        zIndex: 1
       }}
     >
+      {/* Debug info - remove in production */}
+      {import.meta.env.DEV && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          background: 'rgba(0,0,0,0.8)',
+          color: 'white',
+          padding: '10px',
+          fontSize: '12px',
+          zIndex: 9999
+        }}>
+          Path: {location.pathname} | Loading: {isLoading ? 'Yes' : 'No'} | Auth: {isAuthenticated ? 'Yes' : 'No'} | User: {user ? 'Yes' : 'No'}
+        </div>
+      )}
       <NetworkStatus />
       <NetworkDebugger />
       <Routes>
         {/* Public Routes */}
-        <Route path="/" element={<LandingPage />} />
+        <Route 
+          path="/" 
+          element={
+            <div style={{ 
+              padding: '20px', 
+              color: 'white',
+              backgroundColor: '#0f172a',
+              minHeight: '100vh'
+            }}>
+              <div style={{
+                background: 'red',
+                color: 'white',
+                padding: '20px',
+                marginBottom: '20px',
+                fontSize: '24px',
+                fontWeight: 'bold'
+              }}>
+                ✅ React is Working! If you see this, React is rendering.
+              </div>
+              <LandingPage />
+            </div>
+          } 
+        />
 
         <Route
           path="/login"
