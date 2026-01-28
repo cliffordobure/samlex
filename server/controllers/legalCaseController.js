@@ -2020,3 +2020,82 @@ export const renameDocument = async (req, res) => {
     });
   }
 };
+
+/**
+ * @desc    Delete a legal case permanently
+ * @route   DELETE /api/legal-cases/:id
+ * @access  Private (law_firm_admin only)
+ */
+export const deleteLegalCase = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    console.log("🗑️ Deleting legal case:", id);
+
+    // Check if user is admin
+    if (req.user.role !== "law_firm_admin") {
+      return res.status(403).json({
+        success: false,
+        message: "Only administrators can delete cases",
+      });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid case ID format",
+      });
+    }
+
+    // Find the case
+    const legalCase = await LegalCase.findById(id);
+
+    if (!legalCase) {
+      return res.status(404).json({
+        success: false,
+        message: "Legal case not found",
+      });
+    }
+
+    // Verify the case belongs to the user's law firm
+    if (legalCase.lawFirm.toString() !== req.user.lawFirm._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: "You don't have access to this case",
+      });
+    }
+
+    // Delete associated documents from cloud storage if needed
+    // Note: You may want to implement document cleanup here
+    
+    // Delete related documents from database
+    if (legalCase.documents && legalCase.documents.length > 0) {
+      await Document.deleteMany({
+        _id: { $in: legalCase.documents.map(doc => doc._id || doc) }
+      });
+    }
+
+    // Delete the case permanently
+    await LegalCase.findByIdAndDelete(id);
+
+    console.log("✅ Legal case deleted successfully:", legalCase.caseNumber);
+
+    // Emit socket event
+    const io = req.app.get("io");
+    if (io) {
+      io.emit("legalCaseDeleted", { caseId: id });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Legal case deleted successfully",
+    });
+  } catch (error) {
+    console.error("❌ Error deleting legal case:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error deleting legal case",
+      error: error.message,
+    });
+  }
+};

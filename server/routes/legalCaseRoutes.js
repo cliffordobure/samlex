@@ -17,6 +17,7 @@ import {
   addPaymentToCase,
   addCourtActivityToCase,
   renameDocument,
+  deleteLegalCase,
 } from "../controllers/legalCaseController.js";
 import { protect } from "../middleware/auth.js";
 import { validateLegalCase } from "../middleware/validation.js";
@@ -46,6 +47,9 @@ router.post("/", createLegalCase);
 
 // Update a legal case
 router.put("/:id", updateLegalCase);
+
+// Delete a legal case (admin only)
+router.delete("/:id", deleteLegalCase);
 
 // Assign a legal case to an advocate
 router.put("/:id/assign", assignLegalCase);

@@ -20,6 +20,7 @@ import {
   getEscalatedCreditCases,
   addDocumentToCreditCase,
   updateEscalatedCaseStatus,
+  deleteCreditCase,
 } from "../controllers/creditCaseController.js";
 import {
   bulkImportCases,
@@ -69,6 +70,9 @@ router.get("/import-batch/:batchId", protect, getCasesByBatchId);
 
 // Create a new credit collection case
 router.post("/", protect, createCreditCase);
+
+// Delete a credit case (admin only)
+router.delete("/:id", protect, deleteCreditCase);
 
 // Move (update stage/status) a credit case
 router.patch("/:id/move", protect, moveCreditCase);

@@ -6,11 +6,13 @@ import {
   assignCase,
   addCaseComment,
   escalateCase,
+  deleteCreditCase,
 } from "../../store/slices/creditCaseSlice";
 import {
   getLegalCases,
   assignLegalCase,
   addLegalCaseComment,
+  deleteLegalCase,
 } from "../../store/slices/legalCaseSlice";
 import { getUsers } from "../../store/slices/userSlice";
 import toast from "react-hot-toast";
@@ -38,6 +40,7 @@ import {
   FaBuilding,
   FaArrowRight,
   FaFileContract,
+  FaTrash,
 } from "react-icons/fa";
 
 const AdminCaseManagement = () => {
@@ -78,6 +81,13 @@ const AdminCaseManagement = () => {
     notes: "",
   });
   const [assignLoading, setAssignLoading] = useState(false);
+  const [deleteModal, setDeleteModal] = useState({
+    isOpen: false,
+    caseId: null,
+    caseType: null, // 'legal' or 'credit'
+    caseNumber: null,
+  });
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (user?.lawFirm?._id) {
@@ -298,6 +308,48 @@ const AdminCaseManagement = () => {
       );
     } finally {
       setAssignLoading(false);
+    }
+  };
+
+  // Handle delete case
+  const handleDeleteCase = (caseId, caseType, caseNumber) => {
+    setDeleteModal({
+      isOpen: true,
+      caseId,
+      caseType,
+      caseNumber,
+    });
+  };
+
+  const confirmDeleteCase = async () => {
+    if (!deleteModal.caseId || !deleteModal.caseType) return;
+
+    setIsDeleting(true);
+    try {
+      if (deleteModal.caseType === "legal") {
+        await dispatch(deleteLegalCase(deleteModal.caseId)).unwrap();
+        toast.success("Legal case deleted successfully");
+        // Refresh legal cases
+        dispatch(getLegalCases({ lawFirm: user.lawFirm._id }));
+      } else if (deleteModal.caseType === "credit") {
+        await dispatch(deleteCreditCase(deleteModal.caseId)).unwrap();
+        toast.success("Credit case deleted successfully");
+        // Refresh credit cases
+        dispatch(getCreditCases({ lawFirm: user.lawFirm._id }));
+        // Refresh escalated cases if needed
+        fetchEscalatedCases();
+      }
+      setDeleteModal({ isOpen: false, caseId: null, caseType: null, caseNumber: null });
+    } catch (error) {
+      toast.error(error.message || "Failed to delete case");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const cancelDeleteCase = () => {
+    if (!isDeleting) {
+      setDeleteModal({ isOpen: false, caseId: null, caseType: null, caseNumber: null });
     }
   };
 
@@ -839,6 +891,16 @@ const AdminCaseManagement = () => {
                                 <FaEye className="w-3 h-3" />
                                 <span>View</span>
                               </Link>
+                              {user?.role === "law_firm_admin" && (
+                                <button
+                                  className="w-full sm:w-auto px-3 py-1 bg-red-600/20 hover:bg-red-600/30 border border-red-500/30 text-red-400 hover:text-red-300 rounded-lg text-xs transition-all duration-300 flex items-center justify-center gap-1"
+                                  onClick={() => handleDeleteCase(case_._id, "credit", case_.caseNumber)}
+                                  title="Delete case"
+                                >
+                                  <FaTrash className="w-3 h-3" />
+                                  <span>Delete</span>
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -976,6 +1038,16 @@ const AdminCaseManagement = () => {
                                 <FaEye className="w-3 h-3" />
                                 <span>View</span>
                               </button>
+                              {user?.role === "law_firm_admin" && (
+                                <button
+                                  className="w-full sm:w-auto px-3 py-1 bg-red-600/20 hover:bg-red-600/30 border border-red-500/30 text-red-400 hover:text-red-300 rounded-lg text-xs transition-all duration-300 flex items-center justify-center gap-1"
+                                  onClick={() => handleDeleteCase(case_._id, "legal", case_.caseNumber)}
+                                  title="Delete case"
+                                >
+                                  <FaTrash className="w-3 h-3" />
+                                  <span>Delete</span>
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -1148,6 +1220,17 @@ const AdminCaseManagement = () => {
                                 <span className="hidden sm:inline">View Details</span>
                                 <span className="sm:hidden">View</span>
                               </Link>
+                              {user?.role === "law_firm_admin" && (
+                                <button
+                                  className="w-full sm:w-auto px-3 py-1 bg-red-600/20 hover:bg-red-600/30 border border-red-500/30 text-red-400 hover:text-red-300 rounded-lg text-xs transition-all duration-300 flex items-center justify-center gap-1"
+                                  onClick={() => handleDeleteCase(case_._id, "credit", case_.caseNumber)}
+                                  title="Delete case"
+                                >
+                                  <FaTrash className="w-3 h-3" />
+                                  <span className="hidden sm:inline">Delete</span>
+                                  <span className="sm:hidden">Del</span>
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -1160,6 +1243,65 @@ const AdminCaseManagement = () => {
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {deleteModal.isOpen && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-gradient-to-br from-slate-800 to-slate-700 rounded-2xl p-6 w-full max-w-md mx-auto border border-slate-600/50 shadow-2xl">
+            <div className="flex items-center gap-4 mb-6">
+              <div className="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center">
+                <FaExclamationTriangle className="w-6 h-6 text-red-400" />
+              </div>
+              <div>
+                <h3 className="font-bold text-xl text-white">Delete Case</h3>
+                <p className="text-slate-400 text-sm">This action cannot be undone</p>
+              </div>
+            </div>
+
+            <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl">
+              <p className="text-white mb-2">
+                Are you sure you want to permanently delete this case?
+              </p>
+              <p className="text-slate-300 text-sm">
+                <strong>Case Number:</strong> {deleteModal.caseNumber}
+              </p>
+              <p className="text-slate-300 text-sm">
+                <strong>Type:</strong> {deleteModal.caseType === "legal" ? "Legal Case" : "Credit Collection Case"}
+              </p>
+              <p className="text-red-400 text-sm mt-2 font-semibold">
+                ⚠️ This will permanently delete the case and all associated data from the database.
+              </p>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                className="flex-1 px-4 py-2 bg-slate-700/50 hover:bg-slate-600/50 border border-slate-600/50 text-slate-300 hover:text-white rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={cancelDeleteCase}
+                disabled={isDeleting}
+              >
+                Cancel
+              </button>
+              <button
+                className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                onClick={confirmDeleteCase}
+                disabled={isDeleting}
+              >
+                {isDeleting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  <>
+                    <FaTrash className="w-4 h-4" />
+                    <span>Delete Permanently</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Assignment Modal for Escalated Cases */}
       {showAssignmentModal && selectedEscalatedCase && (

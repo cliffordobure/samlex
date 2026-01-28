@@ -7,6 +7,7 @@ import {
   assignLegalCase,
   getPendingAssignmentCases,
   getLegalCaseStatistics,
+  deleteLegalCase,
 } from "../../store/slices/legalCaseSlice";
 import { getUsers } from "../../store/slices/userSlice";
 import LegalKanbanBoard from "./LegalKanbanBoard";
@@ -78,6 +79,7 @@ import {
   FaExternalLinkAlt,
   FaList,
   FaColumns,
+  FaTrash,
 } from "react-icons/fa";
 
 const LegalCaseManagement = () => {
@@ -109,6 +111,12 @@ const LegalCaseManagement = () => {
     assignedTo: "",
     notes: "",
   });
+  const [deleteModal, setDeleteModal] = useState({
+    isOpen: false,
+    caseId: null,
+    caseNumber: null,
+  });
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Statistics for the dashboard
   const [stats, setStats] = useState({
@@ -914,6 +922,19 @@ const LegalCaseManagement = () => {
                                Assign
                              </button>
                            )}
+                           {user?.role === "law_firm_admin" && (
+                             <button
+                               onClick={(e) => {
+                                 e.stopPropagation();
+                                 handleDeleteCase(legalCase._id, legalCase.caseNumber);
+                               }}
+                               className="flex-1 px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors text-sm flex items-center justify-center gap-1"
+                               title="Delete case"
+                             >
+                               <FaTrash className="w-3 h-3" />
+                               Delete
+                             </button>
+                           )}
                          </div>
                        </div>
                     </div>
@@ -1051,6 +1072,16 @@ const LegalCaseManagement = () => {
                                   <option value="closed">Closed</option>
                                 </select>
                               )}
+                              {user?.role === "law_firm_admin" && (
+                                <button
+                                  onClick={() => handleDeleteCase(legalCase._id, legalCase.caseNumber)}
+                                  className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors text-sm flex items-center gap-1"
+                                  title="Delete case"
+                                >
+                                  <FaTrash className="w-3 h-3" />
+                                  Delete
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -1072,6 +1103,61 @@ const LegalCaseManagement = () => {
           </>
         )}
       </div>
+      {/* Delete Confirmation Modal */}
+      {deleteModal.isOpen && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-gradient-to-br from-slate-800 to-slate-700 rounded-2xl p-6 w-full max-w-md mx-auto border border-slate-600/50 shadow-2xl">
+            <div className="flex items-center gap-4 mb-6">
+              <div className="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center">
+                <FaExclamationTriangle className="w-6 h-6 text-red-400" />
+              </div>
+              <div>
+                <h3 className="font-bold text-xl text-white">Delete Case</h3>
+                <p className="text-slate-400 text-sm">This action cannot be undone</p>
+              </div>
+            </div>
+
+            <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl">
+              <p className="text-white mb-2">
+                Are you sure you want to permanently delete this legal case?
+              </p>
+              <p className="text-slate-300 text-sm">
+                <strong>Case Number:</strong> {deleteModal.caseNumber}
+              </p>
+              <p className="text-red-400 text-sm mt-2 font-semibold">
+                ⚠️ This will permanently delete the case and all associated data from the database.
+              </p>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                className="flex-1 px-4 py-2 bg-slate-700/50 hover:bg-slate-600/50 border border-slate-600/50 text-slate-300 hover:text-white rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={cancelDeleteCase}
+                disabled={isDeleting}
+              >
+                Cancel
+              </button>
+              <button
+                className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                onClick={confirmDeleteCase}
+                disabled={isDeleting}
+              >
+                {isDeleting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  <>
+                    <FaTrash className="w-4 h-4" />
+                    <span>Delete Permanently</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Assignment Modal */}
       {showAssignmentModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">

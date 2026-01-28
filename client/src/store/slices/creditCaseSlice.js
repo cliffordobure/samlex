@@ -243,6 +243,26 @@ const creditCaseSlice = createSlice({
       })
       .addCase(updateCaseStatus.rejected, (state, action) => {
         state.error = action.payload;
+      })
+      .addCase(deleteCreditCase.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(deleteCreditCase.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.cases = state.cases.filter(
+          (case_) => case_._id !== action.payload.id
+        );
+        if (state.currentCase && state.currentCase._id === action.payload.id) {
+          state.currentCase = null;
+        }
+        if (state.caseDetails && state.caseDetails._id === action.payload.id) {
+          state.caseDetails = null;
+        }
+      })
+      .addCase(deleteCreditCase.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
       });
   },
 });

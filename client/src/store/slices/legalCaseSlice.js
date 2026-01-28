@@ -142,6 +142,20 @@ export const addLegalCaseComment = createAsyncThunk(
   }
 );
 
+export const deleteLegalCase = createAsyncThunk(
+  "legalCases/deleteLegalCase",
+  async (id, { rejectWithValue }) => {
+    try {
+      const response = await legalCaseApi.deleteLegalCase(id);
+      return { id, ...response.data };
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to delete legal case"
+      );
+    }
+  }
+);
+
 export const addLegalCaseDocument = createAsyncThunk(
   "legalCases/addLegalCaseDocument",
   async ({ id, documents }, { rejectWithValue }) => {
@@ -332,6 +346,23 @@ const legalCaseSlice = createSlice({
       })
       .addCase(getPendingAssignmentCases.fulfilled, () => {
         // Handle pending assignment cases if needed
+      })
+      .addCase(deleteLegalCase.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(deleteLegalCase.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.cases = state.cases.filter(
+          (case_) => case_._id !== action.payload.id
+        );
+        if (state.currentCase && state.currentCase._id === action.payload.id) {
+          state.currentCase = null;
+        }
+      })
+      .addCase(deleteLegalCase.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
       })
       .addCase(getLegalCaseStatistics.fulfilled, () => {
         // Handle statistics if needed

@@ -1644,3 +1644,78 @@ export const updatePromisedPaymentStatus = async (req, res) => {
     });
   }
 };
+
+/**
+ * @desc    Delete a credit case permanently
+ * @route   DELETE /api/credit-cases/:id
+ * @access  Private (law_firm_admin only)
+ */
+export const deleteCreditCase = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    console.log("🗑️ Deleting credit case:", id);
+
+    // Check if user is admin
+    if (req.user.role !== "law_firm_admin") {
+      return res.status(403).json({
+        success: false,
+        message: "Only administrators can delete cases",
+      });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid case ID format",
+      });
+    }
+
+    // Find the case
+    const creditCase = await CreditCase.findById(id);
+
+    if (!creditCase) {
+      return res.status(404).json({
+        success: false,
+        message: "Credit case not found",
+      });
+    }
+
+    // Verify the case belongs to the user's law firm
+    if (creditCase.lawFirm.toString() !== req.user.lawFirm._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: "You don't have access to this case",
+      });
+    }
+
+    // Delete associated comments
+    await Comment.deleteMany({ creditCase: id });
+
+    // Delete associated payments
+    await Payment.deleteMany({ creditCase: id });
+
+    // Delete associated documents from database if needed
+    // Note: You may want to implement document cleanup here
+
+    // Delete the case permanently
+    await CreditCase.findByIdAndDelete(id);
+
+    console.log("✅ Credit case deleted successfully:", creditCase.caseNumber);
+
+    // Emit socket event
+    req.app.get("io").emit("caseDeleted", { caseId: id });
+
+    res.status(200).json({
+      success: true,
+      message: "Credit case deleted successfully",
+    });
+  } catch (error) {
+    console.error("❌ Error deleting credit case:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error deleting credit case",
+      error: error.message,
+    });
+  }
+};
