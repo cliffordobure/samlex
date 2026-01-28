@@ -116,6 +116,20 @@ export const getCreditCaseById = createAsyncThunk(
   }
 );
 
+export const deleteCreditCase = createAsyncThunk(
+  "creditCases/deleteCreditCase",
+  async (id, { rejectWithValue }) => {
+    try {
+      const response = await creditCaseApi.deleteCreditCase(id);
+      return { id, ...response.data }; // Return id for reducer to filter
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to delete credit case"
+      );
+    }
+  }
+);
+
 const initialState = {
   cases: [],
   currentCase: null,
