@@ -121,7 +121,7 @@ function App() {
       }
     }
   }, [user, isAuthenticated, isLoading, location.pathname, navigate]);
-
+//this line is for testing the application 
   const getDashboardRoute = () => {
     // Determine role - check userType first, then user.role
     const userType = localStorage.getItem("userType");
