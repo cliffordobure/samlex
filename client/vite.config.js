@@ -36,15 +36,32 @@ export default defineConfig({
     chunkSizeWarningLimit: 1000,
     rollupOptions: {
       output: {
-        manualChunks: {
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          'redux-vendor': ['@reduxjs/toolkit', 'react-redux'],
-          'ui-vendor': ['react-icons', 'react-hot-toast', 'framer-motion'],
-          'chart-vendor': ['chart.js', 'react-chartjs-2'],
+        manualChunks(id) {
+          // More aggressive chunking to prevent scoping issues
+          if (id.includes('node_modules')) {
+            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
+              return 'react-vendor';
+            }
+            if (id.includes('@reduxjs') || id.includes('react-redux')) {
+              return 'redux-vendor';
+            }
+            if (id.includes('react-icons') || id.includes('react-hot-toast') || id.includes('framer-motion')) {
+              return 'ui-vendor';
+            }
+            if (id.includes('chart.js') || id.includes('react-chartjs')) {
+              return 'chart-vendor';
+            }
+            // Split other large node_modules
+            if (id.includes('node_modules')) {
+              return 'vendor';
+            }
+          }
         },
       },
       treeshake: {
         moduleSideEffects: false,
+        propertyReadSideEffects: false,
+        tryCatchDeoptimization: false,
       },
     },
     minify: 'esbuild',

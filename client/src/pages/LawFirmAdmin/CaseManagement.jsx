@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -86,6 +86,24 @@ const AdminCaseManagement = () => {
   });
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Fetch escalated cases - moved before useEffect to fix scoping
+  const fetchEscalatedCases = useCallback(async () => {
+    setEscalatedLoading(true);
+    try {
+      const response = await creditCaseApi.getEscalatedCases({
+        page: 1,
+        limit: 50,
+      });
+      console.log("Escalated cases response:", response.data);
+      setEscalatedCases(response.data.data || []);
+    } catch (error) {
+      console.error("Error fetching escalated cases:", error);
+      toast.error("Failed to fetch escalated cases");
+    } finally {
+      setEscalatedLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (user?.lawFirm?._id) {
       console.log("🔄 Loading cases for law firm:", user.lawFirm._id);
@@ -100,7 +118,7 @@ const AdminCaseManagement = () => {
       // Load escalated cases
       fetchEscalatedCases();
     }
-  }, [dispatch, user?.lawFirm?._id]);
+  }, [dispatch, user?.lawFirm?._id, fetchEscalatedCases]);
 
   // Socket listeners for real-time updates
   useEffect(() => {
@@ -148,25 +166,7 @@ const AdminCaseManagement = () => {
       socket.off("creditCaseUpdated", handleCreditCaseUpdated);
       socket.emit("leave-law-firm", user.lawFirm._id);
     };
-  }, [dispatch, user?.lawFirm?._id]);
-
-  // Fetch escalated cases
-  const fetchEscalatedCases = async () => {
-    setEscalatedLoading(true);
-    try {
-      const response = await creditCaseApi.getEscalatedCases({
-        page: 1,
-        limit: 50,
-      });
-      console.log("Escalated cases response:", response.data);
-      setEscalatedCases(response.data.data || []);
-    } catch (error) {
-      console.error("Error fetching escalated cases:", error);
-      toast.error("Failed to fetch escalated cases");
-    } finally {
-      setEscalatedLoading(false);
-    }
-  };
+  }, [dispatch, user?.lawFirm?._id, fetchEscalatedCases]);
 
   const handleAssignCase = async (caseId, userId, caseType = "credit") => {
     try {
