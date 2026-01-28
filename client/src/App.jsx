@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import React, { useEffect } from "react";
 import {
   Routes,
   Route,
@@ -71,14 +71,25 @@ function App() {
       userType: userType,
       userRole: user?.role,
       currentPath: location.pathname,
+      isLoading: isLoading,
     });
 
     // Only dispatch getCurrentUser if we have a token but no user data
-    if (token && !user) {
+    if (token && !user && !isLoading) {
       console.log("📡 Dispatching getCurrentUser");
       dispatch(getCurrentUser());
     }
-  }, [dispatch, user]);
+    
+    // Timeout fallback: if loading takes too long, stop loading
+    if (isLoading) {
+      const timeout = setTimeout(() => {
+        console.warn("⚠️ Loading timeout - stopping loading state");
+        // Don't force stop, let the thunk handle it
+      }, 10000); // 10 second timeout
+      
+      return () => clearTimeout(timeout);
+    }
+  }, [dispatch, user, isLoading]);
 
   // Handle invalid tokens
   useEffect(() => {
@@ -187,7 +198,23 @@ function App() {
     }
   };
 
-  if (isLoading) {
+  // Prevent infinite loading - if loading for more than 10 seconds, show app anyway
+  const [loadingTimeout, setLoadingTimeout] = React.useState(false);
+  
+  React.useEffect(() => {
+    if (isLoading) {
+      const timer = setTimeout(() => {
+        console.warn("⚠️ Loading timeout exceeded - rendering app anyway");
+        setLoadingTimeout(true);
+      }, 10000); // 10 second timeout
+      return () => clearTimeout(timer);
+    } else {
+      setLoadingTimeout(false);
+    }
+  }, [isLoading]);
+
+  // Don't show loading if timeout exceeded or if there's no token (should show login)
+  if (isLoading && !loadingTimeout && localStorage.getItem("token")) {
     return <Loading />;
   }
 
