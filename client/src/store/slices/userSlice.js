@@ -101,6 +101,20 @@ export const resetUserPassword = createAsyncThunk(
   }
 );
 
+export const deleteUser = createAsyncThunk(
+  "users/deleteUser",
+  async (id, { rejectWithValue }) => {
+    try {
+      const response = await userApi.deleteUser(id);
+      return { id, ...response.data };
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to delete user"
+      );
+    }
+  }
+);
+
 const initialState = {
   users: [],
   currentUser: null,
@@ -196,6 +210,21 @@ const userSlice = createSlice({
       })
       .addCase(resetUserPassword.fulfilled, () => {
         // No state change needed, handled by UI toast
+      })
+      .addCase(deleteUser.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(deleteUser.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.users = state.users.filter((user) => user._id !== action.payload.id);
+        if (state.currentUser && state.currentUser._id === action.payload.id) {
+          state.currentUser = null;
+        }
+      })
+      .addCase(deleteUser.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
       });
   },
 });

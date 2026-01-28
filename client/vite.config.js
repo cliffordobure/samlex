@@ -43,8 +43,15 @@ export default defineConfig({
           'chart-vendor': ['chart.js', 'react-chartjs-2'],
         },
       },
+      treeshake: {
+        moduleSideEffects: false,
+      },
     },
     minify: 'esbuild',
     cssMinify: true,
+    commonjsOptions: {
+      include: [/node_modules/],
+      transformMixedEsModules: true,
+    },
   },
 });

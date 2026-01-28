@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -30,15 +30,12 @@ import {
   FaColumns,
   FaList,
   FaTimes,
-  FaCheckCircle,
   FaExclamationTriangle,
-  FaClock,
   FaUser,
   FaCalendar,
   FaMoneyBillWave,
   FaGavel,
   FaBuilding,
-  FaArrowRight,
   FaFileContract,
   FaTrash,
 } from "react-icons/fa";
@@ -360,7 +357,7 @@ const AdminCaseManagement = () => {
     setShowAssignmentModal(true);
   };
 
-  const filteredCreditCases = React.useMemo(() => {
+  const filteredCreditCases = useMemo(() => {
     console.log("🔍 Credit cases loaded:", {
       total: creditCases?.length || 0,
       cases: creditCases?.map((c) => ({
@@ -406,7 +403,7 @@ const AdminCaseManagement = () => {
     return filtered;
   }, [creditCases, filters]);
 
-  const filteredLegalCases = React.useMemo(() => {
+  const filteredLegalCases = useMemo(() => {
     console.log("🔍 Legal cases loaded:", {
       total: legalCases?.length || 0,
       cases: legalCases?.map((c) => ({

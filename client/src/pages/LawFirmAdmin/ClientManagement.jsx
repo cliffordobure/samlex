@@ -26,6 +26,7 @@ import {
   FaEnvelope,
   FaCalendar,
   FaTag,
+  FaExclamationTriangle,
 } from "react-icons/fa";
 
 const ClientManagement = () => {
@@ -39,6 +40,8 @@ const ClientManagement = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedClient, setSelectedClient] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [clientToDelete, setClientToDelete] = useState(null);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -101,11 +104,22 @@ const ClientManagement = () => {
     dispatch(fetchClients(filters));
   };
 
-  const handleDeleteClient = async (clientId) => {
-    if (window.confirm("Are you sure you want to delete this client?")) {
-      await dispatch(deleteClient(clientId));
-      dispatch(fetchClients(filters));
-    }
+  const handleDeleteClient = (client) => {
+    setClientToDelete(client);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDeleteClient = async () => {
+    if (!clientToDelete) return;
+    await dispatch(deleteClient(clientToDelete._id));
+    setShowDeleteModal(false);
+    setClientToDelete(null);
+    dispatch(fetchClients(filters));
+  };
+
+  const cancelDeleteClient = () => {
+    setShowDeleteModal(false);
+    setClientToDelete(null);
   };
 
   const handleEdit = (client) => {
@@ -424,9 +438,9 @@ const ClientManagement = () => {
                             <FaEdit className="w-4 h-4" />
                           </button>
                           <button
-                            onClick={() => handleDeleteClient(client._id)}
+                            onClick={() => handleDeleteClient(client)}
                             className="text-red-400 hover:text-red-300 transition-colors"
-                            title="Delete client"
+                            title="Delete client permanently"
                           >
                             <FaTrash className="w-4 h-4" />
                           </button>
@@ -439,6 +453,76 @@ const ClientManagement = () => {
             </table>
           </div>
         </div>
+
+        {/* Delete Client Confirmation Modal */}
+        {showDeleteModal && clientToDelete && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-gradient-to-br from-slate-800 to-slate-700 rounded-2xl w-full max-w-md mx-4 border border-slate-600/50 shadow-2xl">
+              <div className="flex items-center mb-6">
+                <div className="flex-shrink-0">
+                  <div className="bg-red-500/20 p-3 rounded-xl border border-red-500/30">
+                    <FaExclamationTriangle className="h-6 w-6 text-red-400" />
+                  </div>
+                </div>
+                <div className="ml-4">
+                  <h3 className="text-xl font-bold text-white">
+                    Delete Client
+                  </h3>
+                  <p className="text-sm text-slate-400">This action cannot be undone</p>
+                </div>
+              </div>
+
+              <div className="mb-6">
+                <div className="bg-red-500/10 p-4 rounded-xl border border-red-500/20 mb-4">
+                  <p className="text-slate-300 mb-3">
+                    Are you sure you want to permanently delete{" "}
+                    <span className="font-semibold text-white">
+                      {clientToDelete?.firstName} {clientToDelete?.lastName}
+                      {clientToDelete?.companyName && ` (${clientToDelete.companyName})`}
+                    </span>?
+                  </p>
+                  <p className="text-slate-300 mb-2">
+                    <strong>Email:</strong> {clientToDelete?.email}
+                  </p>
+                  <p className="text-slate-300 mb-2">
+                    <strong>Type:</strong> {clientToDelete?.clientType}
+                  </p>
+                  <p className="text-red-400 text-sm mt-3 font-semibold">
+                    ⚠️ This will permanently delete the client and all associated data from the database. This action cannot be undone.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={cancelDeleteClient}
+                  className="px-6 py-2 bg-slate-600/80 hover:bg-slate-600 text-white rounded-xl border border-slate-500/50 hover:border-slate-400/50 transition-all duration-200"
+                  disabled={deleting}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDeleteClient}
+                  disabled={deleting}
+                  className="px-6 py-2 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 disabled:from-red-800 disabled:to-red-900 disabled:cursor-not-allowed text-white border-0 rounded-xl font-medium transition-all duration-200 shadow-lg flex items-center gap-2"
+                >
+                  {deleting ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <span>Deleting...</span>
+                    </>
+                  ) : (
+                    <>
+                      <FaTrash className="w-4 h-4" />
+                      <span>Delete Permanently</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Pagination */}
         {pagination.pages > 1 && (
@@ -621,6 +705,76 @@ const ClientManagement = () => {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Client Confirmation Modal */}
+        {showDeleteModal && clientToDelete && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-gradient-to-br from-slate-800 to-slate-700 rounded-2xl w-full max-w-md mx-4 border border-slate-600/50 shadow-2xl">
+              <div className="flex items-center mb-6">
+                <div className="flex-shrink-0">
+                  <div className="bg-red-500/20 p-3 rounded-xl border border-red-500/30">
+                    <FaExclamationTriangle className="h-6 w-6 text-red-400" />
+                  </div>
+                </div>
+                <div className="ml-4">
+                  <h3 className="text-xl font-bold text-white">
+                    Delete Client
+                  </h3>
+                  <p className="text-sm text-slate-400">This action cannot be undone</p>
+                </div>
+              </div>
+
+              <div className="mb-6">
+                <div className="bg-red-500/10 p-4 rounded-xl border border-red-500/20 mb-4">
+                  <p className="text-slate-300 mb-3">
+                    Are you sure you want to permanently delete{" "}
+                    <span className="font-semibold text-white">
+                      {clientToDelete?.firstName} {clientToDelete?.lastName}
+                      {clientToDelete?.companyName && ` (${clientToDelete.companyName})`}
+                    </span>?
+                  </p>
+                  <p className="text-slate-300 mb-2">
+                    <strong>Email:</strong> {clientToDelete?.email}
+                  </p>
+                  <p className="text-slate-300 mb-2">
+                    <strong>Type:</strong> {clientToDelete?.clientType}
+                  </p>
+                  <p className="text-red-400 text-sm mt-3 font-semibold">
+                    ⚠️ This will permanently delete the client and all associated data from the database. This action cannot be undone.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={cancelDeleteClient}
+                  className="px-6 py-2 bg-slate-600/80 hover:bg-slate-600 text-white rounded-xl border border-slate-500/50 hover:border-slate-400/50 transition-all duration-200"
+                  disabled={deleting}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDeleteClient}
+                  disabled={deleting}
+                  className="px-6 py-2 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 disabled:from-red-800 disabled:to-red-900 disabled:cursor-not-allowed text-white border-0 rounded-xl font-medium transition-all duration-200 shadow-lg flex items-center gap-2"
+                >
+                  {deleting ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <span>Deleting...</span>
+                    </>
+                  ) : (
+                    <>
+                      <FaTrash className="w-4 h-4" />
+                      <span>Delete Permanently</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         )}

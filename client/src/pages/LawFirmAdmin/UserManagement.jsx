@@ -9,6 +9,7 @@ import {
   updateUser,
   deactivateUser,
   resetUserPassword,
+  deleteUser,
 } from "../../store/slices/userSlice";
 import { getDepartments } from "../../store/slices/departmentSlice";
 import toast from "react-hot-toast";
@@ -68,6 +69,9 @@ const UserList = () => {
   const [userToDeactivate, setUserToDeactivate] = useState(null);
   const [isDeactivating, setIsDeactivating] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [userToDelete, setUserToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [sortConfig, setSortConfig] = useState({
     key: "createdAt",
     direction: "desc",
@@ -186,6 +190,35 @@ const UserList = () => {
       toast.error(err || "Failed to reset password");
     } finally {
       setIsResetting(false);
+    }
+  };
+
+  const handleDelete = (user) => {
+    setUserToDelete(user);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!userToDelete) return;
+    setIsDeleting(true);
+    try {
+      await dispatch(deleteUser(userToDelete._id)).unwrap();
+      toast.success("User deleted successfully");
+      setShowDeleteModal(false);
+      setUserToDelete(null);
+      // Refresh users list
+      dispatch(getUsers());
+    } catch (err) {
+      toast.error(err || "Failed to delete user");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const cancelDelete = () => {
+    if (!isDeleting) {
+      setShowDeleteModal(false);
+      setUserToDelete(null);
     }
   };
 
@@ -512,9 +545,17 @@ const UserList = () => {
                           </button>
                           <button
                             onClick={() => handleDeactivate(user)}
-                            className="p-2 text-red-400 hover:text-red-300 hover:bg-red-500/20 rounded-lg transition-all duration-200"
+                            className="p-2 text-orange-400 hover:text-orange-300 hover:bg-orange-500/20 rounded-lg transition-all duration-200"
                             title="Deactivate User"
                             disabled={isDeactivating}
+                          >
+                            <FaUserTimes className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(user)}
+                            className="p-2 text-red-400 hover:text-red-300 hover:bg-red-500/20 rounded-lg transition-all duration-200"
+                            title="Delete User Permanently"
+                            disabled={isDeleting}
                           >
                             <FaTrash className="w-4 h-4" />
                           </button>
@@ -596,6 +637,75 @@ const UserList = () => {
                 className="px-6 py-2 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 disabled:from-red-800 disabled:to-red-900 disabled:cursor-not-allowed text-white border-0 rounded-xl font-medium transition-all duration-200 shadow-lg"
               >
                 {isDeactivating ? "Deactivating..." : "Deactivate User"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete User Modal */}
+      {showDeleteModal && userToDelete && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gradient-to-br from-slate-800 to-slate-700 rounded-2xl w-full max-w-md mx-4 border border-slate-600/50 shadow-2xl">
+            <div className="flex items-center mb-6">
+              <div className="flex-shrink-0">
+                <div className="bg-red-500/20 p-3 rounded-xl border border-red-500/30">
+                  <FaExclamationTriangle className="h-6 w-6 text-red-400" />
+                </div>
+              </div>
+              <div className="ml-4">
+                <h3 className="text-xl font-bold text-white">
+                  Delete User
+                </h3>
+                <p className="text-sm text-slate-400">This action cannot be undone</p>
+              </div>
+            </div>
+
+            <div className="mb-6">
+              <div className="bg-red-500/10 p-4 rounded-xl border border-red-500/20 mb-4">
+                <p className="text-slate-300 mb-3">
+                  Are you sure you want to permanently delete{" "}
+                  <span className="font-semibold text-white">
+                    {userToDelete?.firstName} {userToDelete?.lastName}
+                  </span>?
+                </p>
+                <p className="text-slate-300 mb-2">
+                  <strong>Email:</strong> {userToDelete?.email}
+                </p>
+                <p className="text-slate-300 mb-2">
+                  <strong>Role:</strong> {userToDelete?.role?.replace("_", " ").toUpperCase()}
+                </p>
+                <p className="text-red-400 text-sm mt-3 font-semibold">
+                  ⚠️ This will permanently delete the user and all associated data from the database. This action cannot be undone.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={cancelDelete}
+                className="px-6 py-2 bg-slate-600/80 hover:bg-slate-600 text-white rounded-xl border border-slate-500/50 hover:border-slate-400/50 transition-all duration-200"
+                disabled={isDeleting}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                disabled={isDeleting}
+                className="px-6 py-2 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 disabled:from-red-800 disabled:to-red-900 disabled:cursor-not-allowed text-white border-0 rounded-xl font-medium transition-all duration-200 shadow-lg flex items-center gap-2"
+              >
+                {isDeleting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  <>
+                    <FaTrash className="w-4 h-4" />
+                    <span>Delete Permanently</span>
+                  </>
+                )}
               </button>
             </div>
           </div>
