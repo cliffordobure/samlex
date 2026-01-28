@@ -55,12 +55,22 @@ import ResetPassword from "./pages/ResetPassword";
 import Notifications from "./pages/Notifications";
 
 function App() {
+  console.log("🚀 App component rendering...");
+  
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const location = useLocation();
   const { user, isLoading, isAuthenticated, error } = useSelector(
     (state) => state.auth
   );
+  
+  console.log("📊 App state:", {
+    hasUser: !!user,
+    isLoading,
+    isAuthenticated,
+    error,
+    pathname: location.pathname,
+  });
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -215,11 +225,22 @@ function App() {
 
   // Don't show loading if timeout exceeded or if there's no token (should show login)
   if (isLoading && !loadingTimeout && localStorage.getItem("token")) {
+    console.log("⏳ Showing loading screen...");
     return <Loading />;
   }
 
+  console.log("✅ Rendering main app content...");
+
   return (
-    <div className="min-h-screen bg-dark-900">
+    <div 
+      className="min-h-screen bg-dark-900"
+      style={{ 
+        minHeight: '100vh',
+        backgroundColor: '#0f172a',
+        color: '#f8fafc',
+        width: '100%'
+      }}
+    >
       <NetworkStatus />
       <NetworkDebugger />
       <Routes>
