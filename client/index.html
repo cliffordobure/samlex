@@ -33,32 +33,63 @@
       </div>
     </div>
     <script>
-      // Immediate error logging
+      // Capture ALL errors immediately
+      const errors = [];
+      const originalConsoleError = console.error;
+      console.error = function() {
+        errors.push(Array.from(arguments));
+        originalConsoleError.apply(console, arguments);
+      };
+      
+      // Immediate error logging - CAPTURE PHASE to catch module errors
       window.addEventListener('error', function(e) {
+        console.error('❌❌❌ ERROR EVENT CAUGHT ❌❌❌');
         console.error('Global error:', e.error);
         console.error('Error details:', {
           message: e.message,
           filename: e.filename,
           lineno: e.lineno,
           colno: e.colno,
-          error: e.error
+          error: e.error,
+          stack: e.error ? e.error.stack : 'No stack'
         });
+        
+        // Show error immediately
         const root = document.getElementById('root');
         if (root) {
-          root.innerHTML = '<div class="error-fallback"><h2>Application Error</h2><p>' + e.message + '</p><p>File: ' + (e.filename || 'unknown') + '</p><pre>' + (e.error ? e.error.stack : 'No stack trace') + '</pre></div>';
+          const errorHtml = '<div class="error-fallback" style="padding: 20px; background: #fee; border: 2px solid #c33; margin: 20px; border-radius: 4px; color: #c33;"><h2>❌ JavaScript Error Detected</h2><p><strong>Error Message:</strong> ' + e.message + '</p><p><strong>File:</strong> ' + (e.filename || 'unknown') + '</p><p><strong>Line:</strong> ' + (e.lineno || 'unknown') + '</p><pre style="background: #fff; padding: 10px; overflow: auto; white-space: pre-wrap;">' + (e.error ? e.error.stack : 'No stack trace available') + '</pre><p><small>Check browser console (F12) for more details</small></p></div>';
+          root.innerHTML = errorHtml;
         }
-      });
+      }, true); // Use capture phase
       
       // Log script loading errors
       window.addEventListener('error', function(e) {
+        console.error('❌ ERROR EVENT CAUGHT:', {
+          message: e.message,
+          filename: e.filename,
+          lineno: e.lineno,
+          colno: e.colno,
+          error: e.error,
+          target: e.target
+        });
+        
         if (e.target && e.target.tagName === 'SCRIPT') {
-          console.error('Script loading error:', {
+          console.error('❌ Script loading error:', {
             src: e.target.src,
-            error: e.message
+            error: e.message,
+            filename: e.filename,
+            lineno: e.lineno
           });
           const root = document.getElementById('root');
           if (root) {
-            root.innerHTML = '<div class="error-fallback"><h2>Script Loading Error</h2><p>Failed to load: ' + e.target.src + '</p><p>Error: ' + e.message + '</p><p>Check Network tab for details.</p></div>';
+            root.innerHTML = '<div class="error-fallback"><h2>Script Loading Error</h2><p>Failed to load: ' + e.target.src + '</p><p>Error: ' + e.message + '</p><p>File: ' + (e.filename || 'unknown') + '</p><p>Line: ' + (e.lineno || 'unknown') + '</p><p>Check Network tab for details.</p></div>';
+          }
+        } else {
+          // Any other error
+          console.error('❌ Runtime error:', e.message);
+          const root = document.getElementById('root');
+          if (root && root.innerHTML.includes('Loading')) {
+            root.innerHTML = '<div class="error-fallback"><h2>JavaScript Error</h2><p><strong>Error:</strong> ' + e.message + '</p><p><strong>File:</strong> ' + (e.filename || 'unknown') + '</p><p><strong>Line:</strong> ' + (e.lineno || 'unknown') + '</p><pre style="background: #fff; padding: 10px; overflow: auto;">' + (e.error ? e.error.stack : 'No stack trace') + '</pre></div>';
           }
         }
       }, true);
@@ -90,12 +121,31 @@
                     }
                   } else {
                     console.log('✅ Script file exists and is accessible');
-                    // Check if main.jsx executed
-                    if (!window.__APP_LOADING__ && !window.__APP_LOADED__) {
-                      console.error('❌ Script loaded but main.jsx did not execute!');
-                      console.error('This means there is a JavaScript error preventing execution.');
-                      console.error('Check Console tab for red error messages.');
-                    }
+                    // Try to read the script content to check if it's valid
+                    response.text().then(function(scriptContent) {
+                      console.log('📄 Script file size:', scriptContent.length, 'characters');
+                      // Check if it looks like valid JavaScript
+                      if (scriptContent.includes('import') || scriptContent.includes('export') || scriptContent.includes('function')) {
+                        console.log('✅ Script appears to contain valid JavaScript');
+                      } else {
+                        console.error('⚠️ Script content might be invalid or empty');
+                        console.log('First 200 characters:', scriptContent.substring(0, 200));
+                      }
+                      
+                      // Check if main.jsx executed
+                      if (!window.__APP_LOADING__ && !window.__APP_LOADED__) {
+                        console.error('❌ Script loaded but main.jsx did not execute!');
+                        console.error('This means there is a JavaScript error preventing execution.');
+                        console.error('The script file loaded successfully but the code inside failed to run.');
+                        console.error('This is usually caused by:');
+                        console.error('1. Syntax error in the bundled code');
+                        console.error('2. Import/module resolution error');
+                        console.error('3. Runtime error during module initialization');
+                        console.error('Check Console tab above for red error messages with file names and line numbers.');
+                      }
+                    }).catch(function(err) {
+                      console.error('Error reading script content:', err);
+                    });
                   }
                 })
                 .catch(function(error) {
@@ -112,10 +162,19 @@
             originalError.apply(console, arguments);
           };
           
-          // Show diagnostic message
+          // Show diagnostic message with collected errors
           const root = document.getElementById('root');
           if (root && !root.innerHTML.includes('error-fallback')) {
-            root.innerHTML = '<div style="padding: 20px; text-align: center; background: #fff3cd; border: 2px solid #ffc107; margin: 20px; border-radius: 4px;"><h2>⚠️ Application Not Loading</h2><p>The script file loaded successfully but the application did not start.</p><p><strong>This usually means there is a JavaScript error.</strong></p><p>Please check:</p><ul style="text-align: left; display: inline-block;"><li><strong>Console tab</strong> for red error messages</li><li>Look for errors starting with "❌" or "Error"</li><li>Check if you see "🚀 main.jsx script started" in console</li></ul><p><small>If you see "🚀 main.jsx script started" but nothing after, there is an import or initialization error.</small></p></div>';
+            let errorSummary = '';
+            if (errors.length > 0) {
+              errorSummary = '<div style="background: #fee; padding: 10px; margin: 10px 0; border-radius: 4px;"><strong>Errors captured:</strong><ul>';
+              errors.forEach(function(err, idx) {
+                errorSummary += '<li>' + JSON.stringify(err) + '</li>';
+              });
+              errorSummary += '</ul></div>';
+            }
+            
+            root.innerHTML = '<div style="padding: 20px; text-align: center; background: #fff3cd; border: 2px solid #ffc107; margin: 20px; border-radius: 4px;"><h2>⚠️ Application Not Loading</h2><p>The script file loaded successfully (status 200) but the JavaScript code inside is NOT executing.</p><p><strong>This means there is a JavaScript error preventing the code from running.</strong></p>' + errorSummary + '<p><strong>What to check:</strong></p><ol style="text-align: left; display: inline-block;"><li>Look in the <strong>Console tab</strong> for red error messages</li><li>Check if you see "🚀 main.jsx script started" - if NOT, the script failed before first line</li><li>Look for errors with file names like "index-D1ymCBAx.js"</li><li>Check Vercel build logs for build errors</li></ol><p><small>Scroll up in the Console tab to see the actual error message</small></p></div>';
           }
         }
       }, 5000);
