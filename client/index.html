@@ -88,6 +88,14 @@
                     if (root) {
                       root.innerHTML = '<div class="error-fallback"><h2>Script Not Found</h2><p>Failed to load: ' + script.src + '</p><p>Status: ' + response.status + ' ' + response.statusText + '</p><p>This usually means the build did not complete correctly or the file path is wrong.</p><p>Check Vercel build logs for errors.</p></div>';
                     }
+                  } else {
+                    console.log('✅ Script file exists and is accessible');
+                    // Check if main.jsx executed
+                    if (!window.__APP_LOADING__ && !window.__APP_LOADED__) {
+                      console.error('❌ Script loaded but main.jsx did not execute!');
+                      console.error('This means there is a JavaScript error preventing execution.');
+                      console.error('Check Console tab for red error messages.');
+                    }
                   }
                 })
                 .catch(function(error) {
@@ -96,10 +104,18 @@
             }
           });
           
+          // Check for console errors
+          const originalError = console.error;
+          let errorCount = 0;
+          console.error = function() {
+            errorCount++;
+            originalError.apply(console, arguments);
+          };
+          
           // Show diagnostic message
           const root = document.getElementById('root');
           if (root && !root.innerHTML.includes('error-fallback')) {
-            root.innerHTML = '<div style="padding: 20px; text-align: center; background: #fff3cd; border: 2px solid #ffc107; margin: 20px; border-radius: 4px;"><h2>⚠️ Application Not Loading</h2><p>The script file may not be loading correctly.</p><p>Please check:</p><ul style="text-align: left; display: inline-block;"><li>Network tab for failed requests</li><li>Console for error messages</li><li>Vercel build logs</li></ul><p><small>Check browser console (F12) for detailed diagnostics</small></p></div>';
+            root.innerHTML = '<div style="padding: 20px; text-align: center; background: #fff3cd; border: 2px solid #ffc107; margin: 20px; border-radius: 4px;"><h2>⚠️ Application Not Loading</h2><p>The script file loaded successfully but the application did not start.</p><p><strong>This usually means there is a JavaScript error.</strong></p><p>Please check:</p><ul style="text-align: left; display: inline-block;"><li><strong>Console tab</strong> for red error messages</li><li>Look for errors starting with "❌" or "Error"</li><li>Check if you see "🚀 main.jsx script started" in console</li></ul><p><small>If you see "🚀 main.jsx script started" but nothing after, there is an import or initialization error.</small></p></div>';
           }
         }
       }, 5000);
