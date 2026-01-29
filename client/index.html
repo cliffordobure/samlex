@@ -4,10 +4,52 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite + React</title>
+    <title>Samlex - Law Firm SaaS</title>
+    <style>
+      /* Loading fallback */
+      #root:empty::before {
+        content: "Loading...";
+        display: block;
+        padding: 20px;
+        text-align: center;
+        color: #666;
+      }
+      /* Error fallback */
+      .error-fallback {
+        padding: 20px;
+        background: #fee;
+        color: #c33;
+        border: 1px solid #c33;
+        margin: 20px;
+        border-radius: 4px;
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div style="padding: 20px; text-align: center;">
+        <h1>Loading Application...</h1>
+        <p>If this message persists, check the browser console for errors.</p>
+      </div>
+    </div>
+    <script>
+      // Immediate error logging
+      window.addEventListener('error', function(e) {
+        console.error('Global error:', e.error);
+        document.getElementById('root').innerHTML = '<div class="error-fallback"><h2>Application Error</h2><p>' + e.message + '</p><pre>' + (e.error ? e.error.stack : 'No stack trace') + '</pre></div>';
+      });
+      
+      // Log when page loads
+      console.log('HTML loaded, attempting to load main.jsx...');
+      console.log('Current URL:', window.location.href);
+      console.log('User Agent:', navigator.userAgent);
+    </script>
     <script type="module" src="/src/main.jsx"></script>
+    <noscript>
+      <div style="padding: 20px; text-align: center; background: #fee; color: #c33;">
+        <h1>JavaScript is Required</h1>
+        <p>Please enable JavaScript to use this application.</p>
+      </div>
+    </noscript>
   </body>
 </html>
