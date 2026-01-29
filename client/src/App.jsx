@@ -274,16 +274,6 @@ function App() {
               backgroundColor: '#0f172a',
               minHeight: '100vh'
             }}>
-              <div style={{
-                background: 'red',
-                color: 'white',
-                padding: '20px',
-                marginBottom: '20px',
-                fontSize: '24px',
-                fontWeight: 'bold'
-              }}>
-                ✅ React is Working! If you see this, React is rendering.
-              </div>
               <LandingPage />
             </div>
           } 
