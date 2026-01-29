@@ -233,6 +233,15 @@ const LegalOverview = () => {
         });
       }
       
+      // Also count filing fees that are marked as paid
+      if (legalCase.filingFee && legalCase.filingFee.paid && legalCase.filingFee.amount) {
+        totalMoneyCollected += legalCase.filingFee.amount;
+        // Count as a payment if not already counted in payments array
+        if (!legalCase.payments || legalCase.payments.length === 0) {
+          totalPaymentsCount += 1;
+        }
+      }
+      
       // Sum up total fees (if totalFee is set)
       if (legalCase.totalFee && legalCase.totalFee.amount) {
         totalFeeAmount += legalCase.totalFee.amount;
@@ -707,7 +716,7 @@ const LegalOverview = () => {
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0 pr-1">
               <p className="text-slate-400 text-xs font-medium mb-1">Total Revenue</p>
-              <p className="text-[10px] sm:text-xs font-bold text-white group-hover:text-purple-400 transition-colors break-words leading-tight">{formatCurrency(stats.totalFilingFees)}</p>
+              <p className="text-[10px] sm:text-xs font-bold text-white group-hover:text-purple-400 transition-colors break-words leading-tight">{formatCurrency(stats.totalMoneyCollected)}</p>
               <div className="flex items-center mt-1">
                 <FaMoneyBillWave className="w-3 h-3 text-purple-500 mr-1 flex-shrink-0" />
                 <span className="text-purple-500 text-xs font-medium break-words">

@@ -230,14 +230,13 @@ const CreateLegalCase = () => {
         newErrors.clientName = "Client name is required";
       }
 
-      if (!formData.client.email.trim()) {
-        newErrors.clientEmail = "Client email is required";
-      } else if (!/\S+@\S+\.\S+/.test(formData.client.email)) {
-        newErrors.clientEmail = "Please enter a valid email address";
-      }
-
       if (!formData.client.phone.trim()) {
         newErrors.clientPhone = "Client phone is required";
+      }
+
+      // Email is optional, but if provided, it must be valid
+      if (formData.client.email.trim() && !/\S+@\S+\.\S+/.test(formData.client.email)) {
+        newErrors.clientEmail = "Please enter a valid email address";
       }
     }
 
@@ -736,7 +735,7 @@ const CreateLegalCase = () => {
                 {/* Client Email */}
                 <div className="space-y-2">
                   <label className="block text-sm font-semibold text-white">
-                    Client Email <span className="text-red-400">*</span>
+                    Client Email <span className="text-dark-400 text-xs">(Optional)</span>
                   </label>
                   <div className="relative">
                     <FaEnvelope className="absolute left-3 top-1/2 transform -translate-y-1/2 text-dark-400 w-4 h-4" />

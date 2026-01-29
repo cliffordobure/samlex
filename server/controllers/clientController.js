@@ -31,24 +31,34 @@ export const createClient = async (req, res) => {
     console.log("Request body:", req.body);
     console.log("User:", req.user);
 
-    // Check if client with email already exists in this law firm
-    const existingClient = await Client.findOne({
-      email: email.toLowerCase(),
-      lawFirm: req.user.lawFirm._id,
-    });
-
-    if (existingClient) {
+    // Validate required fields
+    if (!firstName || !lastName || !phoneNumber) {
       return res.status(400).json({
         success: false,
-        message: "Client with this email already exists",
+        message: "First name, last name, and phone number are required",
       });
+    }
+
+    // Check if client with email already exists in this law firm (only if email is provided)
+    if (email && email.trim()) {
+      const existingClient = await Client.findOne({
+        email: email.toLowerCase(),
+        lawFirm: req.user.lawFirm._id,
+      });
+
+      if (existingClient) {
+        return res.status(400).json({
+          success: false,
+          message: "Client with this email already exists",
+        });
+      }
     }
 
     // Create new client
     const client = new Client({
       firstName,
       lastName,
-      email: email.toLowerCase(),
+      email: email && email.trim() ? email.toLowerCase() : null,
       phoneNumber,
       address,
       dateOfBirth,
@@ -264,8 +274,8 @@ export const updateClient = async (req, res) => {
       });
     }
 
-    // Check if email is being updated and if it already exists
-    if (updateData.email && updateData.email !== client.email) {
+    // Check if email is being updated and if it already exists (only if email is provided)
+    if (updateData.email && updateData.email.trim() && updateData.email !== client.email) {
       const existingClient = await Client.findOne({
         email: updateData.email.toLowerCase(),
         lawFirm: req.user.lawFirm._id,
@@ -278,6 +288,10 @@ export const updateClient = async (req, res) => {
           message: "Client with this email already exists",
         });
       }
+      updateData.email = updateData.email.toLowerCase();
+    } else if (updateData.email === "" || updateData.email === null) {
+      // Allow clearing email
+      updateData.email = null;
     }
 
     // Add updatedBy field

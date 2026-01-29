@@ -584,11 +584,10 @@ const ClientManagement = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Email *
+                    Email <span className="text-slate-500 text-xs">(Optional)</span>
                   </label>
                   <input
                     type="email"
-                    required
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -597,10 +596,11 @@ const ClientManagement = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Phone Number
+                    Phone Number *
                   </label>
                   <input
                     type="tel"
+                    required
                     value={formData.phoneNumber}
                     onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
                     className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"

@@ -149,11 +149,11 @@ const CompleteCaseInfo = () => {
       // Prepare data for submission
       const submitData = {};
 
-      // Only include client if name and email are provided
-      if (formData.client.name && formData.client.email) {
+      // Only include client if name and phone are provided
+      if (formData.client.name && formData.client.phone) {
         submitData.client = {
           name: formData.client.name,
-          email: formData.client.email,
+          email: formData.client.email || null,
           phone: formData.client.phone,
         };
       }

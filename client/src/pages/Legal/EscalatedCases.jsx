@@ -260,11 +260,11 @@ const EscalatedCases = () => {
       // Prepare additional info data
       const additionalInfo = {};
 
-      // Only include client if name and email are provided
-      if (caseInfo.client.name && caseInfo.client.email) {
+      // Only include client if name and phone are provided
+      if (caseInfo.client.name && caseInfo.client.phone) {
         additionalInfo.client = {
           name: caseInfo.client.name,
-          email: caseInfo.client.email,
+          email: caseInfo.client.email || null,
           phone: caseInfo.client.phone,
         };
       }

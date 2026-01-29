@@ -16,12 +16,14 @@ const clientSchema = new mongoose.Schema(
     },
     email: {
       type: String,
-      required: [true, "Email is required"],
+      required: false,
       lowercase: true,
       match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, "Please enter a valid email"],
+      default: null,
     },
     phoneNumber: {
       type: String,
+      required: [true, "Phone number is required"],
       trim: true,
     },
     address: {
@@ -132,7 +134,8 @@ const clientSchema = new mongoose.Schema(
 );
 
 // Indexes for better query performance
-clientSchema.index({ email: 1, lawFirm: 1 }, { unique: true });
+// Unique index on email and lawFirm, but allow multiple null emails
+clientSchema.index({ email: 1, lawFirm: 1 }, { unique: true, sparse: true });
 clientSchema.index({ lawFirm: 1 });
 clientSchema.index({ clientType: 1 });
 clientSchema.index({ status: 1 });
@@ -162,15 +165,24 @@ clientSchema.pre("save", function (next) {
   }
   
   // Convert names to title case
-  this.firstName = this.firstName
-    .split(" ")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(" ");
+  if (this.firstName) {
+    this.firstName = this.firstName
+      .split(" ")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(" ");
+  }
     
-  this.lastName = this.lastName
-    .split(" ")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(" ");
+  if (this.lastName) {
+    this.lastName = this.lastName
+      .split(" ")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(" ");
+  }
+  
+  // Normalize email to null if empty string
+  if (this.email === "" || this.email === undefined) {
+    this.email = null;
+  }
     
   next();
 });

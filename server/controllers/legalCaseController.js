@@ -76,36 +76,68 @@ export const createLegalCase = async (req, res) => {
       }
     }
 
-    // Handle client - if it's an object, create a new client user
+    // Handle client - if it's an object, create a new client
     let clientId = client;
-    if (client && typeof client === "object" && client.name && client.email) {
-      // Check if client already exists
-      let existingClient = await User.findOne({
-        email: client.email,
-        lawFirm: req.user.lawFirm._id,
-        role: "client",
-      });
+    if (client && typeof client === "object" && client.name && client.phone) {
+      // Validate required fields
+      if (!client.name.trim() || !client.phone.trim()) {
+        return res.status(400).json({
+          success: false,
+          message: "Client name and phone number are required",
+        });
+      }
+
+      // Check if client already exists (by email if provided, or by name and phone)
+      let existingClient = null;
+      if (client.email && client.email.trim()) {
+        existingClient = await Client.findOne({
+          email: client.email.toLowerCase(),
+          lawFirm: req.user.lawFirm._id,
+        });
+      }
+      
+      // If not found by email, try to find by name and phone
+      if (!existingClient) {
+        const [firstName, ...lastNameParts] = client.name.trim().split(" ");
+        const lastName = lastNameParts.join(" ") || "Client";
+        existingClient = await Client.findOne({
+          firstName: firstName || "Client",
+          lastName: lastName,
+          phoneNumber: client.phone,
+          lawFirm: req.user.lawFirm._id,
+        });
+      }
 
       if (existingClient) {
         clientId = existingClient._id;
       } else {
-        // Create new client user
+        // Create new client
         const [firstName, ...lastNameParts] = client.name.trim().split(" ");
         const lastName = lastNameParts.join(" ") || "Client";
 
-        const newClient = new User({
+        const newClient = new Client({
           firstName: firstName || "Client",
           lastName: lastName,
-          email: client.email,
-          phoneNumber: client.phone || "",
-          password: Math.random().toString(36).slice(-8), // Generate random password
-          role: "client",
+          email: client.email && client.email.trim() ? client.email.toLowerCase() : null,
+          phoneNumber: client.phone,
           lawFirm: req.user.lawFirm._id,
           createdBy: req.user._id,
         });
 
         const savedClient = await newClient.save();
         clientId = savedClient._id;
+      }
+    } else if (client && typeof client === "string") {
+      // Validate that the client ID exists and belongs to the law firm
+      const existingClient = await Client.findOne({
+        _id: client,
+        lawFirm: req.user.lawFirm._id,
+      });
+      
+      if (!existingClient) {
+        console.warn(`Client ${client} not found or doesn't belong to law firm ${req.user.lawFirm._id}`);
+        // Don't fail, just set to null - the case can be created without a client
+        clientId = null;
       }
     }
 
@@ -271,24 +303,39 @@ export const createLegalCase = async (req, res) => {
             // Use existing client from credit case
             newCase.client = creditCase.client;
             console.log("Transferred existing client from credit case");
-          } else if (!newCase.client && (creditCase.debtorName || creditCase.debtorEmail)) {
-            // Create client from debtor information if no client exists
+          } else if (!newCase.client && creditCase.debtorName && creditCase.debtorContact) {
+            // Create client from debtor information if no client exists (name and phone required)
             const debtorClient = {
               name: creditCase.debtorName || '',
               email: creditCase.debtorEmail || '',
               phone: creditCase.debtorContact || '',
             };
             
-            // Check if client already exists
-            let existingClient = await Client.findOne({
-              email: debtorClient.email,
-              lawFirm: req.user.lawFirm._id,
-            });
+            // Check if client already exists (by email if provided, or by name and phone)
+            let existingClient = null;
+            if (debtorClient.email && debtorClient.email.trim()) {
+              existingClient = await Client.findOne({
+                email: debtorClient.email.toLowerCase(),
+                lawFirm: req.user.lawFirm._id,
+              });
+            }
+            
+            // If not found by email, try to find by name and phone
+            if (!existingClient && debtorClient.name && debtorClient.phone) {
+              const [firstName, ...lastNameParts] = debtorClient.name.trim().split(" ");
+              const lastName = lastNameParts.join(" ") || "Client";
+              existingClient = await Client.findOne({
+                firstName: firstName || "Client",
+                lastName: lastName,
+                phoneNumber: debtorClient.phone,
+                lawFirm: req.user.lawFirm._id,
+              });
+            }
             
             if (existingClient) {
               newCase.client = existingClient._id;
               console.log("Found existing client for debtor");
-            } else if (debtorClient.email) {
+            } else if (debtorClient.name && debtorClient.phone) {
               // Create new client from debtor
               const [firstName, ...lastNameParts] = debtorClient.name.trim().split(" ");
               const lastName = lastNameParts.join(" ") || "Client";
@@ -669,6 +716,28 @@ export const getLegalCaseById = async (req, res) => {
       console.log("Opposing Party:", legalCase.opposingParty);
       console.log("Documents Count:", legalCase.documents?.length || 0);
       console.log("Notes Count:", legalCase.notes?.length || 0);
+    }
+
+    // Fallback: If client is missing but we have escalated credit case with debtor info, create client object
+    if (!legalCase.client && legalCase.escalatedFrom?.creditCaseId) {
+      const creditCase = legalCase.escalatedFrom.creditCaseId;
+      if (creditCase && (creditCase.debtorName || creditCase.debtorEmail)) {
+        // Create a virtual client object from debtor information
+        const [firstName, ...lastNameParts] = (creditCase.debtorName || '').trim().split(" ");
+        const lastName = lastNameParts.join(" ") || "Client";
+        
+        legalCase.client = {
+          firstName: firstName || "Client",
+          lastName: lastName,
+          email: creditCase.debtorEmail || "",
+          phoneNumber: creditCase.debtorContact || "",
+          _id: null, // Indicate this is a virtual client
+          isVirtual: true, // Flag to indicate this is derived from credit case
+        };
+        
+        console.log("=== DEBUG: Created virtual client from credit case debtor ===");
+        console.log("Virtual Client:", legalCase.client);
+      }
     }
 
     // Check if user has access to this case
@@ -1553,12 +1622,35 @@ export const completeCaseInfo = async (req, res) => {
 
     // Handle client creation if provided
     let clientId = existingCase.client;
-    if (client && typeof client === "object" && client.name && client.email) {
-      // Check if client already exists
-      let existingClient = await Client.findOne({
-        email: client.email,
-        lawFirm: req.user.lawFirm._id,
-      });
+    if (client && typeof client === "object" && client.name && client.phone) {
+      // Validate required fields
+      if (!client.name.trim() || !client.phone.trim()) {
+        return res.status(400).json({
+          success: false,
+          message: "Client name and phone number are required",
+        });
+      }
+
+      // Check if client already exists (by email if provided, or by name and phone)
+      let existingClient = null;
+      if (client.email && client.email.trim()) {
+        existingClient = await Client.findOne({
+          email: client.email.toLowerCase(),
+          lawFirm: req.user.lawFirm._id,
+        });
+      }
+      
+      // If not found by email, try to find by name and phone
+      if (!existingClient) {
+        const [firstName, ...lastNameParts] = client.name.trim().split(" ");
+        const lastName = lastNameParts.join(" ") || "Client";
+        existingClient = await Client.findOne({
+          firstName: firstName || "Client",
+          lastName: lastName,
+          phoneNumber: client.phone,
+          lawFirm: req.user.lawFirm._id,
+        });
+      }
 
       if (existingClient) {
         clientId = existingClient._id;
@@ -1570,8 +1662,8 @@ export const completeCaseInfo = async (req, res) => {
         const newClient = new Client({
           firstName: firstName || "Client",
           lastName: lastName,
-          email: client.email,
-          phoneNumber: client.phone || "",
+          email: client.email && client.email.trim() ? client.email.toLowerCase() : null,
+          phoneNumber: client.phone,
           lawFirm: req.user.lawFirm._id,
           createdBy: req.user._id,
         });

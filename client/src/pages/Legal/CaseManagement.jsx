@@ -80,6 +80,7 @@ import {
   FaList,
   FaColumns,
   FaTrash,
+  FaUserCircle,
 } from "react-icons/fa";
 
 const LegalCaseManagement = () => {
@@ -98,12 +99,14 @@ const LegalCaseManagement = () => {
     search: "",
     escalatedFrom: "",
   });
-  const [viewMode, setViewMode] = useState("grid"); // 'grid', 'list', or 'kanban'
+  const [viewMode, setViewMode] = useState("list"); // 'grid', 'list', or 'kanban' - Default to list/table view
   const [showFilters, setShowFilters] = useState(false);
   const [sortBy, setSortBy] = useState("createdAt");
   const [sortOrder, setSortOrder] = useState("desc");
   const [selectedCases, setSelectedCases] = useState([]);
   const [showBulkActions, setShowBulkActions] = useState(false);
+  const [activeTab, setActiveTab] = useState("myCases"); // 'myCases', 'fileNew', 'documents', 'payments', 'hearings', 'reports'
+  const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
 
   const [showAssignmentModal, setShowAssignmentModal] = useState(false);
   const [assignmentData, setAssignmentData] = useState({
@@ -345,6 +348,48 @@ const LegalCaseManagement = () => {
     return sortOrder === "asc" ? <FaSortUp className="w-3 h-3" /> : <FaSortDown className="w-3 h-3" />;
   };
 
+  const handleDeleteCase = (caseId, caseNumber) => {
+    setDeleteModal({
+      isOpen: true,
+      caseId,
+      caseNumber,
+    });
+  };
+
+  const cancelDeleteCase = () => {
+    setDeleteModal({
+      isOpen: false,
+      caseId: null,
+      caseNumber: null,
+    });
+  };
+
+  const confirmDeleteCase = async () => {
+    if (!deleteModal.caseId) return;
+    
+    setIsDeleting(true);
+    try {
+      await dispatch(deleteLegalCase(deleteModal.caseId)).unwrap();
+      toast.success("Case deleted successfully");
+      setDeleteModal({
+        isOpen: false,
+        caseId: null,
+        caseNumber: null,
+      });
+      
+      // Refetch cases
+      if (user.role === "legal_head") {
+        dispatch(getLegalCases({ lawFirm: user.lawFirm._id }));
+      } else if (user.role === "advocate") {
+        dispatch(getLegalCases({ assignedTo: user._id }));
+      }
+    } catch (error) {
+      toast.error(error || "Failed to delete case");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const getStatusColor = (status) => {
     const colors = {
       pending_assignment: "text-yellow-500",
@@ -470,253 +515,286 @@ const LegalCaseManagement = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900/20 to-indigo-900/20 p-3 sm:p-4 md:p-6">
-      {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6 md:mb-8 gap-4">
-        <div>
-          <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2">
-            Legal Case Management
-          </h1>
-          <p className="text-slate-300 text-lg">
-            Manage and track all legal cases and proceedings
-          </p>
-        </div>
-        
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => navigate('/legal/cases/create')}
-            className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-xl font-medium transition-all duration-300 shadow-lg hover:shadow-xl flex items-center gap-2"
-          >
-            <FaPlus className="w-4 h-4" />
-            Create Case
-          </button>
-        </div>
-      </div>
-
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6 mb-6 md:mb-8">
-        {/* Total Cases */}
-        <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-slate-400 text-xs sm:text-sm font-medium">Total Cases</p>
-              <p className="text-2xl sm:text-3xl font-bold text-white mt-2">{stats.totalCases}</p>
-              <div className="flex items-center mt-2">
-                <FaArrowUp className="w-3 h-3 sm:w-4 sm:h-4 text-green-500 mr-1" />
-                <span className="text-green-500 text-xs sm:text-sm font-medium">
-                  +{stats.caseGrowth}% from last month
-                </span>
-              </div>
-            </div>
-            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-blue-500/20 to-indigo-500/20 rounded-xl sm:rounded-2xl flex items-center justify-center">
-              <FaGavel className="w-6 h-6 sm:w-8 sm:h-8 text-blue-400" />
-            </div>
-          </div>
-        </div>
-
-        {/* Active Cases */}
-        <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-slate-400 text-xs sm:text-sm font-medium">Active Cases</p>
-              <p className="text-2xl sm:text-3xl font-bold text-white mt-2">{stats.activeCases}</p>
-              <div className="flex items-center mt-2">
-                <FaClock className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-500 mr-1" />
-                <span className="text-yellow-500 text-xs sm:text-sm font-medium">
-                  {stats.pendingCases} pending
-                </span>
-              </div>
-            </div>
-            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-yellow-500/20 to-orange-500/20 rounded-xl sm:rounded-2xl flex items-center justify-center">
-              <FaClock className="w-6 h-6 sm:w-8 sm:h-8 text-yellow-400" />
-            </div>
-          </div>
-        </div>
-
-        {/* Resolved Cases */}
-        <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-slate-400 text-xs sm:text-sm font-medium">Resolved Cases</p>
-              <p className="text-2xl sm:text-3xl font-bold text-white mt-2">{stats.resolvedCases}</p>
-              <div className="flex items-center mt-2">
-                <FaCheckCircle className="w-3 h-3 sm:w-4 sm:h-4 text-green-500 mr-1" />
-                <span className="text-green-500 text-xs sm:text-sm font-medium">
-                  {stats.totalCases > 0 ? Math.round((stats.resolvedCases / stats.totalCases) * 100) : 0}% success rate
-                </span>
-              </div>
-            </div>
-            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-xl sm:rounded-2xl flex items-center justify-center">
-              <FaCheckCircle className="w-6 h-6 sm:w-8 sm:h-8 text-green-400" />
-            </div>
-          </div>
-        </div>
-
-        {/* Urgent Cases */}
-        <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-slate-400 text-xs sm:text-sm font-medium">Urgent Cases</p>
-              <p className="text-2xl sm:text-3xl font-bold text-white mt-2">{stats.urgentCases}</p>
-              <div className="flex items-center mt-2">
-                <FaExclamationTriangle className="w-3 h-3 sm:w-4 sm:h-4 text-red-500 mr-1" />
-                <span className="text-red-500 text-xs sm:text-sm font-medium">
-                  Requires attention
-                </span>
-              </div>
-            </div>
-            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-red-500/20 to-pink-500/20 rounded-xl sm:rounded-2xl flex items-center justify-center">
-              <FaExclamationTriangle className="w-6 h-6 sm:w-8 sm:h-8 text-red-400" />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Filters and Search */}
-      <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl mb-6 md:mb-8">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          <div className="flex-1">
-            <div className="relative">
-              <FaSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
-              <input
-                type="text"
-                placeholder="Search cases by title, case number, or description..."
-                className="w-full bg-slate-700/50 text-white placeholder-slate-400 rounded-xl px-12 py-3 border border-slate-600/50 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                value={filters.search}
-                onChange={(e) =>
-                  setFilters({ ...filters, search: e.target.value })
-                }
-              />
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
+    <div className="min-h-screen bg-gray-50">
+      {/* Navigation Tabs - E-filing Style */}
+      <div className="bg-white border-b border-gray-200 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <nav className="flex space-x-8" aria-label="Tabs">
             <button
-              onClick={() => setShowFilters(!showFilters)}
-              className="px-4 py-3 bg-slate-700/50 hover:bg-slate-600/50 text-slate-300 rounded-xl transition-colors flex items-center gap-2"
+              onClick={() => setActiveTab("myCases")}
+              className={`${
+                activeTab === "myCases"
+                  ? "border-blue-600 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors`}
             >
-              <FaFilter className="w-4 h-4" />
-              Filters
+              <div className="flex items-center gap-2">
+                <FaFileAlt className="w-4 h-4" />
+                My Cases
+              </div>
             </button>
-
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setViewMode("grid")}
-                className={`px-3 py-2 rounded-lg transition-colors ${
-                  viewMode === "grid" 
-                    ? "bg-blue-600 text-white" 
-                    : "bg-slate-700/50 text-slate-300 hover:bg-slate-600/50"
-                }`}
-                title="Grid View"
-              >
-                <FaThumbsUp className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setViewMode("list")}
-                className={`px-3 py-2 rounded-lg transition-colors ${
-                  viewMode === "list" 
-                    ? "bg-blue-600 text-white" 
-                    : "bg-slate-700/50 text-slate-300 hover:bg-slate-600/50"
-                }`}
-                title="List View"
-              >
-                <FaList className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setViewMode("kanban")}
-                className={`px-3 py-2 rounded-lg transition-colors ${
-                  viewMode === "kanban" 
-                    ? "bg-blue-600 text-white" 
-                    : "bg-slate-700/50 text-slate-300 hover:bg-slate-600/50"
-                }`}
-                title="Kanban Board"
-              >
-                <FaColumns className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
+            <button
+              onClick={() => navigate('/legal/cases/create')}
+              className={`${
+                activeTab === "fileNew"
+                  ? "border-blue-600 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors`}
+            >
+              <div className="flex items-center gap-2">
+                <FaPlus className="w-4 h-4" />
+                File New Case
+              </div>
+            </button>
+            <button
+              onClick={() => setActiveTab("documents")}
+              className={`${
+                activeTab === "documents"
+                  ? "border-blue-600 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors`}
+            >
+              <div className="flex items-center gap-2">
+                <FaFileContract className="w-4 h-4" />
+                Documents
+              </div>
+            </button>
+            <button
+              onClick={() => setActiveTab("hearings")}
+              className={`${
+                activeTab === "hearings"
+                  ? "border-blue-600 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors`}
+            >
+              <div className="flex items-center gap-2">
+                <FaCalendarAlt className="w-4 h-4" />
+                Hearings
+              </div>
+            </button>
+            <button
+              onClick={() => setActiveTab("payments")}
+              className={`${
+                activeTab === "payments"
+                  ? "border-blue-600 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors`}
+            >
+              <div className="flex items-center gap-2">
+                <FaFileInvoiceDollar className="w-4 h-4" />
+                Payments & Fees
+              </div>
+            </button>
+            <button
+              onClick={() => setActiveTab("reports")}
+              className={`${
+                activeTab === "reports"
+                  ? "border-blue-600 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors`}
+            >
+              <div className="flex items-center gap-2">
+                <FaChartLine className="w-4 h-4" />
+                Reports
+              </div>
+            </button>
+          </nav>
         </div>
-
-        {showFilters && (
-          <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <select
-              className="w-full bg-slate-700/50 text-white border border-slate-600/50 rounded-xl px-4 py-3 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-              value={filters.status}
-              onChange={(e) =>
-                setFilters({ ...filters, status: e.target.value })
-              }
-            >
-              <option value="">All Statuses</option>
-              <option value="pending_assignment">Pending Assignment</option>
-              <option value="filed">Filed</option>
-              <option value="assigned">Assigned</option>
-              <option value="under_review">Under Review</option>
-              <option value="court_proceedings">Court Proceedings</option>
-              <option value="settlement">Settlement</option>
-              <option value="resolved">Resolved</option>
-              <option value="closed">Closed</option>
-            </select>
-
-            <select
-              className="w-full bg-slate-700/50 text-white border border-slate-600/50 rounded-xl px-4 py-3 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-              value={filters.caseType}
-              onChange={(e) =>
-                setFilters({ ...filters, caseType: e.target.value })
-              }
-            >
-              <option value="">All Case Types</option>
-              <option value="civil">Civil</option>
-              <option value="criminal">Criminal</option>
-              <option value="corporate">Corporate</option>
-              <option value="family">Family</option>
-              <option value="property">Property</option>
-              <option value="labor">Labor</option>
-              <option value="debt_collection">Debt Collection</option>
-              <option value="other">Other</option>
-            </select>
-
-            <select
-              className="w-full bg-slate-700/50 text-white border border-slate-600/50 rounded-xl px-4 py-3 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-              value={filters.priority}
-              onChange={(e) =>
-                setFilters({ ...filters, priority: e.target.value })
-              }
-            >
-              <option value="">All Priorities</option>
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-              <option value="urgent">Urgent</option>
-            </select>
-
-            {user.role === "legal_head" && (
-              <select
-                className="w-full bg-slate-700/50 text-white border border-slate-600/50 rounded-xl px-4 py-3 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                value={filters.assignedTo}
-                onChange={(e) =>
-                  setFilters({ ...filters, assignedTo: e.target.value })
-                }
-              >
-                <option value="">All Advocates</option>
-                {advocates.map((advocate) => (
-                  <option key={advocate._id} value={advocate._id}>
-                    {advocate.firstName} {advocate.lastName}
-                  </option>
-                ))}
-              </select>
-            )}
-          </div>
-        )}
       </div>
 
-      {/* Cases Display */}
-      <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl">
-        {isLoading ? (
-          <div className="flex justify-center items-center py-12">
-            <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-            <span className="ml-4 text-slate-300 text-lg">Loading cases...</span>
-          </div>
-        ) : !cases || cases.length === 0 ? (
+      {/* Main Content Area */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Statistics Cards - E-filing Style */}
+        {activeTab === "myCases" && (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-blue-600">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-gray-600 text-sm font-medium">Total Cases</p>
+                    <p className="text-3xl font-bold text-gray-900 mt-2">{stats.totalCases}</p>
+                    <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
+                      <FaArrowUp className="w-3 h-3" />
+                      +{stats.caseGrowth}% from last month
+                    </p>
+                  </div>
+                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <FaGavel className="w-6 h-6 text-blue-600" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-yellow-500">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-gray-600 text-sm font-medium">Active Cases</p>
+                    <p className="text-3xl font-bold text-gray-900 mt-2">{stats.activeCases}</p>
+                    <p className="text-xs text-yellow-600 mt-1 flex items-center gap-1">
+                      <FaClock className="w-3 h-3" />
+                      {stats.pendingCases} pending assignment
+                    </p>
+                  </div>
+                  <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
+                    <FaClock className="w-6 h-6 text-yellow-600" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-green-500">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-gray-600 text-sm font-medium">Resolved Cases</p>
+                    <p className="text-3xl font-bold text-gray-900 mt-2">{stats.resolvedCases}</p>
+                    <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
+                      <FaCheckCircle className="w-3 h-3" />
+                      {stats.totalCases > 0 ? Math.round((stats.resolvedCases / stats.totalCases) * 100) : 0}% success rate
+                    </p>
+                  </div>
+                  <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                    <FaCheckCircle className="w-6 h-6 text-green-600" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-red-500">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-gray-600 text-sm font-medium">Urgent Cases</p>
+                    <p className="text-3xl font-bold text-gray-900 mt-2">{stats.urgentCases}</p>
+                    <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                      <FaExclamationTriangle className="w-3 h-3" />
+                      Requires immediate attention
+                    </p>
+                  </div>
+                  <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+                    <FaExclamationTriangle className="w-6 h-6 text-red-600" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Advanced Search and Filters - E-filing Style */}
+            <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-4">
+                <div className="flex-1">
+                  <div className="relative">
+                    <FaSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <input
+                      type="text"
+                      placeholder="Search by case number, parties, advocate name, or case title..."
+                      className="w-full bg-gray-50 border border-gray-300 rounded-lg px-12 py-3 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      value={filters.search}
+                      onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setShowAdvancedSearch(!showAdvancedSearch)}
+                    className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors flex items-center gap-2 text-sm font-medium"
+                  >
+                    <FaFilter className="w-4 h-4" />
+                    Advanced Search
+                  </button>
+                  <button
+                    onClick={() => {
+                      setFilters({ status: "", caseType: "", priority: "", assignedTo: "", search: "", escalatedFrom: "" });
+                      setShowAdvancedSearch(false);
+                    }}
+                    className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors text-sm font-medium"
+                  >
+                    Clear All
+                  </button>
+                </div>
+              </div>
+
+              {showAdvancedSearch && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t border-gray-200">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Case Status</label>
+                    <select
+                      className="w-full bg-gray-50 border border-gray-300 rounded-lg px-4 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      value={filters.status}
+                      onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+                    >
+                      <option value="">All Statuses</option>
+                      <option value="pending_assignment">Pending Assignment</option>
+                      <option value="filed">Filed</option>
+                      <option value="assigned">Assigned</option>
+                      <option value="under_review">Under Review</option>
+                      <option value="court_proceedings">Court Proceedings</option>
+                      <option value="settlement">Settlement</option>
+                      <option value="resolved">Resolved</option>
+                      <option value="closed">Closed</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Case Type</label>
+                    <select
+                      className="w-full bg-gray-50 border border-gray-300 rounded-lg px-4 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      value={filters.caseType}
+                      onChange={(e) => setFilters({ ...filters, caseType: e.target.value })}
+                    >
+                      <option value="">All Case Types</option>
+                      <option value="civil">Civil</option>
+                      <option value="criminal">Criminal</option>
+                      <option value="corporate">Corporate</option>
+                      <option value="family">Family</option>
+                      <option value="property">Property</option>
+                      <option value="labor">Labor</option>
+                      <option value="debt_collection">Debt Collection</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Priority</label>
+                    <select
+                      className="w-full bg-gray-50 border border-gray-300 rounded-lg px-4 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      value={filters.priority}
+                      onChange={(e) => setFilters({ ...filters, priority: e.target.value })}
+                    >
+                      <option value="">All Priorities</option>
+                      <option value="low">Low</option>
+                      <option value="medium">Medium</option>
+                      <option value="high">High</option>
+                      <option value="urgent">Urgent</option>
+                    </select>
+                  </div>
+
+                  {user.role === "legal_head" && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Assigned To</label>
+                      <select
+                        className="w-full bg-gray-50 border border-gray-300 rounded-lg px-4 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        value={filters.assignedTo}
+                        onChange={(e) => setFilters({ ...filters, assignedTo: e.target.value })}
+                      >
+                        <option value="">All Advocates</option>
+                        {advocates.map((advocate) => (
+                          <option key={advocate._id} value={advocate._id}>
+                            {advocate.firstName} {advocate.lastName}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </>
+        )}
+
+        {/* Tab Content */}
+        {activeTab === "myCases" && (
+          <div className="bg-white rounded-lg shadow-md p-6">
+            {isLoading ? (
+              <div className="flex justify-center items-center py-12">
+                <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+                <span className="ml-4 text-gray-600 text-lg">Loading cases...</span>
+              </div>
+            ) : !cases || cases.length === 0 ? (
           <div className="text-center py-12">
             <FaFileAlt className="mx-auto text-6xl text-slate-400 mb-4" />
             <h3 className="text-xl font-bold text-white mb-2">No cases found</h3>
@@ -943,99 +1021,192 @@ const LegalCaseManagement = () => {
               </div>
                         )}
 
-            {/* List View */}
+            {/* List View - Kenya Judiciary Style Table */}
             {viewMode === "list" && (
-              <div className="overflow-x-auto">
-                <table className="w-full">
+              <div className="overflow-x-auto bg-white rounded-lg shadow-lg">
+                <table className="w-full border-collapse">
                   <thead>
-                    <tr className="border-b border-slate-600/50">
-                      <th className="text-left p-4 text-slate-300 font-medium">
+                    <tr className="bg-gradient-to-r from-blue-900 to-blue-800 text-white">
+                      <th className="px-4 py-4 text-left text-xs font-bold uppercase tracking-wider border-r border-blue-700">
                         <div className="flex items-center gap-2">
                           <input
                             type="checkbox"
                             checked={selectedCases.length === filteredCases.length && filteredCases.length > 0}
                             onChange={handleSelectAll}
-                            className="w-4 h-4 text-blue-600 bg-slate-700 border-slate-600 rounded focus:ring-blue-500 focus:ring-2"
+                            className="w-4 h-4 text-white bg-white border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
                           />
-                          Case Number
+                          <span>Case No.</span>
                         </div>
                       </th>
-                      <th className="text-left p-4 text-slate-300 font-medium">Title</th>
-                      <th className="text-left p-4 text-slate-300 font-medium">Type</th>
-                      <th className="text-left p-4 text-slate-300 font-medium">Status</th>
-                      <th className="text-left p-4 text-slate-300 font-medium">Priority</th>
-                      <th className="text-left p-4 text-slate-300 font-medium">Assigned To</th>
-                      <th className="text-left p-4 text-slate-300 font-medium">Client</th>
-                      <th className="text-left p-4 text-slate-300 font-medium">Created</th>
-                      <th className="text-left p-4 text-slate-300 font-medium">Actions</th>
+                      <th className="px-4 py-4 text-left text-xs font-bold uppercase tracking-wider border-r border-blue-700">
+                        Parties
+                      </th>
+                      <th className="px-4 py-4 text-left text-xs font-bold uppercase tracking-wider border-r border-blue-700">
+                        Case Type
+                      </th>
+                      <th className="px-4 py-4 text-left text-xs font-bold uppercase tracking-wider border-r border-blue-700">
+                        Court/Status
+                      </th>
+                      <th className="px-4 py-4 text-left text-xs font-bold uppercase tracking-wider border-r border-blue-700">
+                        Filing Date
+                      </th>
+                      <th className="px-4 py-4 text-left text-xs font-bold uppercase tracking-wider border-r border-blue-700">
+                        Next Hearing
+                      </th>
+                      <th className="px-4 py-4 text-left text-xs font-bold uppercase tracking-wider border-r border-blue-700">
+                        Advocate
+                      </th>
+                      <th className="px-4 py-4 text-left text-xs font-bold uppercase tracking-wider">
+                        Actions
+                      </th>
                     </tr>
                   </thead>
-                  <tbody>
-                    {filteredCases.map((legalCase) => {
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {filteredCases.map((legalCase, index) => {
                       const CaseTypeIcon = getCaseTypeIcon(legalCase.caseType);
+                      const isEven = index % 2 === 0;
+                      const nextHearing = legalCase.courtDetails?.courtDate 
+                        ? formatDate(legalCase.courtDetails.courtDate)
+                        : legalCase.courtDetails?.nextHearingDate
+                        ? formatDate(legalCase.courtDetails.nextHearingDate)
+                        : "Not scheduled";
+                      
                       return (
-                        <tr key={legalCase._id} className="border-b border-slate-600/30 hover:bg-slate-700/30 transition-colors">
-                          <td className="p-4">
+                        <tr 
+                          key={legalCase._id} 
+                          className={`${isEven ? 'bg-gray-50' : 'bg-white'} hover:bg-blue-50 transition-colors cursor-pointer`}
+                          onClick={() => navigate(`/legal/cases/${legalCase._id}`)}
+                        >
+                          <td className="px-4 py-4 whitespace-nowrap border-r border-gray-200">
                             <div className="flex items-center gap-3">
                               <input
                                 type="checkbox"
                                 checked={selectedCases.includes(legalCase._id)}
-                                onChange={() => handleCaseSelection(legalCase._id)}
-                                className="w-4 h-4 text-blue-600 bg-slate-700 border-slate-600 rounded focus:ring-blue-500 focus:ring-2"
+                                onChange={(e) => {
+                                  e.stopPropagation();
+                                  handleCaseSelection(legalCase._id);
+                                }}
+                                className="w-4 h-4 text-blue-600 bg-white border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
                               />
-                              <div className="font-mono text-sm text-slate-300">{legalCase.caseNumber}</div>
+                              <div>
+                                <div className="font-mono text-sm font-semibold text-gray-900">
+                                  {legalCase.caseNumber || "N/A"}
+                                </div>
+                                <div className="text-xs text-gray-500 mt-1">
+                                  {legalCase.caseReference || "-"}
+                                </div>
+                              </div>
                             </div>
                           </td>
-                          <td className="p-4">
+                          <td className="px-4 py-4 border-r border-gray-200">
                             <div className="max-w-xs">
-                              <div className="font-medium text-white">{legalCase.title}</div>
-                              <div className="text-sm text-slate-400 truncate">{legalCase.description}</div>
+                              <div className="text-sm font-semibold text-gray-900 mb-1">
+                                {legalCase.title || "Untitled Case"}
+                              </div>
+                              <div className="text-xs text-gray-600 space-y-1">
+                                <div>
+                                  <span className="font-medium">Petitioner:</span>{" "}
+                                  {legalCase.client ? (
+                                    <span className="text-gray-900">
+                                      {legalCase.client.firstName} {legalCase.client.lastName}
+                                    </span>
+                                  ) : (
+                                    <span className="text-gray-400 italic">Not specified</span>
+                                  )}
+                                </div>
+                                {legalCase.opposingParty?.name && (
+                                  <div>
+                                    <span className="font-medium">Respondent:</span>{" "}
+                                    <span className="text-gray-900">{legalCase.opposingParty.name}</span>
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </td>
-                          <td className="p-4">
+                          <td className="px-4 py-4 whitespace-nowrap border-r border-gray-200">
                             <div className="flex items-center gap-2">
                               <CaseTypeIcon className={`w-4 h-4 ${getCaseTypeColor(legalCase.caseType)}`} />
-                              <span className={`text-sm font-medium ${getCaseTypeColor(legalCase.caseType)}`}>
+                              <span className="text-sm font-medium text-gray-900 capitalize">
                                 {(legalCase.caseType || "other").replace("_", " ")}
                               </span>
                             </div>
                           </td>
-                          <td className="p-4">
-                            <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusBgColor(legalCase.status)} ${getStatusColor(legalCase.status)}`}>
-                              {(legalCase.status || "pending").replace("_", " ")}
-                            </span>
+                          <td className="px-4 py-4 border-r border-gray-200">
+                            <div className="space-y-2">
+                              <div>
+                                {legalCase.courtDetails?.courtName ? (
+                                  <div className="text-xs text-gray-600">
+                                    <span className="font-medium">Court:</span> {legalCase.courtDetails.courtName}
+                                  </div>
+                                ) : (
+                                  <div className="text-xs text-gray-400 italic">Court not assigned</div>
+                                )}
+                              </div>
+                              <div>
+                                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded ${
+                                  (legalCase.status || "pending") === "pending_assignment" 
+                                    ? "bg-yellow-100 text-yellow-800"
+                                    : (legalCase.status || "pending") === "assigned"
+                                    ? "bg-blue-100 text-blue-800"
+                                    : (legalCase.status || "pending") === "court_proceedings"
+                                    ? "bg-purple-100 text-purple-800"
+                                    : (legalCase.status || "pending") === "resolved" || (legalCase.status || "pending") === "closed"
+                                    ? "bg-green-100 text-green-800"
+                                    : "bg-gray-100 text-gray-800"
+                                }`}>
+                                  {(legalCase.status || "pending").replace("_", " ").toUpperCase()}
+                                </span>
+                              </div>
+                            </div>
                           </td>
-                          <td className="p-4">
-                            <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getPriorityBgColor(legalCase.priority)} ${getPriorityColor(legalCase.priority)}`}>
-                              {legalCase.priority || "medium"}
-                            </span>
+                          <td className="px-4 py-4 whitespace-nowrap border-r border-gray-200">
+                            <div className="text-sm text-gray-900">
+                              {formatDate(legalCase.createdAt)}
+                            </div>
+                            <div className="text-xs text-gray-500 mt-1">
+                              {getDaysSince(legalCase.createdAt)} days ago
+                            </div>
                           </td>
-                          <td className="p-4">
-                            <div className="text-white">
+                          <td className="px-4 py-4 whitespace-nowrap border-r border-gray-200">
+                            {nextHearing !== "Not scheduled" ? (
+                              <div>
+                                <div className="text-sm font-medium text-gray-900">
+                                  {nextHearing}
+                                </div>
+                                {legalCase.courtDetails?.courtRoom && (
+                                  <div className="text-xs text-gray-500">
+                                    Room {legalCase.courtDetails.courtRoom}
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="text-xs text-gray-400 italic">Not scheduled</div>
+                            )}
+                          </td>
+                          <td className="px-4 py-4 border-r border-gray-200">
+                            <div className="text-sm text-gray-900">
                               {legalCase.assignedTo ? (
-                                `${legalCase.assignedTo.firstName} ${legalCase.assignedTo.lastName}`
+                                <div>
+                                  <div className="font-medium">
+                                    {legalCase.assignedTo.firstName} {legalCase.assignedTo.lastName}
+                                  </div>
+                                  {legalCase.assignedTo.email && (
+                                    <div className="text-xs text-gray-500 mt-1">
+                                      {legalCase.assignedTo.email}
+                                    </div>
+                                  )}
+                                </div>
                               ) : (
-                                <span className="text-slate-400">Unassigned</span>
+                                <span className="text-gray-400 italic text-xs">Unassigned</span>
                               )}
                             </div>
                           </td>
-                          <td className="p-4">
-                            <div className="text-white">
-                              {legalCase.client ? (
-                                `${legalCase.client.firstName} ${legalCase.client.lastName}`
-                              ) : (
-                                <span className="text-slate-400">-</span>
-                              )}
-                            </div>
-                          </td>
-                          <td className="p-4">
-                            <div className="text-sm text-slate-300">{formatDate(legalCase.createdAt)}</div>
-                          </td>
-                          <td className="p-4">
-                            <div className="flex items-center gap-2">
+                          <td className="px-4 py-4 whitespace-nowrap">
+                            <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                               <button
                                 onClick={() => navigate(`/legal/cases/${legalCase._id}`)}
-                                className="px-3 py-2 bg-slate-600/50 hover:bg-slate-500/50 text-slate-300 rounded-lg transition-colors text-sm flex items-center gap-1"
+                                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-medium transition-colors flex items-center gap-1"
+                                title="View case details"
                               >
                                 <FaEye className="w-3 h-3" />
                                 View
@@ -1051,7 +1222,8 @@ const LegalCaseManagement = () => {
                                     });
                                     setShowAssignmentModal(true);
                                   }}
-                                  className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm flex items-center gap-1"
+                                  className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded text-xs font-medium transition-colors flex items-center gap-1"
+                                  title="Assign case"
                                 >
                                   <FaUserPlus className="w-3 h-3" />
                                   Assign
@@ -1060,9 +1232,10 @@ const LegalCaseManagement = () => {
 
                               {legalCase.assignedTo?._id === user._id && (
                                 <select
-                                  className="px-3 py-2 bg-slate-600/50 text-slate-300 border border-slate-600/50 rounded-lg text-sm focus:border-blue-500 focus:outline-none"
+                                  className="px-2 py-1.5 bg-white text-gray-700 border border-gray-300 rounded text-xs focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                                   value={legalCase.status}
                                   onChange={(e) => handleStatusUpdate(legalCase._id, e.target.value)}
+                                  onClick={(e) => e.stopPropagation()}
                                 >
                                   <option value="assigned">Assigned</option>
                                   <option value="under_review">Under Review</option>
@@ -1075,11 +1248,10 @@ const LegalCaseManagement = () => {
                               {user?.role === "law_firm_admin" && (
                                 <button
                                   onClick={() => handleDeleteCase(legalCase._id, legalCase.caseNumber)}
-                                  className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors text-sm flex items-center gap-1"
+                                  className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-medium transition-colors flex items-center gap-1"
                                   title="Delete case"
                                 >
                                   <FaTrash className="w-3 h-3" />
-                                  Delete
                                 </button>
                               )}
                             </div>
@@ -1101,8 +1273,494 @@ const LegalCaseManagement = () => {
               />
             )}
           </>
+            )}
+          </div>
+        )}
+
+        {/* Documents Tab */}
+        {activeTab === "documents" && (
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">Case Documents</h2>
+              <div className="flex items-center gap-3">
+                <input
+                  type="text"
+                  placeholder="Search documents..."
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center gap-2 text-sm">
+                  <FaFilter className="w-4 h-4" />
+                  Filter
+                </button>
+              </div>
+            </div>
+            
+            {isLoading ? (
+              <div className="flex justify-center items-center py-12">
+                <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="bg-gray-50 border-b-2 border-gray-200">
+                      <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-700">Document Name</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-700">Case Number</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-700">Category</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-700">Uploaded Date</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-700">Size</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-700">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {(() => {
+                      const allDocuments = [];
+                      filteredCases.forEach((legalCase) => {
+                        if (legalCase.documents && Array.isArray(legalCase.documents)) {
+                          legalCase.documents.forEach((doc) => {
+                            if (doc && (doc.path || doc.name || doc.originalName)) {
+                              allDocuments.push({
+                                ...doc,
+                                caseNumber: legalCase.caseNumber,
+                                caseId: legalCase._id,
+                                caseTitle: legalCase.title,
+                              });
+                            }
+                          });
+                        }
+                      });
+                      
+                      return allDocuments.length > 0 ? (
+                        allDocuments.map((doc, index) => {
+                          const docName = doc.name || doc.originalName || doc.path?.split('/').pop() || 'Document';
+                          const docSize = doc.size ? `${(doc.size / 1024).toFixed(2)} KB` : 'N/A';
+                          const uploadDate = doc.uploadedAt || doc.createdAt || new Date();
+                          
+                          return (
+                            <tr key={doc._id || index} className="hover:bg-gray-50">
+                              <td className="px-4 py-4">
+                                <div className="flex items-center gap-2">
+                                  <FaFileAlt className="w-5 h-5 text-blue-600" />
+                                  <span className="text-sm font-medium text-gray-900">{docName}</span>
+                                </div>
+                              </td>
+                              <td className="px-4 py-4">
+                                <span className="text-sm text-gray-900 font-mono">{doc.caseNumber}</span>
+                              </td>
+                              <td className="px-4 py-4">
+                                <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded">
+                                  {doc.category?.replace('_', ' ') || 'Case Document'}
+                                </span>
+                              </td>
+                              <td className="px-4 py-4 whitespace-nowrap">
+                                <span className="text-sm text-gray-600">{formatDate(uploadDate)}</span>
+                              </td>
+                              <td className="px-4 py-4 whitespace-nowrap">
+                                <span className="text-sm text-gray-600">{docSize}</span>
+                              </td>
+                              <td className="px-4 py-4 whitespace-nowrap">
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    onClick={() => navigate(`/legal/cases/${doc.caseId}`)}
+                                    className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-medium transition-colors flex items-center gap-1"
+                                  >
+                                    <FaEye className="w-3 h-3" />
+                                    View
+                                  </button>
+                                  {doc.path && (
+                                    <a
+                                      href={doc.path}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-xs font-medium transition-colors flex items-center gap-1"
+                                    >
+                                      <FaDownload className="w-3 h-3" />
+                                      Download
+                                    </a>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      ) : (
+                        <tr>
+                          <td colSpan="6" className="px-4 py-12 text-center">
+                            <FaFileAlt className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                            <p className="text-gray-600">No documents found</p>
+                          </td>
+                        </tr>
+                      );
+                    })()}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Hearings Tab */}
+        {activeTab === "hearings" && (
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">Court Hearings & Calendar</h2>
+              <div className="flex items-center gap-3">
+                <select className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <option>This Month</option>
+                  <option>Next Month</option>
+                  <option>All Upcoming</option>
+                </select>
+              </div>
+            </div>
+            
+            {isLoading ? (
+              <div className="flex justify-center items-center py-12">
+                <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="bg-gray-50 border-b-2 border-gray-200">
+                      <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-700">Date & Time</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-700">Case Number</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-700">Case Title</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-700">Court</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-700">Room</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-700">Type</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-700">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {(() => {
+                      const hearings = [];
+                      filteredCases.forEach((legalCase) => {
+                        if (legalCase.courtDetails?.courtDate) {
+                          hearings.push({
+                            date: legalCase.courtDetails.courtDate,
+                            type: 'Court Hearing',
+                            caseNumber: legalCase.caseNumber,
+                            caseTitle: legalCase.title,
+                            caseId: legalCase._id,
+                            court: legalCase.courtDetails.courtName || 'N/A',
+                            room: legalCase.courtDetails.courtRoom || 'N/A',
+                          });
+                        }
+                        if (legalCase.courtDetails?.nextHearingDate) {
+                          hearings.push({
+                            date: legalCase.courtDetails.nextHearingDate,
+                            type: 'Next Hearing',
+                            caseNumber: legalCase.caseNumber,
+                            caseTitle: legalCase.title,
+                            caseId: legalCase._id,
+                            court: legalCase.courtDetails.courtName || 'N/A',
+                            room: legalCase.courtDetails.courtRoom || 'N/A',
+                          });
+                        }
+                        if (legalCase.courtDetails?.mentioningDate) {
+                          hearings.push({
+                            date: legalCase.courtDetails.mentioningDate,
+                            type: 'Mentioning',
+                            caseNumber: legalCase.caseNumber,
+                            caseTitle: legalCase.title,
+                            caseId: legalCase._id,
+                            court: legalCase.courtDetails.courtName || 'N/A',
+                            room: legalCase.courtDetails.courtRoom || 'N/A',
+                          });
+                        }
+                      });
+                      
+                      // Sort by date
+                      hearings.sort((a, b) => new Date(a.date) - new Date(b.date));
+                      
+                      return hearings.length > 0 ? (
+                        hearings.map((hearing, index) => (
+                          <tr key={index} className="hover:bg-gray-50">
+                            <td className="px-4 py-4 whitespace-nowrap">
+                              <div className="text-sm font-medium text-gray-900">{formatDate(hearing.date)}</div>
+                              <div className="text-xs text-gray-500">
+                                {new Date(hearing.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </div>
+                            </td>
+                            <td className="px-4 py-4">
+                              <span className="text-sm font-mono text-gray-900">{hearing.caseNumber}</span>
+                            </td>
+                            <td className="px-4 py-4">
+                              <span className="text-sm text-gray-900">{hearing.caseTitle}</span>
+                            </td>
+                            <td className="px-4 py-4">
+                              <span className="text-sm text-gray-600">{hearing.court}</span>
+                            </td>
+                            <td className="px-4 py-4">
+                              <span className="text-sm text-gray-600">{hearing.room}</span>
+                            </td>
+                            <td className="px-4 py-4">
+                              <span className="px-2 py-1 text-xs font-medium bg-purple-100 text-purple-800 rounded">
+                                {hearing.type}
+                              </span>
+                            </td>
+                            <td className="px-4 py-4 whitespace-nowrap">
+                              <button
+                                onClick={() => navigate(`/legal/cases/${hearing.caseId}`)}
+                                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-medium transition-colors flex items-center gap-1"
+                              >
+                                <FaEye className="w-3 h-3" />
+                                View Case
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan="7" className="px-4 py-12 text-center">
+                            <FaCalendarAlt className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                            <p className="text-gray-600">No upcoming hearings scheduled</p>
+                          </td>
+                        </tr>
+                      );
+                    })()}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Payments Tab */}
+        {activeTab === "payments" && (
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">Payments & Filing Fees</h2>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="bg-gray-50 border-b-2 border-gray-200">
+                    <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-700">Case Number</th>
+                    <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-700">Case Title</th>
+                    <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-700">Filing Fee</th>
+                    <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-700">Payment Status</th>
+                    <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-700">Total Paid</th>
+                    <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-700">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {filteredCases.map((legalCase) => {
+                    const filingFee = legalCase.filingFee?.amount || 0;
+                    const totalPaid = legalCase.payments?.reduce((sum, p) => sum + (p.amount || 0), 0) || 0;
+                    const isPaid = legalCase.filingFee?.paid || totalPaid >= filingFee;
+                    
+                    return (
+                      <tr key={legalCase._id} className="hover:bg-gray-50">
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <div className="font-mono text-sm font-semibold text-gray-900">{legalCase.caseNumber}</div>
+                        </td>
+                        <td className="px-4 py-4">
+                          <div className="text-sm text-gray-900">{legalCase.title}</div>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-gray-900">{formatCurrency(filingFee)}</div>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                            isPaid ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                          }`}>
+                            {isPaid ? 'Paid' : 'Pending'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-gray-900">{formatCurrency(totalPaid)}</div>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <button
+                            onClick={() => navigate(`/legal/cases/${legalCase._id}`)}
+                            className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-medium transition-colors"
+                          >
+                            View Details
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Reports Tab */}
+        {activeTab === "reports" && (
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">Case Reports & Analytics</h2>
+            
+            {/* Summary Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              <div className="bg-blue-50 rounded-lg p-4 border-l-4 border-blue-600">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">Total Cases</p>
+                    <p className="text-2xl font-bold text-gray-900">{stats.totalCases}</p>
+                  </div>
+                  <FaFileAlt className="w-8 h-8 text-blue-600" />
+                </div>
+              </div>
+              
+              <div className="bg-green-50 rounded-lg p-4 border-l-4 border-green-600">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">Resolved</p>
+                    <p className="text-2xl font-bold text-gray-900">{stats.resolvedCases}</p>
+                    <p className="text-xs text-green-600">
+                      {stats.totalCases > 0 ? Math.round((stats.resolvedCases / stats.totalCases) * 100) : 0}% success rate
+                    </p>
+                  </div>
+                  <FaCheckCircle className="w-8 h-8 text-green-600" />
+                </div>
+              </div>
+              
+              <div className="bg-yellow-50 rounded-lg p-4 border-l-4 border-yellow-600">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">Active Cases</p>
+                    <p className="text-2xl font-bold text-gray-900">{stats.activeCases}</p>
+                    <p className="text-xs text-yellow-600">{stats.pendingCases} pending</p>
+                  </div>
+                  <FaClock className="w-8 h-8 text-yellow-600" />
+                </div>
+              </div>
+              
+              <div className="bg-purple-50 rounded-lg p-4 border-l-4 border-purple-600">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">Avg. Resolution</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {(() => {
+                        const resolvedCases = filteredCases.filter(c => c.status === 'resolved' || c.status === 'closed');
+                        if (resolvedCases.length === 0) return '0';
+                        const totalDays = resolvedCases.reduce((sum, c) => {
+                          const created = new Date(c.createdAt);
+                          const resolved = new Date(c.updatedAt || c.createdAt);
+                          return sum + Math.ceil((resolved - created) / (1000 * 60 * 60 * 24));
+                        }, 0);
+                        return Math.round(totalDays / resolvedCases.length);
+                      })()} days
+                    </p>
+                  </div>
+                  <FaChartLine className="w-8 h-8 text-purple-600" />
+                </div>
+              </div>
+            </div>
+
+            {/* Financial Summary */}
+            {(() => {
+              // Calculate filing fee statistics
+              const totalFilingFees = filteredCases.reduce((sum, c) => sum + (c.filingFee?.amount || 0), 0);
+              const paidFilingFees = filteredCases.reduce((sum, c) => {
+                if (c.filingFee?.paid && c.filingFee?.amount) {
+                  return sum + c.filingFee.amount;
+                }
+                return sum;
+              }, 0);
+              const pendingFilingFees = totalFilingFees - paidFilingFees;
+              
+              // Calculate payment statistics
+              const totalPayments = filteredCases.reduce((sum, c) => {
+                if (c.payments && Array.isArray(c.payments)) {
+                  return sum + c.payments.reduce((paymentSum, p) => paymentSum + (p.amount || 0), 0);
+                }
+                return sum;
+              }, 0);
+              
+              // Cases with paid filing fees
+              const casesWithPaidFees = filteredCases.filter(c => c.filingFee?.paid).length;
+              
+              return (
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Financial Summary</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="bg-green-50 rounded-lg p-4 border-l-4 border-green-600">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-gray-600">Total Filing Fees</p>
+                          <p className="text-xl font-bold text-gray-900">{formatCurrency(totalFilingFees)}</p>
+                        </div>
+                        <FaFileInvoiceDollar className="w-6 h-6 text-green-600" />
+                      </div>
+                    </div>
+                    
+                    <div className="bg-blue-50 rounded-lg p-4 border-l-4 border-blue-600">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-gray-600">Paid Filing Fees</p>
+                          <p className="text-xl font-bold text-gray-900">{formatCurrency(paidFilingFees)}</p>
+                          <p className="text-xs text-blue-600">
+                            {totalFilingFees > 0 ? Math.round((paidFilingFees / totalFilingFees) * 100) : 0}% paid
+                          </p>
+                        </div>
+                        <FaCheckCircle className="w-6 h-6 text-blue-600" />
+                      </div>
+                    </div>
+                    
+                    <div className="bg-yellow-50 rounded-lg p-4 border-l-4 border-yellow-600">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-gray-600">Pending Filing Fees</p>
+                          <p className="text-xl font-bold text-gray-900">{formatCurrency(pendingFilingFees)}</p>
+                        </div>
+                        <FaClock className="w-6 h-6 text-yellow-600" />
+                      </div>
+                    </div>
+                    
+                    <div className="bg-purple-50 rounded-lg p-4 border-l-4 border-purple-600">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-gray-600">Total Payments</p>
+                          <p className="text-xl font-bold text-gray-900">{formatCurrency(totalPayments)}</p>
+                          <p className="text-xs text-purple-600">
+                            {casesWithPaidFees} case{casesWithPaidFees !== 1 ? 's' : ''} paid
+                          </p>
+                        </div>
+                        <FaFileInvoiceDollar className="w-6 h-6 text-purple-600" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+            
+            {/* Case Type Distribution */}
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Cases by Type</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                {['civil', 'criminal', 'corporate', 'family', 'property', 'labor', 'debt_collection', 'other'].map((type) => {
+                  const count = filteredCases.filter(c => c.caseType === type).length;
+                  return (
+                    <div key={type} className="bg-gray-50 rounded-lg p-3 text-center">
+                      <p className="text-xs text-gray-600 capitalize mb-1">{type.replace('_', ' ')}</p>
+                      <p className="text-xl font-bold text-gray-900">{count}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            
+            {/* Status Distribution */}
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Cases by Status</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {['pending_assignment', 'filed', 'assigned', 'under_review', 'court_proceedings', 'settlement', 'resolved', 'closed'].map((status) => {
+                  const count = filteredCases.filter(c => (c.status || 'pending') === status).length;
+                  return (
+                    <div key={status} className="bg-gray-50 rounded-lg p-3">
+                      <p className="text-xs text-gray-600 mb-1 capitalize">{status.replace('_', ' ')}</p>
+                      <p className="text-xl font-bold text-gray-900">{count}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
         )}
       </div>
+
       {/* Delete Confirmation Modal */}
       {deleteModal.isOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
