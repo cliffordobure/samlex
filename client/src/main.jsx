@@ -1,8 +1,12 @@
+// Mark app as loading
+window.__APP_LOADING__ = true;
+
 // Immediate logging
 console.log("🚀 main.jsx script started");
 console.log("📍 Location:", window.location.href);
 console.log("🌍 Environment:", import.meta.env.MODE);
 console.log("🔧 API URL:", import.meta.env.VITE_API_URL || "Not set");
+console.log("📦 Build mode:", import.meta.env.PROD ? "PRODUCTION" : "DEVELOPMENT");
 
 import React from "react";
 import ReactDOM from "react-dom/client";
@@ -60,6 +64,8 @@ if (!rootElement) {
     );
     
     console.log("✅ React app mounted successfully");
+    window.__APP_LOADED__ = true;
+    window.__APP_LOADING__ = false;
   } catch (error) {
     console.error("❌ Error mounting React app:", error);
     const errorHtml = `<div style="padding: 20px; color: red; font-family: Arial; background: #fee; border: 2px solid #c33; margin: 20px; border-radius: 4px;">

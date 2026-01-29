@@ -36,13 +36,73 @@
       // Immediate error logging
       window.addEventListener('error', function(e) {
         console.error('Global error:', e.error);
-        document.getElementById('root').innerHTML = '<div class="error-fallback"><h2>Application Error</h2><p>' + e.message + '</p><pre>' + (e.error ? e.error.stack : 'No stack trace') + '</pre></div>';
+        console.error('Error details:', {
+          message: e.message,
+          filename: e.filename,
+          lineno: e.lineno,
+          colno: e.colno,
+          error: e.error
+        });
+        const root = document.getElementById('root');
+        if (root) {
+          root.innerHTML = '<div class="error-fallback"><h2>Application Error</h2><p>' + e.message + '</p><p>File: ' + (e.filename || 'unknown') + '</p><pre>' + (e.error ? e.error.stack : 'No stack trace') + '</pre></div>';
+        }
       });
+      
+      // Log script loading errors
+      window.addEventListener('error', function(e) {
+        if (e.target && e.target.tagName === 'SCRIPT') {
+          console.error('Script loading error:', {
+            src: e.target.src,
+            error: e.message
+          });
+          const root = document.getElementById('root');
+          if (root) {
+            root.innerHTML = '<div class="error-fallback"><h2>Script Loading Error</h2><p>Failed to load: ' + e.target.src + '</p><p>Error: ' + e.message + '</p><p>Check Network tab for details.</p></div>';
+          }
+        }
+      }, true);
       
       // Log when page loads
       console.log('HTML loaded, attempting to load main.jsx...');
       console.log('Current URL:', window.location.href);
       console.log('User Agent:', navigator.userAgent);
+      
+      // Check if script loads after a timeout
+      setTimeout(function() {
+        if (!window.__APP_LOADED__) {
+          console.error('⚠️ App did not load within 5 seconds');
+          console.log('Checking for script errors...');
+          const scripts = document.querySelectorAll('script[type="module"]');
+          console.log('Found', scripts.length, 'module scripts');
+          scripts.forEach(function(script, index) {
+            console.log('Script', index + ':', script.src || 'inline');
+            if (script.src) {
+              // Try to fetch the script to see if it exists
+              fetch(script.src)
+                .then(function(response) {
+                  console.log('Script', script.src, 'status:', response.status);
+                  if (!response.ok) {
+                    console.error('❌ Script file not found or error:', response.status, response.statusText);
+                    const root = document.getElementById('root');
+                    if (root) {
+                      root.innerHTML = '<div class="error-fallback"><h2>Script Not Found</h2><p>Failed to load: ' + script.src + '</p><p>Status: ' + response.status + ' ' + response.statusText + '</p><p>This usually means the build did not complete correctly or the file path is wrong.</p><p>Check Vercel build logs for errors.</p></div>';
+                    }
+                  }
+                })
+                .catch(function(error) {
+                  console.error('❌ Error checking script:', error);
+                });
+            }
+          });
+          
+          // Show diagnostic message
+          const root = document.getElementById('root');
+          if (root && !root.innerHTML.includes('error-fallback')) {
+            root.innerHTML = '<div style="padding: 20px; text-align: center; background: #fff3cd; border: 2px solid #ffc107; margin: 20px; border-radius: 4px;"><h2>⚠️ Application Not Loading</h2><p>The script file may not be loading correctly.</p><p>Please check:</p><ul style="text-align: left; display: inline-block;"><li>Network tab for failed requests</li><li>Console for error messages</li><li>Vercel build logs</li></ul><p><small>Check browser console (F12) for detailed diagnostics</small></p></div>';
+          }
+        }
+      }, 5000);
     </script>
     <script type="module" src="/src/main.jsx"></script>
     <noscript>
