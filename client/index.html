@@ -124,12 +124,34 @@
                     // Try to read the script content to check if it's valid
                     response.text().then(function(scriptContent) {
                       console.log('📄 Script file size:', scriptContent.length, 'characters');
+                      
+                      // 711 characters is WAY too small for a React app!
+                      if (scriptContent.length < 5000) {
+                        console.error('⚠️⚠️⚠️ CRITICAL: Script file is VERY small!');
+                        console.error('A React app bundle should be hundreds of KB, not ' + scriptContent.length + ' characters!');
+                        console.error('This suggests the build failed or is incomplete.');
+                        console.log('📝 Full script content:');
+                        console.log(scriptContent);
+                        
+                        // Check if it's trying to load other chunks
+                        if (scriptContent.includes('import') && scriptContent.includes('assets/')) {
+                          console.error('⚠️ This appears to be a chunk loader trying to load other chunks');
+                          console.error('The build might have failed to generate all required chunks');
+                        }
+                        
+                        const root = document.getElementById('root');
+                        if (root) {
+                          root.innerHTML = '<div class="error-fallback" style="padding: 20px; background: #fee; border: 2px solid #c33; margin: 20px; border-radius: 4px; color: #c33;"><h2>❌ Build Issue Detected</h2><p><strong>Problem:</strong> The JavaScript file is only ' + scriptContent.length + ' characters, which is too small for a React application.</p><p>A normal React app bundle should be hundreds of KB or several MB.</p><p><strong>This usually means:</strong></p><ul><li>The Vercel build failed or was incomplete</li><li>The build output is corrupted</li><li>Only a chunk loader was generated, not the actual app code</li><li>Check Vercel build logs for errors</li></ul><p><strong>Script content:</strong></p><pre style="background: #fff; padding: 10px; overflow: auto; font-size: 10px;">' + scriptContent.substring(0, 500) + '</pre></div>';
+                        }
+                        return;
+                      }
+                      
                       // Check if it looks like valid JavaScript
-                      if (scriptContent.includes('import') || scriptContent.includes('export') || scriptContent.includes('function')) {
+                      if (scriptContent.includes('import') || scriptContent.includes('export') || scriptContent.includes('function') || scriptContent.includes('React')) {
                         console.log('✅ Script appears to contain valid JavaScript');
                       } else {
                         console.error('⚠️ Script content might be invalid or empty');
-                        console.log('First 200 characters:', scriptContent.substring(0, 200));
+                        console.log('First 500 characters:', scriptContent.substring(0, 500));
                       }
                       
                       // Check if main.jsx executed
