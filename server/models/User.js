@@ -36,6 +36,7 @@ const userSchema = new mongoose.Schema(
         "legal_head",
         "advocate",
         "receptionist",
+        "accountant",
         "client",
       ],
       required: true,

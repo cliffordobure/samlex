@@ -124,6 +124,8 @@ const reportsApi = {
     api.get(`/reports/debt-collector/${debtCollectorId}/stats`, { params }),
   getCreditCollectionPerformance: (lawFirmId, params = {}) =>
     api.get(`/reports/credit-collection/performance/${lawFirmId}`, { params }),
+  getAccountantDashboard: (lawFirmId, params = {}) =>
+    api.get(`/reports/accountant-dashboard/${lawFirmId}`, { params }),
   getCreditCollectionRevenue: (lawFirmId, params = {}) =>
     api.get(`/reports/credit-collection/revenue/${lawFirmId}`, { params }),
   getPromisedPaymentsAnalytics: (lawFirmId, params = {}) =>

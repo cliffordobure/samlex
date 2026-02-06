@@ -4,6 +4,7 @@ import User from "../models/User.js";
 import Department from "../models/Department.js";
 import Payment from "../models/Payment.js";
 import LawFirm from "../models/LawFirm.js"; // Added import for LawFirm
+import RevenueTarget from "../models/RevenueTarget.js";
 import { validateObjectId } from "../middleware/validation.js";
 import { Parser } from "json2csv";
 import PDFDocument from "pdfkit";
@@ -6037,6 +6038,239 @@ export const downloadCreditCollectionPDF = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Failed to download PDF"
+    });
+  }
+};
+
+/**
+ * @desc    Get accountant dashboard data (financial tracking, department reviews, targets)
+ * @route   GET /api/reports/accountant-dashboard/:lawFirmId
+ * @access  Private (accountant, law_firm_admin)
+ */
+export const getAccountantDashboard = async (req, res) => {
+  try {
+    const { lawFirmId } = req.params;
+    const { period = "30" } = req.query; // days
+
+    if (!validateObjectId(lawFirmId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid law firm ID format",
+      });
+    }
+
+    // Check if user has access to this law firm
+    if (
+      req.user.role === "accountant" &&
+      lawFirmId !== req.user.lawFirm._id.toString()
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "Unauthorized access to law firm",
+      });
+    }
+
+    const daysAgo = new Date();
+    daysAgo.setDate(daysAgo.getDate() - parseInt(period));
+
+    // 1. Financial Tracking - Money coming into the company
+    const [legalCases, creditCases, payments, departments, revenueTargets] = await Promise.all([
+      LegalCase.find({ lawFirm: lawFirmId }).lean(),
+      CreditCase.find({ lawFirm: lawFirmId }).lean(),
+      Payment.find({ 
+        lawFirm: lawFirmId, 
+        status: "completed",
+        createdAt: { $gte: daysAgo }
+      }).lean(),
+      Department.find({ lawFirm: lawFirmId, isActive: true }).lean(),
+      RevenueTarget.find({ lawFirm: lawFirmId }).populate("department", "name code").lean()
+    ]);
+
+    // Calculate total money collected
+    const totalMoneyCollected = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
+    
+    // Filing fees from legal cases
+    const paidFilingFees = legalCases
+      .filter(c => c.filingFee && c.filingFee.paid)
+      .reduce((sum, c) => sum + (c.filingFee.amount || 0), 0);
+
+    // Payments from legal cases
+    const legalCasePayments = legalCases.reduce((sum, c) => {
+      if (c.payments && Array.isArray(c.payments)) {
+        return sum + c.payments.reduce((pSum, p) => pSum + (p.amount || 0), 0);
+      }
+      return sum;
+    }, 0);
+
+    // Money recovered from credit cases
+    const creditCasePayments = creditCases.reduce((sum, c) => {
+      if (c.promisedPayments && Array.isArray(c.promisedPayments)) {
+        return sum + c.promisedPayments
+          .filter(pp => pp.status === "paid")
+          .reduce((pSum, p) => pSum + (p.amount || 0), 0);
+      }
+      return sum;
+    }, 0);
+
+    // Recent payments
+    const recentPayments = payments
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(0, 10)
+      .map(p => ({
+        id: p._id,
+        amount: p.amount,
+        currency: p.currency,
+        paymentMethod: p.paymentMethod,
+        purpose: p.purpose,
+        status: p.status,
+        createdAt: p.createdAt,
+        client: p.client,
+        case: p.case
+      }));
+
+    // 2. Department Reviews
+    const departmentReviews = await Promise.all(
+      departments.map(async (dept) => {
+        const deptLegalCases = legalCases.filter(c => 
+          c.department?.toString() === dept._id.toString()
+        );
+        const deptCreditCases = creditCases.filter(c => 
+          c.department?.toString() === dept._id.toString()
+        );
+
+        // Calculate department revenue
+        const deptFilingFees = deptLegalCases
+          .filter(c => c.filingFee && c.filingFee.paid)
+          .reduce((sum, c) => sum + (c.filingFee.amount || 0), 0);
+
+        const deptLegalPayments = deptLegalCases.reduce((sum, c) => {
+          if (c.payments && Array.isArray(c.payments)) {
+            return sum + c.payments.reduce((pSum, p) => pSum + (p.amount || 0), 0);
+          }
+          return sum;
+        }, 0);
+
+        const deptCreditPayments = deptCreditCases.reduce((sum, c) => {
+          if (c.promisedPayments && Array.isArray(c.promisedPayments)) {
+            return sum + c.promisedPayments
+              .filter(pp => pp.status === "paid")
+              .reduce((pSum, p) => pSum + (p.amount || 0), 0);
+          }
+          return sum;
+        }, 0);
+
+        const deptRevenue = deptFilingFees + deptLegalPayments + deptCreditPayments;
+
+        // Get department target
+        const deptTarget = revenueTargets.find(t => 
+          t.department && t.department._id.toString() === dept._id.toString()
+        );
+
+        return {
+          id: dept._id,
+          name: dept.name,
+          code: dept.code,
+          departmentType: dept.departmentType,
+          totalCases: deptLegalCases.length + deptCreditCases.length,
+          activeCases: deptLegalCases.filter(c => c.status !== "closed" && c.status !== "resolved").length +
+                      deptCreditCases.filter(c => c.status !== "closed" && c.status !== "resolved").length,
+          revenue: deptRevenue,
+          yearlyTarget: deptTarget?.yearlyTarget || 0,
+          targetProgress: deptTarget ? (deptRevenue / deptTarget.yearlyTarget) * 100 : 0,
+          targetYear: deptTarget?.year || new Date().getFullYear()
+        };
+      })
+    );
+
+    // 3. Target Monitoring
+    const currentYear = new Date().getFullYear();
+    const currentMonth = new Date().getMonth() + 1;
+    
+    const targetMonitoring = revenueTargets
+      .filter(t => t.year === currentYear)
+      .map(target => {
+        const deptId = target.department?._id?.toString();
+        const deptLegalCases = deptId ? legalCases.filter(c => 
+          c.department?.toString() === deptId
+        ) : legalCases;
+        const deptCreditCases = deptId ? creditCases.filter(c => 
+          c.department?.toString() === deptId
+        ) : creditCases;
+
+        // Calculate actual revenue
+        const actualRevenue = 
+          deptLegalCases
+            .filter(c => c.filingFee && c.filingFee.paid)
+            .reduce((sum, c) => sum + (c.filingFee.amount || 0), 0) +
+          deptLegalCases.reduce((sum, c) => {
+            if (c.payments && Array.isArray(c.payments)) {
+              return sum + c.payments.reduce((pSum, p) => pSum + (p.amount || 0), 0);
+            }
+            return sum;
+          }, 0) +
+          deptCreditCases.reduce((sum, c) => {
+            if (c.promisedPayments && Array.isArray(c.promisedPayments)) {
+              return sum + c.promisedPayments
+                .filter(pp => pp.status === "paid")
+                .reduce((pSum, p) => pSum + (p.amount || 0), 0);
+            }
+            return sum;
+          }, 0);
+
+        // Get monthly target
+        const monthlyTarget = target.monthlyTargets?.find(mt => mt.month === currentMonth);
+        const monthlyTargetAmount = monthlyTarget?.target || 0;
+
+        // Calculate monthly actual (simplified - would need date filtering in real implementation)
+        const monthlyActual = actualRevenue / 12; // Simplified calculation
+
+        return {
+          id: target._id,
+          department: target.department ? {
+            id: target.department._id,
+            name: target.department.name,
+            code: target.department.code
+          } : null,
+          yearlyTarget: target.yearlyTarget,
+          actualRevenue: actualRevenue,
+          progress: (actualRevenue / target.yearlyTarget) * 100,
+          monthlyTarget: monthlyTargetAmount,
+          monthlyActual: monthlyActual,
+          monthlyProgress: monthlyTargetAmount > 0 ? (monthlyActual / monthlyTargetAmount) * 100 : 0,
+          year: target.year,
+          isOnTrack: (actualRevenue / target.yearlyTarget) * 100 >= ((currentMonth / 12) * 100) - 10 // 10% tolerance
+        };
+      });
+
+    res.json({
+      success: true,
+      data: {
+        financialTracking: {
+          totalMoneyCollected,
+          paidFilingFees,
+          legalCasePayments,
+          creditCasePayments,
+          recentPayments,
+          period: parseInt(period)
+        },
+        departmentReviews,
+        targetMonitoring,
+        summary: {
+          totalDepartments: departments.length,
+          totalRevenue: totalMoneyCollected + paidFilingFees + legalCasePayments + creditCasePayments,
+          totalTargets: revenueTargets.length,
+          averageTargetProgress: targetMonitoring.length > 0 
+            ? targetMonitoring.reduce((sum, t) => sum + t.progress, 0) / targetMonitoring.length 
+            : 0
+        }
+      }
+    });
+  } catch (error) {
+    console.error("Error in getAccountantDashboard:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error fetching accountant dashboard data",
+      error: error.message,
     });
   }
 };

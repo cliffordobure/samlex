@@ -26,6 +26,7 @@ import {
   getEnhancedPromisedPaymentsAnalytics,
   downloadCreditCollectionCSV,
   downloadCreditCollectionPDF,
+  getAccountantDashboard,
 } from "../controllers/reportsController.js";
 import LegalCase from "../models/LegalCase.js";
 import {
@@ -331,6 +332,13 @@ router.get(
   "/debt-collector/:debtCollectorId/stats",
   authorize("debt_collector", "law_firm_admin", "credit_head"),
   getDebtCollectorStatsById
+);
+
+// Accountant dashboard endpoint
+router.get(
+  "/accountant-dashboard/:lawFirmId",
+  authorize("accountant", "law_firm_admin"),
+  getAccountantDashboard
 );
 
 export default router;
