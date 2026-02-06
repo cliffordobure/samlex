@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import CaseNumberCounter from "./CaseNumberCounter.js";
 
 const noteSchema = new mongoose.Schema(
   {
@@ -310,29 +311,6 @@ creditCaseSchema.pre("save", function (next) {
   }
   next();
 });
-
-// Add a counter schema for atomic case number generation (shared with LegalCase)
-const caseNumberCounterSchema = new mongoose.Schema({
-  _id: { type: String, required: true },
-  sequence: { type: Number, default: 1 },
-  year: { type: Number, required: true },
-  prefix: { type: String, required: true },
-  lawFirm: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "LawFirm",
-    required: true,
-  },
-  department: { type: mongoose.Schema.Types.ObjectId, ref: "Department" },
-  escalated: { type: Boolean, default: false },
-});
-
-// Use existing model if it exists, otherwise create it
-let CaseNumberCounter;
-try {
-  CaseNumberCounter = mongoose.model("CaseNumberCounter");
-} catch (e) {
-  CaseNumberCounter = mongoose.model("CaseNumberCounter", caseNumberCounterSchema);
-}
 
 // Pre-save hook to generate case number (must be after resolvedAt hook)
 creditCaseSchema.pre("save", async function (next) {
