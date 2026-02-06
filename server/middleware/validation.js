@@ -92,17 +92,24 @@ export const validateCreditCase = [
     .isLength({ min: 5, max: 200 })
     .withMessage("Case title must be between 5 and 200 characters"),
   body("description")
+    .optional()
     .trim()
     .isLength({ min: 10 })
-    .withMessage("Case description must be at least 10 characters"),
+    .withMessage("Case description must be at least 10 characters if provided"),
   body("debtorName")
     .trim()
     .isLength({ min: 2, max: 100 })
     .withMessage("Debtor name must be between 2 and 100 characters"),
   body("debtAmount")
+    .optional()
     .isNumeric()
-    .custom((value) => value > 0)
-    .withMessage("Debt amount must be a positive number"),
+    .custom((value) => {
+      if (value !== undefined && value !== null && value !== '') {
+        return value > 0;
+      }
+      return true;
+    })
+    .withMessage("Debt amount must be a positive number if provided"),
   body("caseReference")
     .trim()
     .isLength({ min: 5, max: 50 })

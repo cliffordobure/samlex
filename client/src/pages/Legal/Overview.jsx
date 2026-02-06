@@ -84,6 +84,9 @@ const LegalOverview = () => {
 
   const [recentActivity, setRecentActivity] = useState([]);
   const [topAdvocates, setTopAdvocates] = useState([]);
+  const [upcomingHearings, setUpcomingHearings] = useState([]);
+  const [pendingActions, setPendingActions] = useState([]);
+  const [recentFilings, setRecentFilings] = useState([]);
   const [caseTrends, setCaseTrends] = useState([
     { month: "Apr 2025", civilCases: 2, criminalCases: 1, corporateCases: 3, familyCases: 1, total: 7 },
     { month: "May 2025", civilCases: 3, criminalCases: 2, corporateCases: 2, familyCases: 2, total: 9 },
@@ -185,6 +188,9 @@ const LegalOverview = () => {
       calculateStats();
       generateRecentActivity();
       generateTopAdvocates();
+      generateUpcomingHearings();
+      generatePendingActions();
+      generateRecentFilings();
     } else {
       console.log("No cases or users data available yet - using sample data for trends");
     }
@@ -324,6 +330,91 @@ const LegalOverview = () => {
       .slice(0, 5);
 
     setTopAdvocates(advocateStats);
+  };
+
+  const generateUpcomingHearings = () => {
+    const now = new Date();
+    const next30Days = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+    
+    const hearings = cases
+      .filter(c => {
+        const hearingDate = c.courtDetails?.nextHearingDate || c.courtDetails?.courtDate;
+        return hearingDate && new Date(hearingDate) >= now && new Date(hearingDate) <= next30Days;
+      })
+      .map(c => ({
+        id: c._id,
+        caseNumber: c.caseNumber,
+        title: c.title,
+        hearingDate: new Date(c.courtDetails?.nextHearingDate || c.courtDetails?.courtDate),
+        courtName: c.courtDetails?.courtName || 'Not specified',
+        courtRoom: c.courtDetails?.courtRoom || 'Not specified',
+        judgeAssigned: c.courtDetails?.judgeAssigned || 'Not assigned',
+        status: c.status,
+      }))
+      .sort((a, b) => a.hearingDate - b.hearingDate)
+      .slice(0, 5);
+
+    setUpcomingHearings(hearings);
+  };
+
+  const generatePendingActions = () => {
+    const pending = cases
+      .filter(c => {
+        // Cases that need attention
+        return (
+          c.status === 'pending_assignment' ||
+          c.status === 'filed' ||
+          (!c.courtDetails?.courtDate && c.status !== 'resolved' && c.status !== 'closed') ||
+          (c.filingFee && !c.filingFee.paid) ||
+          (!c.documents || c.documents.length === 0)
+        );
+      })
+      .map(c => ({
+        id: c._id,
+        caseNumber: c.caseNumber,
+        title: c.title,
+        actionType: 
+          c.status === 'pending_assignment' ? 'assignment' :
+          !c.filingFee?.paid ? 'payment' :
+          !c.courtDetails?.courtDate ? 'hearing_schedule' :
+          !c.documents || c.documents.length === 0 ? 'documents' :
+          'review',
+        priority: c.priority || 'medium',
+        status: c.status,
+        createdAt: new Date(c.createdAt),
+      }))
+      .sort((a, b) => {
+        const priorityOrder = { high: 3, medium: 2, low: 1 };
+        return priorityOrder[b.priority] - priorityOrder[a.priority];
+      })
+      .slice(0, 5);
+
+    setPendingActions(pending);
+  };
+
+  const generateRecentFilings = () => {
+    const now = new Date();
+    const last7Days = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    
+    const filings = cases
+      .filter(c => {
+        const filedDate = c.filedAt || c.createdAt;
+        return new Date(filedDate) >= last7Days;
+      })
+      .map(c => ({
+        id: c._id,
+        caseNumber: c.caseNumber,
+        title: c.title,
+        caseType: c.caseType,
+        filedDate: new Date(c.filedAt || c.createdAt),
+        status: c.status,
+        filingFee: c.filingFee,
+        courtName: c.courtDetails?.courtName || 'Not filed',
+      }))
+      .sort((a, b) => b.filedDate - a.filedDate)
+      .slice(0, 5);
+
+    setRecentFilings(filings);
   };
 
   const generateCaseTrends = () => {
@@ -619,10 +710,10 @@ const LegalOverview = () => {
       {/* Desktop Header */}
       <div className="hidden lg:flex items-center justify-between mb-6 md:mb-8">
         <div>
-          <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2">
+          <h1 className="text-xs font-bold text-white mb-1">
             {user?.role === 'advocate' ? 'My Legal Cases' : 'Legal Department Dashboard'}
           </h1>
-          <p className="text-slate-300 text-lg">
+          <p className="text-slate-300 text-xs">
             {user?.role === 'advocate' 
               ? `Welcome back, ${user?.firstName}! Here's your case overview.`
               : `Welcome back, ${user?.firstName}! Here's your legal department overview.`
@@ -649,6 +740,196 @@ const LegalOverview = () => {
               New Case
             </button>
           )}
+        </div>
+      </div>
+
+      {/* Judiciary E-Filing Features Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 md:mb-8">
+        {/* Upcoming Hearings */}
+        <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-xs font-bold text-white flex items-center gap-2">
+              <FaCalendarAlt className="w-4 h-4 text-blue-400" />
+              Upcoming Court Hearings
+            </h3>
+            <button 
+              onClick={() => navigate('/legal/calendar')}
+              className="text-blue-400 hover:text-blue-300 text-xs transition-colors"
+            >
+              View All
+            </button>
+          </div>
+          <div className="space-y-2">
+            {upcomingHearings.length > 0 ? (
+              upcomingHearings.map((hearing) => (
+                <div 
+                  key={hearing.id} 
+                  onClick={() => navigate(`/legal/cases/${hearing.id}`)}
+                  className="p-3 bg-slate-700/30 rounded-lg border border-slate-600/30 hover:bg-slate-700/50 transition-colors cursor-pointer"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-white truncate">{hearing.title}</p>
+                      <p className="text-xs text-slate-400">{hearing.caseNumber}</p>
+                      <p className="text-xs text-slate-500 mt-1">
+                        {hearing.courtName} • Room {hearing.courtRoom}
+                      </p>
+                    </div>
+                    <div className="text-right ml-2">
+                      <p className="text-xs font-medium text-blue-400">
+                        {hearing.hearingDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        {hearing.hearingDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-8">
+                <FaCalendarAlt className="w-8 h-8 text-slate-500 mx-auto mb-2" />
+                <p className="text-xs text-slate-400">No upcoming hearings</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Pending Actions */}
+        <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-xs font-bold text-white flex items-center gap-2">
+              <FaExclamationTriangle className="w-4 h-4 text-orange-400" />
+              Pending Actions
+            </h3>
+            <button 
+              onClick={() => navigate('/legal/cases')}
+              className="text-blue-400 hover:text-blue-300 text-xs transition-colors"
+            >
+              View All
+            </button>
+          </div>
+          <div className="space-y-2">
+            {pendingActions.length > 0 ? (
+              pendingActions.map((action) => {
+                const actionLabels = {
+                  assignment: 'Needs Assignment',
+                  payment: 'Payment Pending',
+                  hearing_schedule: 'Schedule Hearing',
+                  documents: 'Upload Documents',
+                  review: 'Needs Review',
+                };
+                const actionColors = {
+                  assignment: 'text-yellow-400',
+                  payment: 'text-orange-400',
+                  hearing_schedule: 'text-blue-400',
+                  documents: 'text-purple-400',
+                  review: 'text-red-400',
+                };
+                return (
+                  <div 
+                    key={action.id} 
+                    onClick={() => navigate(`/legal/cases/${action.id}`)}
+                    className="p-3 bg-slate-700/30 rounded-lg border border-slate-600/30 hover:bg-slate-700/50 transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-white truncate">{action.title}</p>
+                        <p className="text-xs text-slate-400">{action.caseNumber}</p>
+                        <p className={`text-xs ${actionColors[action.actionType]} mt-1`}>
+                          {actionLabels[action.actionType]}
+                        </p>
+                      </div>
+                      <div className={`w-2 h-2 rounded-full ${
+                        action.priority === 'high' ? 'bg-red-500' :
+                        action.priority === 'medium' ? 'bg-yellow-500' :
+                        'bg-green-500'
+                      }`}></div>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="text-center py-8">
+                <FaCheckCircle className="w-8 h-8 text-green-500 mx-auto mb-2" />
+                <p className="text-xs text-slate-400">No pending actions</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Recent Filings Section */}
+      <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl mb-6 md:mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-xs font-bold text-white flex items-center gap-2">
+            <FaFileAlt className="w-4 h-4 text-green-400" />
+            Recent Case Filings
+          </h3>
+          <button 
+            onClick={() => navigate('/legal/cases')}
+            className="text-blue-400 hover:text-blue-300 text-xs transition-colors"
+          >
+            View All
+          </button>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-slate-600/50">
+                <th className="text-left py-2 px-3 text-xs font-medium text-slate-400">Case Number</th>
+                <th className="text-left py-2 px-3 text-xs font-medium text-slate-400">Title</th>
+                <th className="text-left py-2 px-3 text-xs font-medium text-slate-400">Type</th>
+                <th className="text-left py-2 px-3 text-xs font-medium text-slate-400">Court</th>
+                <th className="text-left py-2 px-3 text-xs font-medium text-slate-400">Filing Fee</th>
+                <th className="text-left py-2 px-3 text-xs font-medium text-slate-400">Status</th>
+                <th className="text-left py-2 px-3 text-xs font-medium text-slate-400">Filed Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {recentFilings.length > 0 ? (
+                recentFilings.map((filing) => (
+                  <tr 
+                    key={filing.id}
+                    onClick={() => navigate(`/legal/cases/${filing.id}`)}
+                    className="border-b border-slate-600/30 hover:bg-slate-700/30 cursor-pointer transition-colors"
+                  >
+                    <td className="py-2 px-3 text-xs text-white font-medium">{filing.caseNumber}</td>
+                    <td className="py-2 px-3 text-xs text-slate-300 truncate max-w-xs">{filing.title}</td>
+                    <td className="py-2 px-3 text-xs text-slate-400 capitalize">{filing.caseType.replace('_', ' ')}</td>
+                    <td className="py-2 px-3 text-xs text-slate-400">{filing.courtName}</td>
+                    <td className="py-2 px-3 text-xs text-slate-300">
+                      {filing.filingFee?.paid ? (
+                        <span className="text-green-400">KES {formatCurrency(filing.filingFee?.amount || 0)}</span>
+                      ) : (
+                        <span className="text-orange-400">KES {formatCurrency(filing.filingFee?.amount || 0)}</span>
+                      )}
+                    </td>
+                    <td className="py-2 px-3">
+                      <span className={`text-xs px-2 py-1 rounded ${
+                        filing.status === 'filed' ? 'bg-blue-500/20 text-blue-400' :
+                        filing.status === 'assigned' ? 'bg-purple-500/20 text-purple-400' :
+                        filing.status === 'court_proceedings' ? 'bg-red-500/20 text-red-400' :
+                        'bg-slate-500/20 text-slate-400'
+                      }`}>
+                        {filing.status.replace('_', ' ')}
+                      </span>
+                    </td>
+                    <td className="py-2 px-3 text-xs text-slate-400">
+                      {filing.filedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="7" className="py-8 text-center">
+                    <FaFileAlt className="w-8 h-8 text-slate-500 mx-auto mb-2" />
+                    <p className="text-xs text-slate-400">No recent filings</p>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
 
@@ -844,7 +1125,7 @@ const LegalOverview = () => {
         {/* Recent Cases */}
         <div className="lg:col-span-2 bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6 gap-3">
-            <h3 className="text-lg sm:text-xl font-bold text-white">Recent Cases</h3>
+            <h3 className="text-xs font-bold text-white">Recent Cases</h3>
             <Link 
               to="/legal/cases" 
               className="px-3 py-1.5 bg-blue-600/50 hover:bg-blue-500/50 text-blue-200 text-xs rounded-lg transition-colors"
@@ -865,7 +1146,7 @@ const LegalOverview = () => {
                       'bg-gray-500'
                     }`}></div>
                     <div>
-                      <h4 className="text-sm font-medium text-slate-200">{caseItem.title}</h4>
+                      <h4 className="text-xs font-medium text-slate-200">{caseItem.title}</h4>
                       <p className="text-xs text-slate-400">
                         {caseItem.caseType} • {caseItem.caseNumber}
                       </p>
@@ -886,11 +1167,11 @@ const LegalOverview = () => {
                 <div className="w-16 h-16 bg-slate-600/50 rounded-full flex items-center justify-center mx-auto mb-4">
                   <FaFileAlt className="w-8 h-8 text-slate-400" />
                 </div>
-                <p className="text-slate-400 text-sm mb-2">No cases found</p>
+                <p className="text-slate-400 text-xs mb-2">No cases found</p>
                 <p className="text-slate-500 text-xs">Create your first case to get started</p>
                 <button
                   onClick={handleNewCase}
-                  className="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors"
+                  className="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg transition-colors"
                 >
                   Create Case
                 </button>
@@ -901,7 +1182,7 @@ const LegalOverview = () => {
 
         {/* Quick Actions */}
         <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl">
-          <h3 className="text-lg sm:text-xl font-bold text-white mb-4 sm:mb-6">Quick Actions</h3>
+          <h3 className="text-xs font-bold text-white mb-4 sm:mb-6">Quick Actions</h3>
           <div className="space-y-3 sm:space-y-4">
             <button
               onClick={handleNewCase}
@@ -911,8 +1192,8 @@ const LegalOverview = () => {
                 <FaPlus className="w-5 h-5 sm:w-6 sm:h-6" />
               </div>
               <div className="text-left">
-                <div className="font-bold text-sm sm:text-base">Create New Case</div>
-                <div className="text-xs sm:text-sm opacity-80">Start a new legal case</div>
+                <div className="font-bold text-xs">Create New Case</div>
+                <div className="text-xs opacity-80">Start a new legal case</div>
               </div>
             </button>
 
@@ -924,8 +1205,8 @@ const LegalOverview = () => {
                 <FaChartBar className="w-5 h-5 sm:w-6 sm:h-6" />
               </div>
               <div className="text-left">
-                <div className="font-bold text-sm sm:text-base">View All Cases</div>
-                <div className="text-xs sm:text-sm opacity-80">Manage existing cases</div>
+                <div className="font-bold text-xs">View All Cases</div>
+                <div className="text-xs opacity-80">Manage existing cases</div>
               </div>
             </button>
 
@@ -939,8 +1220,8 @@ const LegalOverview = () => {
                     <FaUserPlus className="w-5 h-5 sm:w-6 sm:h-6" />
                   </div>
                   <div className="text-left">
-                    <div className="font-bold text-sm sm:text-base">Assign Cases</div>
-                    <div className="text-xs sm:text-sm opacity-80">Assign cases to advocates</div>
+                    <div className="font-bold text-xs">Assign Cases</div>
+                    <div className="text-xs opacity-80">Assign cases to advocates</div>
                   </div>
                 </button>
 
@@ -952,8 +1233,8 @@ const LegalOverview = () => {
                     <FaExclamationTriangle className="w-5 h-5 sm:w-6 sm:h-6" />
                   </div>
                   <div className="text-left">
-                    <div className="font-bold text-sm sm:text-base">Escalated Cases</div>
-                    <div className="text-xs sm:text-sm opacity-80">Review escalated cases</div>
+                    <div className="font-bold text-xs">Escalated Cases</div>
+                    <div className="text-xs opacity-80">Review escalated cases</div>
                   </div>
                 </button>
               </>
@@ -967,8 +1248,8 @@ const LegalOverview = () => {
                 <FaChartLine className="w-5 h-5 sm:w-6 sm:h-6" />
               </div>
               <div className="text-left">
-                <div className="font-bold text-sm sm:text-base">Generate Reports</div>
-                <div className="text-xs sm:text-sm opacity-80">View detailed analytics</div>
+                <div className="font-bold text-xs">Generate Reports</div>
+                <div className="text-xs opacity-80">View detailed analytics</div>
               </div>
             </button>
           </div>
@@ -981,7 +1262,7 @@ const LegalOverview = () => {
         {user?.role !== 'advocate' && (
           <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl">
             <div className="flex items-center justify-between mb-4 sm:mb-6">
-              <h3 className="text-lg sm:text-xl font-bold text-white">Top Advocates</h3>
+              <h3 className="text-xs font-bold text-white">Top Advocates</h3>
               <button 
                 onClick={() => navigate('/legal/cases')}
                 className="text-blue-400 hover:text-blue-300 text-xs sm:text-sm font-medium transition-colors"
@@ -997,13 +1278,13 @@ const LegalOverview = () => {
                     {advocate.name.split(' ').map(n => n[0]).join('')}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-semibold text-white group-hover:text-blue-300 transition-colors text-sm sm:text-base">{advocate.name}</h4>
-                    <p className="text-xs sm:text-sm text-slate-400 truncate">{advocate.email}</p>
+                    <h4 className="font-semibold text-white group-hover:text-blue-300 transition-colors text-xs">{advocate.name}</h4>
+                    <p className="text-xs text-slate-400 truncate">{advocate.email}</p>
                     <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4 mt-1 sm:mt-2 gap-1">
-                      <span className="text-xs sm:text-sm text-slate-300">
+                      <span className="text-xs text-slate-300">
                         {advocate.resolvedCases}/{advocate.totalCases} cases
                       </span>
-                      <span className={`text-xs sm:text-sm font-medium ${getPerformanceColor(advocate.performance)}`}>
+                      <span className={`text-xs font-medium ${getPerformanceColor(advocate.performance)}`}>
                         {advocate.resolutionRate}% success
                       </span>
                     </div>
@@ -1020,7 +1301,7 @@ const LegalOverview = () => {
         {/* Recent Activity */}
         <div className={`bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl ${user?.role === 'advocate' ? 'lg:col-span-1' : ''}`}>
           <div className="flex items-center justify-between mb-4 sm:mb-6">
-            <h3 className="text-lg sm:text-xl font-bold text-white">Recent Activity</h3>
+            <h3 className="text-xs font-bold text-white">Recent Activity</h3>
             <button 
               onClick={() => navigate('/legal/cases')}
               className="text-blue-400 hover:text-blue-300 text-xs sm:text-sm font-medium transition-colors"
@@ -1036,8 +1317,8 @@ const LegalOverview = () => {
                   <activity.icon className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-white truncate group-hover:text-blue-300 transition-colors text-sm sm:text-base">{activity.title}</p>
-                  <p className="text-xs sm:text-sm text-slate-400">{activity.description}</p>
+                  <p className="font-medium text-white truncate group-hover:text-blue-300 transition-colors text-xs">{activity.title}</p>
+                  <p className="text-xs text-slate-400">{activity.description}</p>
                   <p className="text-xs text-slate-500 mt-1">
                     {activity.timestamp.toLocaleTimeString('en-US', { 
                       hour: '2-digit', 
@@ -1057,7 +1338,7 @@ const LegalOverview = () => {
       {/* Case Type Distribution */}
       <div className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6 gap-3">
-          <h3 className="text-lg sm:text-xl font-bold text-white">Case Type Distribution</h3>
+          <h3 className="text-xs font-bold text-white">Case Type Distribution</h3>
           <div className="flex items-center gap-2">
             <button 
               onClick={() => navigate('/legal/cases')}
@@ -1105,8 +1386,8 @@ const LegalOverview = () => {
                 <div className={`w-12 h-12 sm:w-16 sm:h-16 ${color} rounded-full flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform`}>
                   <IconComponent className="text-white text-xl sm:text-2xl" />
                 </div>
-                <div className="text-lg sm:text-xl font-bold text-white">{count}</div>
-                <div className="text-xs sm:text-sm text-slate-400">{label}</div>
+                <div className="text-xs font-bold text-white">{count}</div>
+                <div className="text-xs text-slate-400">{label}</div>
               </div>
             );
           })}

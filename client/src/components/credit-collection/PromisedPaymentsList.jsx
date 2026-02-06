@@ -127,8 +127,58 @@ const PromisedPaymentsList = ({ case_, onUpdate }) => {
     );
   };
 
+  // Calculate remaining balance
+  const calculateRemainingBalance = () => {
+    if (!case_ || !case_.debtAmount) return null;
+    
+    const totalPaid = case_.promisedPayments
+      ? case_.promisedPayments
+          .filter((p) => p.status === "paid")
+          .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0)
+      : 0;
+    
+    const remaining = parseFloat(case_.debtAmount) - totalPaid;
+    return {
+      totalDebt: parseFloat(case_.debtAmount) || 0,
+      totalPaid,
+      remaining: remaining > 0 ? remaining : 0,
+      currency: case_.currency || "KES",
+    };
+  };
+
+  const balance = calculateRemainingBalance();
+
   return (
     <div className="bg-dark-800 rounded-lg p-6">
+      {/* Remaining Balance Display */}
+      {balance && (
+        <div className="mb-6 p-4 bg-gradient-to-r from-blue-600/20 to-indigo-600/20 border border-blue-500/30 rounded-xl">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <p className="text-xs text-slate-400 mb-1">Total Debt</p>
+              <p className="text-lg font-bold text-white">
+                {formatCurrency(balance.totalDebt, balance.currency)}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-slate-400 mb-1">Total Paid</p>
+              <p className="text-lg font-bold text-green-400">
+                {formatCurrency(balance.totalPaid, balance.currency)}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-slate-400 mb-1">Remaining Balance</p>
+              <p className={`text-lg font-bold ${balance.remaining > 0 ? 'text-orange-400' : 'text-green-400'}`}>
+                {formatCurrency(balance.remaining, balance.currency)}
+              </p>
+              {balance.remaining === 0 && (
+                <span className="text-xs text-green-400 mt-1 inline-block">✓ Fully Paid</span>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-white flex items-center">
           <FaMoneyBillWave className="mr-2 text-green-400" />

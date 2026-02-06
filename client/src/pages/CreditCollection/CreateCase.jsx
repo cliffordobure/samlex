@@ -477,16 +477,15 @@ const CreateCase = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-2">
-                      Debt Amount (KSH)
+                      Debt Amount (KSH) <span className="text-slate-500 text-xs">(Optional)</span>
                     </label>
                     <input
                       name="debtAmount"
                       type="number"
                       value={form.debtAmount}
                       onChange={handleChange}
-                      required
                       className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
-                      placeholder="Enter debt amount"
+                      placeholder="Enter debt amount (optional)"
                     />
                   </div>
                   <div>
@@ -524,7 +523,7 @@ const CreateCase = () => {
                 
                 <div className="mt-6">
                   <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Description
+                    Description (Optional)
                   </label>
                   <textarea
                     name="description"
@@ -532,7 +531,7 @@ const CreateCase = () => {
                     onChange={handleChange}
                     rows={4}
                     className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 resize-none"
-                    placeholder="Enter case description..."
+                    placeholder="Enter case description (optional)..."
                   />
                 </div>
               </div>

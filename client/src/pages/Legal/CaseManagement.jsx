@@ -13,6 +13,11 @@ import { getUsers } from "../../store/slices/userSlice";
 import LegalKanbanBoard from "./LegalKanbanBoard";
 import toast from "react-hot-toast";
 import socket from "../../utils/socket";
+import { getAccessibleDocumentUrl } from "../../utils/documentUrl.js";
+import { getDocumentViewerUrl, isImage, canPreviewInBrowser, isPDF } from "../../utils/documentViewer.js";
+import { API_URL } from "../../config/api.js";
+
+const FILE_BASE = API_URL.replace(/\/api$/, "");
 import {
   FaPlus,
   FaSearch,
@@ -120,6 +125,11 @@ const LegalCaseManagement = () => {
     caseNumber: null,
   });
   const [isDeleting, setIsDeleting] = useState(false);
+  const [documentModal, setDocumentModal] = useState({
+    isOpen: false,
+    document: null,
+    url: null,
+  });
 
   // Statistics for the dashboard
   const [stats, setStats] = useState({
@@ -1054,6 +1064,9 @@ const LegalCaseManagement = () => {
                         Next Hearing
                       </th>
                       <th className="px-4 py-4 text-left text-xs font-bold uppercase tracking-wider border-r border-blue-700">
+                        Documents
+                      </th>
+                      <th className="px-4 py-4 text-left text-xs font-bold uppercase tracking-wider border-r border-blue-700">
                         Advocate
                       </th>
                       <th className="px-4 py-4 text-left text-xs font-bold uppercase tracking-wider">
@@ -1170,7 +1183,7 @@ const LegalCaseManagement = () => {
                           <td className="px-4 py-4 whitespace-nowrap border-r border-gray-200">
                             {nextHearing !== "Not scheduled" ? (
                               <div>
-                                <div className="text-sm font-medium text-gray-900">
+                                <div className="text-xs font-medium text-gray-900">
                                   {nextHearing}
                                 </div>
                                 {legalCase.courtDetails?.courtRoom && (
@@ -1184,7 +1197,115 @@ const LegalCaseManagement = () => {
                             )}
                           </td>
                           <td className="px-4 py-4 border-r border-gray-200">
-                            <div className="text-sm text-gray-900">
+                            <div className="space-y-2">
+                              {legalCase.documents && legalCase.documents.length > 0 ? (
+                                <div className="flex flex-wrap gap-1.5">
+                                  {legalCase.documents.slice(0, 3).map((doc, docIndex) => {
+                                    const isPdf = doc.mimeType?.includes('pdf') || doc.name?.toLowerCase().endsWith('.pdf');
+                                    const isImage = doc.mimeType?.includes('image') || ['jpg', 'jpeg', 'png', 'gif'].some(ext => doc.name?.toLowerCase().endsWith(`.${ext}`));
+                                    // Extract URL from document object - use url, path, or construct from API
+                                    const docUrl = doc.url || (doc.path ? (doc.path.startsWith('http') ? doc.path : `${FILE_BASE}${doc.path}`) : null);
+                                    
+                                    // Skip rendering if no valid URL
+                                    if (!docUrl || typeof docUrl !== 'string') {
+                                      return null;
+                                    }
+                                    
+                                    const handleDocumentClick = async (e) => {
+                                      e.stopPropagation();
+                                      if (!docUrl || typeof docUrl !== 'string') {
+                                        console.warn('Invalid document URL:', docUrl);
+                                        return;
+                                      }
+                                      
+                                      try {
+                                        // If it's an S3 URL, get signed URL, otherwise use directly
+                                        let finalUrl = docUrl;
+                                        if (typeof docUrl === 'string' && (docUrl.includes('.s3.') || docUrl.includes('s3.amazonaws.com'))) {
+                                          finalUrl = await getAccessibleDocumentUrl(docUrl);
+                                        }
+                                        if (finalUrl) {
+                                          // Open in modal viewer instead of new tab
+                                          setDocumentModal({
+                                            isOpen: true,
+                                            document: doc,
+                                            url: finalUrl,
+                                          });
+                                        }
+                                      } catch (error) {
+                                        console.error('Error opening document:', error);
+                                        // Fallback to direct URL
+                                        if (docUrl && typeof docUrl === 'string') {
+                                          setDocumentModal({
+                                            isOpen: true,
+                                            document: doc,
+                                            url: docUrl,
+                                          });
+                                        }
+                                      }
+                                    };
+                                    
+                                    return (
+                                      <div
+                                        key={docIndex}
+                                        className="group relative"
+                                        onClick={handleDocumentClick}
+                                      >
+                                        <div className="flex items-center gap-1 px-2 py-1 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded text-xs cursor-pointer transition-colors">
+                                          {isPdf ? (
+                                            <FaFilePdf className="w-3 h-3 text-red-600" />
+                                          ) : isImage ? (
+                                            <FaFileAlt className="w-3 h-3 text-green-600" />
+                                          ) : (
+                                            <FaFileAlt className="w-3 h-3 text-blue-600" />
+                                          )}
+                                          <span className="text-gray-700 font-medium truncate max-w-[80px]">
+                                            {doc.name || doc.originalName || 'Document'}
+                                          </span>
+                                        </div>
+                                        {/* Tooltip on hover */}
+                                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-10">
+                                          {doc.name || doc.originalName || 'Document'}
+                                          {doc.size && (
+                                            <span className="block text-gray-400 text-[10px] mt-0.5">
+                                              {(doc.size / 1024).toFixed(1)} KB
+                                            </span>
+                                          )}
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                  {legalCase.documents.length > 3 && (
+                                    <div className="flex items-center gap-1 px-2 py-1 bg-gray-100 border border-gray-300 rounded text-xs">
+                                      <FaFileAlt className="w-3 h-3 text-gray-600" />
+                                      <span className="text-gray-700 font-medium">
+                                        +{legalCase.documents.length - 3} more
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-2 text-xs text-gray-400 italic">
+                                  <FaFileAlt className="w-3 h-3" />
+                                  <span>No documents</span>
+                                </div>
+                              )}
+                              {legalCase.documents && legalCase.documents.length > 0 && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigate(`/legal/cases/${legalCase._id}`, { state: { tab: 'documents' } });
+                                  }}
+                                  className="text-xs text-blue-600 hover:text-blue-800 font-medium mt-1 flex items-center gap-1"
+                                >
+                                  <FaEye className="w-3 h-3" />
+                                  View all ({legalCase.documents.length})
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-4 py-4 border-r border-gray-200">
+                            <div className="text-xs text-gray-900">
                               {legalCase.assignedTo ? (
                                 <div>
                                   <div className="font-medium">
@@ -1816,6 +1937,103 @@ const LegalCaseManagement = () => {
           </div>
         </div>
       )}
+      
+      {/* Document Viewer Modal */}
+      {documentModal.isOpen && documentModal.document && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <div className="flex items-center gap-3">
+                {isPdf(documentModal.document.name || documentModal.document.originalName) ? (
+                  <FaFilePdf className="w-6 h-6 text-red-600" />
+                ) : isImage(documentModal.document.name || documentModal.document.originalName) ? (
+                  <FaFileAlt className="w-6 h-6 text-green-600" />
+                ) : (
+                  <FaFileAlt className="w-6 h-6 text-blue-600" />
+                )}
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900">
+                    {documentModal.document.name || documentModal.document.originalName || 'Document'}
+                  </h3>
+                  {documentModal.document.size && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      {(documentModal.document.size / 1024).toFixed(1)} KB
+                    </p>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {documentModal.url && (
+                  <a
+                    href={documentModal.url}
+                    download={documentModal.document.name || documentModal.document.originalName}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-medium transition-colors flex items-center gap-2"
+                  >
+                    <FaDownload className="w-4 h-4" />
+                    Download
+                  </a>
+                )}
+                <button
+                  onClick={() => setDocumentModal({ isOpen: false, document: null, url: null })}
+                  className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <FaTimes className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body - Document Viewer */}
+            <div className="flex-1 overflow-auto p-6 bg-gray-50">
+              {documentModal.url && canPreviewInBrowser(documentModal.document.name || documentModal.document.originalName) ? (
+                <div className="w-full h-full flex items-center justify-center">
+                  {isImage(documentModal.document.name || documentModal.document.originalName) ? (
+                    <img
+                      src={getDocumentViewerUrl(documentModal.url, documentModal.document.name || documentModal.document.originalName)}
+                      alt={documentModal.document.name || documentModal.document.originalName}
+                      className="max-w-full max-h-[70vh] object-contain rounded-lg shadow-lg"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'block';
+                      }}
+                    />
+                  ) : (
+                    <iframe
+                      src={getDocumentViewerUrl(documentModal.url, documentModal.document.name || documentModal.document.originalName)}
+                      className="w-full h-[70vh] border border-gray-300 rounded-lg shadow-lg"
+                      title={documentModal.document.name || documentModal.document.originalName}
+                    />
+                  )}
+                  <div style={{ display: 'none' }} className="text-center p-8">
+                    <FaFileAlt className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-600 font-medium">Unable to preview this document</p>
+                    <p className="text-gray-500 text-sm mt-2">Please download to view</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center p-8">
+                  <FaFileAlt className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-600 font-medium">Preview not available for this file type</p>
+                  <p className="text-gray-500 text-xs mt-2 mb-4">
+                    {documentModal.document.name || documentModal.document.originalName || 'Document'}
+                  </p>
+                  {documentModal.url && (
+                    <a
+                      href={documentModal.url}
+                      download={documentModal.document.name || documentModal.document.originalName}
+                      className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+                    >
+                      <FaDownload className="w-5 h-5" />
+                      Download Document
+                    </a>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+      
       {/* Assignment Modal */}
       {showAssignmentModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">

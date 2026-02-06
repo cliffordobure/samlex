@@ -988,7 +988,7 @@ const CaseDetails = () => {
             Retry Load Case
           </button>
         </div>
-        <div className="text-sm text-dark-400">
+        <div className="text-xs text-dark-400">
           <p>Case ID: {id}</p>
           <p>Cases loaded: {cases?.length || 0}</p>
           <p>Loading: {isLoading ? "Yes" : "No"}</p>
@@ -1012,13 +1012,13 @@ const CaseDetails = () => {
                 className="flex items-center gap-2 px-4 py-2 bg-dark-700 hover:bg-dark-600 text-white rounded-lg border border-dark-600 hover:border-primary-400 transition-all duration-200 shadow-sm"
               >
                 <FaArrowLeft className="w-4 h-4" />
-                <span className="font-medium">Back to Cases</span>
+                <span className="font-medium text-xs">Back to Cases</span>
               </Link>
               <div className="flex-1">
                 <div className="flex items-center gap-4 mb-2">
                   <div className="flex items-center gap-2">
                     <CaseTypeIcon className="w-6 h-6 text-primary-400" />
-                    <h1 className="text-3xl font-bold text-white">
+                    <h1 className="text-xs font-bold text-white">
                       {currentCase.caseNumber}
                     </h1>
                   </div>
@@ -1030,11 +1030,11 @@ const CaseDetails = () => {
                     {currentCase.status?.replace("_", " ") || "Unknown"}
                   </span>
                 </div>
-                <p className="text-dark-300 text-lg font-medium">
+                <p className="text-dark-300 text-xs font-medium">
                   {currentCase.title}
                 </p>
                 <div className="flex items-center gap-4 mt-2">
-                  <span className="text-sm text-dark-400">
+                  <span className="text-xs text-dark-400">
                     Created:{" "}
                     {new Date(currentCase.createdAt).toLocaleDateString()}
                   </span>
@@ -1044,7 +1044,7 @@ const CaseDetails = () => {
                         console.log("Manual retry - fetching case:", id);
                         dispatch(getLegalCase(id));
                       }}
-                      className="px-3 py-1 bg-yellow-500 hover:bg-yellow-600 text-white rounded text-sm font-medium transition-all duration-200"
+                      className="px-3 py-1 bg-yellow-500 hover:bg-yellow-600 text-white rounded text-xs font-medium transition-all duration-200"
                     >
                       Retry Load
                     </button>
@@ -1142,10 +1142,10 @@ const CaseDetails = () => {
                     <FaFileAlt className="w-5 h-5 text-primary-400" />
                   </div>
                   <div>
-                    <h2 className="text-2xl font-bold text-white">
+                    <h2 className="text-xs font-bold text-white">
                       Case Information
                     </h2>
-                    <p className="text-dark-300">
+                    <p className="text-xs text-dark-300">
                       Essential case details and metadata
                     </p>
                   </div>
@@ -1154,30 +1154,30 @@ const CaseDetails = () => {
               <div className="p-8">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-white">
+                    <label className="block text-xs font-semibold text-white">
                       Case Number
                     </label>
-                    <div className="font-mono text-lg bg-dark-900/50 px-4 py-3 rounded-lg border border-dark-600 text-white">
+                    <div className="font-mono text-xs bg-dark-900/50 px-4 py-3 rounded-lg border border-dark-600 text-white">
                       {currentCase.caseNumber}
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-white">
+                    <label className="block text-xs font-semibold text-white">
                       Case Type
                     </label>
                     <div className="flex items-center gap-3 bg-dark-900/50 px-4 py-3 rounded-lg border border-dark-600">
-                      <CaseTypeIcon className="w-5 h-5 text-primary-400" />
-                      <span className="text-white capitalize">
+                      <CaseTypeIcon className="w-4 h-4 text-primary-400" />
+                      <span className="text-xs text-white capitalize">
                         {currentCase.caseType}
                       </span>
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-white">
+                    <label className="block text-xs font-semibold text-white">
                       Priority
                     </label>
                     <span
-                      className={`inline-block px-3 py-2 rounded-lg text-sm font-bold uppercase tracking-wide ${
+                      className={`inline-block px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wide ${
                         priorityColors[currentCase.priority] || "bg-gray-500"
                       } text-white shadow-sm`}
                     >
@@ -1185,18 +1185,18 @@ const CaseDetails = () => {
                     </span>
                   </div>
                   <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-white">
+                    <label className="block text-xs font-semibold text-white">
                       Created Date
                     </label>
-                    <div className="bg-dark-900/50 px-4 py-3 rounded-lg border border-dark-600 text-white">
+                    <div className="bg-dark-900/50 px-4 py-3 rounded-lg border border-dark-600 text-xs text-white">
                       {new Date(currentCase.createdAt).toLocaleDateString()}
                     </div>
                   </div>
                   <div className="md:col-span-2 space-y-2">
-                    <label className="block text-sm font-semibold text-white">
+                    <label className="block text-xs font-semibold text-white">
                       Description
                     </label>
-                    <div className="bg-dark-900/50 px-4 py-3 rounded-lg border border-dark-600 text-white min-h-[80px]">
+                    <div className="bg-dark-900/50 px-4 py-3 rounded-lg border border-dark-600 text-xs text-white min-h-[80px]">
                       {currentCase.description || "No description provided"}
                     </div>
                   </div>
@@ -1212,10 +1212,10 @@ const CaseDetails = () => {
                     <FaUser className="w-5 h-5 text-green-400" />
                   </div>
                   <div>
-                    <h2 className="text-2xl font-bold text-white">
+                    <h2 className="text-xs font-bold text-white">
                       Client Information
                     </h2>
-                    <p className="text-dark-300">
+                    <p className="text-xs text-dark-300">
                       Client details and contact information
                     </p>
                   </div>
@@ -1225,37 +1225,37 @@ const CaseDetails = () => {
                 {currentCase.client ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <label className="block text-sm font-semibold text-white">
+                      <label className="block text-xs font-semibold text-white">
                         Name
                       </label>
-                      <div className="bg-dark-900/50 px-4 py-3 rounded-lg border border-dark-600 text-white">
+                      <div className="bg-dark-900/50 px-4 py-3 rounded-lg border border-dark-600 text-xs text-white">
                         {currentCase.client.firstName}{" "}
                         {currentCase.client.lastName}
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <label className="block text-sm font-semibold text-white">
+                      <label className="block text-xs font-semibold text-white">
                         Email
                       </label>
-                      <div className="flex items-center gap-3 bg-dark-900/50 px-4 py-3 rounded-lg border border-dark-600 text-white">
-                        <FaEnvelope className="w-4 h-4 text-dark-400" />
+                      <div className="flex items-center gap-3 bg-dark-900/50 px-4 py-3 rounded-lg border border-dark-600 text-xs text-white">
+                        <FaEnvelope className="w-3 h-3 text-dark-400" />
                         {currentCase.client.email}
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <label className="block text-sm font-semibold text-white">
+                      <label className="block text-xs font-semibold text-white">
                         Phone
                       </label>
-                      <div className="flex items-center gap-3 bg-dark-900/50 px-4 py-3 rounded-lg border border-dark-600 text-white">
-                        <FaPhone className="w-4 h-4 text-dark-400" />
+                      <div className="flex items-center gap-3 bg-dark-900/50 px-4 py-3 rounded-lg border border-dark-600 text-xs text-white">
+                        <FaPhone className="w-3 h-3 text-dark-400" />
                         {currentCase.client.phoneNumber || "Not provided"}
                       </div>
                     </div>
                   </div>
                 ) : (
                   <div className="text-center py-8 text-dark-400">
-                    <FaUser className="mx-auto text-4xl mb-4" />
-                    <p>Client information not available</p>
+                    <FaUser className="mx-auto w-6 h-6 mb-4" />
+                    <p className="text-xs">Client information not available</p>
                   </div>
                 )}
               </div>
@@ -1271,10 +1271,10 @@ const CaseDetails = () => {
                         <FaGavel className="w-5 h-5 text-blue-400" />
                       </div>
                       <div>
-                        <h2 className="text-2xl font-bold text-white">
+                        <h2 className="text-xs font-bold text-white">
                           Court Details
                         </h2>
-                        <p className="text-dark-300">
+                        <p className="text-xs text-dark-300">
                           Court information and hearing details
                         </p>
                       </div>
@@ -1299,28 +1299,28 @@ const CaseDetails = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {currentCase.courtDetails.courtName && (
                       <div className="space-y-2">
-                        <label className="block text-sm font-semibold text-white">
+                        <label className="block text-xs font-semibold text-white">
                           Court Name
                         </label>
-                        <div className="bg-dark-900/50 px-4 py-3 rounded-lg border border-dark-600 text-white">
+                        <div className="bg-dark-900/50 px-4 py-3 rounded-lg border border-dark-600 text-xs text-white">
                           {currentCase.courtDetails.courtName}
                         </div>
                       </div>
                     )}
                     {currentCase.courtDetails.courtLocation && (
                       <div className="space-y-2">
-                        <label className="block text-sm font-semibold text-white">
+                        <label className="block text-xs font-semibold text-white">
                           Location
                         </label>
-                        <div className="flex items-center gap-3 bg-dark-900/50 px-4 py-3 rounded-lg border border-dark-600 text-white">
-                          <FaMapMarkerAlt className="w-4 h-4 text-dark-400" />
+                        <div className="flex items-center gap-3 bg-dark-900/50 px-4 py-3 rounded-lg border border-dark-600 text-xs text-white">
+                          <FaMapMarkerAlt className="w-3 h-3 text-dark-400" />
                           {currentCase.courtDetails.courtLocation}
                         </div>
                       </div>
                     )}
                     {currentCase.courtDetails.judgeAssigned && (
                       <div className="space-y-2">
-                        <label className="block text-sm font-semibold text-white">
+                        <label className="block text-xs font-semibold text-white">
                           Judge Assigned
                         </label>
                         <div className="bg-dark-900/50 px-4 py-3 rounded-lg border border-dark-600 text-white">
@@ -1330,7 +1330,7 @@ const CaseDetails = () => {
                     )}
                     {currentCase.courtDetails.courtDate && (
                       <div className="space-y-2">
-                        <label className="block text-sm font-semibold text-white">
+                        <label className="block text-xs font-semibold text-white">
                           Court Date
                         </label>
                         <div className="flex items-center gap-3 bg-dark-900/50 px-4 py-3 rounded-lg border border-dark-600 text-white">
@@ -1343,7 +1343,7 @@ const CaseDetails = () => {
                     )}
                     {currentCase.courtDetails.courtRoom && (
                       <div className="space-y-2">
-                        <label className="block text-sm font-semibold text-white">
+                        <label className="block text-xs font-semibold text-white">
                           Court Room
                         </label>
                         <div className="bg-dark-900/50 px-4 py-3 rounded-lg border border-dark-600 text-white">
@@ -1366,7 +1366,7 @@ const CaseDetails = () => {
                         <FaHistory className="w-5 h-5 text-purple-400" />
                       </div>
                       <div>
-                        <h2 className="text-2xl font-bold text-white">
+                        <h2 className="text-xs font-bold text-white">
                           Court Activities
                         </h2>
                         <p className="text-dark-300">
@@ -1392,12 +1392,12 @@ const CaseDetails = () => {
                       <table className="w-full">
                         <thead>
                           <tr className="border-b border-dark-600">
-                            <th className="text-left py-3 px-4 text-sm font-semibold text-white">Date</th>
-                            <th className="text-left py-3 px-4 text-sm font-semibold text-white">Type</th>
-                            <th className="text-left py-3 px-4 text-sm font-semibold text-white">Outcome</th>
-                            <th className="text-left py-3 px-4 text-sm font-semibold text-white">Judge</th>
-                            <th className="text-left py-3 px-4 text-sm font-semibold text-white">Next Hearing</th>
-                            <th className="text-left py-3 px-4 text-sm font-semibold text-white">Notes</th>
+                            <th className="text-left py-3 px-4 text-xs font-semibold text-white">Date</th>
+                            <th className="text-left py-3 px-4 text-xs font-semibold text-white">Type</th>
+                            <th className="text-left py-3 px-4 text-xs font-semibold text-white">Outcome</th>
+                            <th className="text-left py-3 px-4 text-xs font-semibold text-white">Judge</th>
+                            <th className="text-left py-3 px-4 text-xs font-semibold text-white">Next Hearing</th>
+                            <th className="text-left py-3 px-4 text-xs font-semibold text-white">Notes</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -1405,7 +1405,7 @@ const CaseDetails = () => {
                             .sort((a, b) => new Date(b.activityDate) - new Date(a.activityDate))
                             .map((activity, index) => (
                               <tr key={activity._id || index} className="border-b border-dark-600/50 hover:bg-dark-900/30">
-                                <td className="py-3 px-4 text-sm text-white">
+                                <td className="py-3 px-4 text-xs text-white">
                                   {new Date(activity.activityDate).toLocaleDateString()}
                                 </td>
                                 <td className="py-3 px-4">
@@ -1413,16 +1413,16 @@ const CaseDetails = () => {
                                     {activity.activityType?.replace("_", " ").toUpperCase()}
                                   </span>
                                 </td>
-                                <td className="py-3 px-4 text-sm text-dark-300">
+                                <td className="py-3 px-4 text-xs text-dark-300">
                                   {activity.outcome || "-"}
                                 </td>
-                                <td className="py-3 px-4 text-sm text-dark-300">
+                                <td className="py-3 px-4 text-xs text-dark-300">
                                   {activity.judgeName || "-"}
                                 </td>
-                                <td className="py-3 px-4 text-sm text-dark-300">
+                                <td className="py-3 px-4 text-xs text-dark-300">
                                   {activity.nextHearingDate ? new Date(activity.nextHearingDate).toLocaleDateString() : "-"}
                                 </td>
-                                <td className="py-3 px-4 text-sm text-dark-300 max-w-xs truncate">
+                                <td className="py-3 px-4 text-xs text-dark-300 max-w-xs truncate">
                                   {activity.notes || "-"}
                                 </td>
                               </tr>
@@ -1449,7 +1449,7 @@ const CaseDetails = () => {
                       <FaFileAlt className="w-5 h-5 text-orange-400" />
                     </div>
                     <div>
-                      <h2 className="text-2xl font-bold text-white">
+                      <h2 className="text-xs font-bold text-white">
                         Documents
                       </h2>
                       <p className="text-dark-300">Case documents and files</p>
@@ -1500,7 +1500,7 @@ const CaseDetails = () => {
                                     type="text"
                                     value={newDocName}
                                     onChange={(e) => setNewDocName(e.target.value)}
-                                    className="flex-1 px-2 py-1 bg-dark-800 border border-dark-600 rounded text-white text-sm"
+                                    className="flex-1 px-2 py-1 bg-dark-800 border border-dark-600 rounded text-white text-xs"
                                     placeholder="Enter new name"
                                     autoFocus
                                     onKeyDown={(e) => {
@@ -1536,7 +1536,7 @@ const CaseDetails = () => {
                                       doc.originalName ||
                                       (doc.path ? doc.path.split("/").pop() : `Document ${index + 1}`)}
                                   </div>
-                                  <div className="text-sm text-dark-400">
+                                  <div className="text-xs text-dark-400">
                                     {doc.uploadedBy?.firstName || doc.uploadedBy ? `${doc.uploadedBy.firstName || ''} ${doc.uploadedBy.lastName || ''}`.trim() : 'Unknown'}
                                   </div>
                                 </>
@@ -1586,7 +1586,7 @@ const CaseDetails = () => {
                     <FaComments className="w-5 h-5 text-blue-400" />
                   </div>
                   <div>
-                    <h2 className="text-2xl font-bold text-white">
+                    <h2 className="text-xs font-bold text-white">
                       Case Chat & Comments
                     </h2>
                     <p className="text-slate-300">
@@ -1602,8 +1602,8 @@ const CaseDetails = () => {
                   {(!comments || !Array.isArray(comments) || comments.length === 0) ? (
                     <div className="text-center py-12">
                       <FaComments className="w-16 h-16 text-slate-500 mx-auto mb-4" />
-                      <p className="text-slate-400 text-lg">No messages yet</p>
-                      <p className="text-slate-500 text-sm">Start the conversation below</p>
+                      <p className="text-slate-400 text-xs">No messages yet</p>
+                      <p className="text-slate-500 text-xs">Start the conversation below</p>
                     </div>
                   ) : (
                     comments.map((comment) => (
@@ -1618,7 +1618,7 @@ const CaseDetails = () => {
                         }`}>
                           <div className="flex items-center gap-2 mb-1">
                             <FaUserCircle className="w-4 h-4" />
-                            <span className="text-sm font-medium">
+                            <span className="text-xs font-medium">
                               {comment.author?.firstName} {comment.author?.lastName}
                             </span>
                             <span className={`text-xs px-2 py-1 rounded-full ${
@@ -1629,7 +1629,7 @@ const CaseDetails = () => {
                               {comment.author?.role?.replace('_', ' ')}
                             </span>
                           </div>
-                          <p className="text-sm">{comment.content}</p>
+                          <p className="text-xs">{comment.content}</p>
                           <p className={`text-xs mt-1 ${
                             comment.author?._id === user?._id 
                               ? 'text-blue-200' 
@@ -1680,15 +1680,15 @@ const CaseDetails = () => {
             {/* Case Status Card */}
             <div className="bg-gradient-to-br from-dark-800/50 to-dark-700/50 border border-dark-600 rounded-2xl shadow-2xl backdrop-blur-sm overflow-hidden">
               <div className="bg-gradient-to-r from-dark-700 to-dark-600 px-6 py-4 border-b border-dark-600">
-                <h3 className="text-lg font-bold text-white">Case Status</h3>
+                <h3 className="text-xs font-bold text-white">Case Status</h3>
               </div>
               <div className="p-6 space-y-4">
                 <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-white">
+                  <label className="block text-xs font-semibold text-white">
                     Status
                   </label>
                   <span
-                    className={`inline-block px-3 py-2 rounded-lg text-sm font-bold uppercase tracking-wide ${
+                    className={`inline-block px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wide ${
                       statusColors[currentCase.status] || "bg-gray-500"
                     } text-white shadow-sm`}
                   >
@@ -1696,11 +1696,11 @@ const CaseDetails = () => {
                   </span>
                 </div>
                 <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-white">
+                  <label className="block text-xs font-semibold text-white">
                     Priority
                   </label>
                   <span
-                    className={`inline-block px-3 py-2 rounded-lg text-sm font-bold uppercase tracking-wide ${
+                    className={`inline-block px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wide ${
                       priorityColors[currentCase.priority] || "bg-gray-500"
                     } text-white shadow-sm`}
                   >
@@ -1708,19 +1708,19 @@ const CaseDetails = () => {
                   </span>
                 </div>
                 <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-white">
+                  <label className="block text-xs font-semibold text-white">
                     Created
                   </label>
-                  <div className="bg-dark-900/50 px-3 py-2 rounded-lg border border-dark-600 text-white text-sm">
+                  <div className="bg-dark-900/50 px-3 py-2 rounded-lg border border-dark-600 text-white text-xs">
                     {new Date(currentCase.createdAt).toLocaleDateString()}
                   </div>
                 </div>
                 {currentCase.dueDate && (
                   <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-white">
+                    <label className="block text-xs font-semibold text-white">
                       Due Date
                     </label>
-                    <div className="bg-dark-900/50 px-3 py-2 rounded-lg border border-dark-600 text-white text-sm">
+                    <div className="bg-dark-900/50 px-3 py-2 rounded-lg border border-dark-600 text-white text-xs">
                       {new Date(currentCase.dueDate).toLocaleDateString()}
                     </div>
                   </div>
@@ -1731,11 +1731,11 @@ const CaseDetails = () => {
             {/* Assignment Card */}
             <div className="bg-gradient-to-br from-dark-800/50 to-dark-700/50 border border-dark-600 rounded-2xl shadow-2xl backdrop-blur-sm overflow-hidden">
               <div className="bg-gradient-to-r from-dark-700 to-dark-600 px-6 py-4 border-b border-dark-600">
-                <h3 className="text-lg font-bold text-white">Assignment</h3>
+                <h3 className="text-xs font-bold text-white">Assignment</h3>
               </div>
               <div className="p-6 space-y-4">
                 <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-white">
+                  <label className="block text-xs font-semibold text-white">
                     Assigned To
                   </label>
                   <div className="bg-dark-900/50 px-3 py-2 rounded-lg border border-dark-600 text-white">
@@ -1754,7 +1754,7 @@ const CaseDetails = () => {
                 </div>
                 {currentCase.assignedBy && (
                   <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-white">
+                    <label className="block text-xs font-semibold text-white">
                       Assigned By
                     </label>
                     <div className="bg-dark-900/50 px-3 py-2 rounded-lg border border-dark-600 text-white">
@@ -1765,10 +1765,10 @@ const CaseDetails = () => {
                 )}
                 {currentCase.assignedAt && (
                   <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-white">
+                    <label className="block text-xs font-semibold text-white">
                       Assigned Date
                     </label>
-                    <div className="bg-dark-900/50 px-3 py-2 rounded-lg border border-dark-600 text-white text-sm">
+                    <div className="bg-dark-900/50 px-3 py-2 rounded-lg border border-dark-600 text-white text-xs">
                       {new Date(currentCase.assignedAt).toLocaleDateString()}
                     </div>
                   </div>
@@ -1780,11 +1780,11 @@ const CaseDetails = () => {
             {currentCase.filingFee && (
               <div className="bg-gradient-to-br from-dark-800/50 to-dark-700/50 border border-dark-600 rounded-2xl shadow-2xl backdrop-blur-sm overflow-hidden">
                 <div className="bg-gradient-to-r from-dark-700 to-dark-600 px-6 py-4 border-b border-dark-600">
-                  <h3 className="text-lg font-bold text-white">Filing Fee</h3>
+                  <h3 className="text-xs font-bold text-white">Filing Fee</h3>
                 </div>
                 <div className="p-6 space-y-4">
                   <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-white">
+                    <label className="block text-xs font-semibold text-white">
                       Amount
                     </label>
                     <div className="bg-dark-900/50 px-3 py-2 rounded-lg border border-dark-600 text-white">
@@ -1793,12 +1793,12 @@ const CaseDetails = () => {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-white">
+                    <label className="block text-xs font-semibold text-white">
                       Status
                     </label>
                     <div className="flex items-center gap-3">
                       <span
-                        className={`inline-block px-3 py-2 rounded-lg text-sm font-bold ${
+                        className={`inline-block px-3 py-2 rounded-lg text-xs font-bold ${
                           currentCase.filingFee.paid
                             ? "bg-green-500"
                             : "bg-yellow-500"
@@ -1811,7 +1811,7 @@ const CaseDetails = () => {
                       {user?.role === "advocate" && currentCase.assignedTo?._id === user._id && (
                         <button
                           onClick={() => handlePaymentStatusUpdate(!currentCase.filingFee.paid)}
-                          className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
+                          className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all duration-200 ${
                             currentCase.filingFee.paid
                               ? "bg-red-500 hover:bg-red-600 text-white"
                               : "bg-green-500 hover:bg-green-600 text-white"
@@ -1824,7 +1824,7 @@ const CaseDetails = () => {
                     
                     {/* Payment Date */}
                     {currentCase.filingFee.paid && currentCase.filingFee.paidAt && (
-                      <p className="text-dark-400 text-sm">
+                      <p className="text-dark-400 text-xs">
                         Paid on: {new Date(currentCase.filingFee.paidAt).toLocaleDateString()}
                       </p>
                     )}
@@ -1839,13 +1839,13 @@ const CaseDetails = () => {
                 <div className="bg-gradient-to-r from-dark-700 to-dark-600 px-6 py-4 border-b border-dark-600 flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <FaMoneyBillWave className="w-5 h-5 text-green-400" />
-                    <h3 className="text-lg font-bold text-white">Payment Tracking</h3>
+                    <h3 className="text-xs font-bold text-white">Payment Tracking</h3>
                   </div>
                   {(user?.role === "advocate" && currentCase.assignedTo?._id === user._id) || 
                    (user?.role === "legal_head" || user?.role === "law_firm_admin") ? (
                     <button
                       onClick={() => setShowPaymentModal(true)}
-                      className="px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-1"
+                      className="px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-1"
                     >
                       <FaEdit className="w-3 h-3" />
                       Add Payment
@@ -1856,15 +1856,15 @@ const CaseDetails = () => {
                   {currentCase.totalFee && (
                     <div className="mb-4 p-3 bg-dark-900/50 rounded-lg border border-dark-600">
                       <div className="flex justify-between items-center">
-                        <span className="text-sm text-dark-300">Total Fee:</span>
-                        <span className="text-lg font-bold text-white">
+                        <span className="text-xs text-dark-300">Total Fee:</span>
+                        <span className="text-xs font-bold text-white">
                           {currentCase.totalFee.currency || "KES"} {currentCase.totalFee.amount?.toLocaleString() || "0"}
                         </span>
                       </div>
                       {currentCase.payments && currentCase.payments.length > 0 && (
                         <div className="flex justify-between items-center mt-2">
-                          <span className="text-sm text-dark-300">Total Paid:</span>
-                          <span className="text-lg font-bold text-green-400">
+                          <span className="text-xs text-dark-300">Total Paid:</span>
+                          <span className="text-xs font-bold text-green-400">
                             {currentCase.payments[0]?.currency || "KES"} {currentCase.payments.reduce((sum, p) => sum + (p.amount || 0), 0).toLocaleString()}
                           </span>
                         </div>
@@ -1915,8 +1915,8 @@ const CaseDetails = () => {
                     </div>
                   ) : (
                     <div className="text-center py-4 text-dark-400">
-                      <FaMoneyBillWave className="mx-auto text-3xl mb-2 opacity-50" />
-                      <p className="text-sm">No payments recorded yet</p>
+                      <FaMoneyBillWave className="mx-auto text-xs mb-2 opacity-50" />
+                      <p className="text-xs">No payments recorded yet</p>
                     </div>
                   )}
                 </div>
@@ -1938,10 +1938,10 @@ const CaseDetails = () => {
                     <FaUserPlus className="w-6 h-6 text-blue-400" />
                   </div>
                   <div>
-                    <h3 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-400 via-indigo-500 to-purple-500 bg-clip-text text-transparent">
+                    <h3 className="text-xs sm:text-xs font-bold bg-gradient-to-r from-blue-400 via-indigo-500 to-purple-500 bg-clip-text text-transparent">
                       {currentCase.assignedTo ? "Reassign Case" : "Assign Case"} to Advocate
                     </h3>
-                    <p className="text-slate-300 text-lg mt-1">
+                    <p className="text-slate-300 text-xs mt-1">
                       {currentCase.assignedTo ? "Transfer case to a different advocate" : "Assign this case to an available advocate"}
                     </p>
                   </div>
@@ -1965,11 +1965,11 @@ const CaseDetails = () => {
                         <FaUser className="w-4 h-4 text-blue-400" />
                       </div>
                       <div>
-                        <h4 className="text-blue-300 font-semibold text-lg mb-2">Current Assignment</h4>
+                        <h4 className="text-blue-300 font-semibold text-xs mb-2">Current Assignment</h4>
                         <p className="text-slate-300">
                           <span className="font-medium">Currently assigned to:</span> {currentCase.assignedTo.firstName} {currentCase.assignedTo.lastName}
                         </p>
-                        <p className="text-slate-400 text-sm mt-1">
+                        <p className="text-slate-400 text-xs mt-1">
                           This will be reassigned to the selected advocate
                         </p>
                       </div>
@@ -1986,7 +1986,7 @@ const CaseDetails = () => {
                     <div className="w-8 h-8 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-lg flex items-center justify-center">
                       <FaUserTie className="w-4 h-4 text-green-400" />
                     </div>
-                    <h4 className="text-white font-semibold text-lg">Select Advocate</h4>
+                    <h4 className="text-white font-semibold text-xs">Select Advocate</h4>
                   </div>
                   <select
                     className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:border-green-500/50 transition-all duration-200"
@@ -2006,7 +2006,7 @@ const CaseDetails = () => {
                       </option>
                     ))}
                   </select>
-                  <p className="text-slate-400 text-sm mt-2">
+                  <p className="text-slate-400 text-xs mt-2">
                     Select the advocate who will handle this case
                   </p>
                 </div>
@@ -2017,7 +2017,7 @@ const CaseDetails = () => {
                     <div className="w-8 h-8 bg-gradient-to-br from-purple-500/20 to-indigo-500/20 rounded-lg flex items-center justify-center">
                       <FaFileAlt className="w-4 h-4 text-purple-400" />
                     </div>
-                    <h4 className="text-white font-semibold text-lg">Assignment Notes</h4>
+                    <h4 className="text-white font-semibold text-xs">Assignment Notes</h4>
                   </div>
                   <textarea
                     className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all duration-200 resize-none"
@@ -2031,7 +2031,7 @@ const CaseDetails = () => {
                       })
                     }
                   />
-                  <p className="text-slate-400 text-sm mt-2">
+                  <p className="text-slate-400 text-xs mt-2">
                     Optional notes about the case assignment
                   </p>
                 </div>
@@ -2069,7 +2069,7 @@ const CaseDetails = () => {
       {showNoteModal && (
         <div className="modal modal-open">
           <div className="modal-box">
-            <h3 className="font-bold text-lg mb-4">Add Note</h3>
+            <h3 className="font-bold text-xs mb-4">Add Note</h3>
             <form onSubmit={handleAddNote}>
               <div className="space-y-4">
                 <div>
@@ -2122,10 +2122,10 @@ const CaseDetails = () => {
                   <FaFileAlt className="w-6 h-6 text-orange-400" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-xl sm:text-2xl font-bold text-white truncate">
+                  <h3 className="text-xs sm:text-xs font-bold text-white truncate">
                     {selectedDocument.filename}
                   </h3>
-                  <p className="text-slate-400 text-sm mt-1 truncate">
+                  <p className="text-slate-400 text-xs mt-1 truncate">
                     {selectedDocument.url}
                   </p>
                 </div>
@@ -2177,8 +2177,8 @@ const CaseDetails = () => {
                     <div className="h-full flex flex-col items-center justify-center p-8">
                       <div className="text-center mb-6">
                         <FaFileAlt className="w-16 h-16 text-slate-500 mx-auto mb-4" />
-                        <p className="text-slate-300 text-lg mb-2">Document Preview Not Available</p>
-                        <p className="text-slate-400 text-sm mb-4">
+                        <p className="text-slate-300 text-xs mb-2">Document Preview Not Available</p>
+                        <p className="text-slate-400 text-xs mb-4">
                           This file type cannot be previewed in the browser
                         </p>
                         <a
@@ -2212,13 +2212,13 @@ const CaseDetails = () => {
                     <FaCalendar className="w-6 h-6 text-blue-400" />
                   </div>
                   <div>
-                    <h3 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-400 via-indigo-500 to-purple-500 bg-clip-text text-transparent">
+                    <h3 className="text-xs sm:text-xs font-bold bg-gradient-to-r from-blue-400 via-indigo-500 to-purple-500 bg-clip-text text-transparent">
                       Update Court Dates
                     </h3>
-                    <p className="text-slate-300 text-lg mt-1">
+                    <p className="text-slate-300 text-xs mt-1">
                       Manage hearing dates, mentioning dates, and court information
                     </p>
-                    <p className="text-slate-400 text-sm mt-1">
+                    <p className="text-slate-400 text-xs mt-1">
                       Case: {currentCase?.caseNumber}
                     </p>
                     {currentCase?.status && (
@@ -2250,13 +2250,13 @@ const CaseDetails = () => {
                           <FaInfoCircle className="w-4 h-4 text-blue-400" />
                         </div>
                         <div className="flex-1">
-                          <h4 className="text-blue-300 font-semibold text-lg mb-4">Current Court Information</h4>
+                          <h4 className="text-blue-300 font-semibold text-xs mb-4">Current Court Information</h4>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             {currentCase.courtDetails.courtName && (
                               <div className="flex items-center gap-3">
                                 <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
                                 <div>
-                                  <span className="text-slate-400 text-sm">Court:</span>
+                                  <span className="text-slate-400 text-xs">Court:</span>
                                   <span className="text-white font-medium ml-2">
                                     {currentCase.courtDetails.courtName}
                                   </span>
@@ -2267,7 +2267,7 @@ const CaseDetails = () => {
                               <div className="flex items-center gap-3">
                                 <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
                                 <div>
-                                  <span className="text-slate-400 text-sm">Location:</span>
+                                  <span className="text-slate-400 text-xs">Location:</span>
                                   <span className="text-white font-medium ml-2">
                                     {currentCase.courtDetails.courtLocation}
                                   </span>
@@ -2278,7 +2278,7 @@ const CaseDetails = () => {
                               <div className="flex items-center gap-3">
                                 <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
                                 <div>
-                                  <span className="text-slate-400 text-sm">Judge:</span>
+                                  <span className="text-slate-400 text-xs">Judge:</span>
                                   <span className="text-white font-medium ml-2">
                                     {currentCase.courtDetails.judgeAssigned}
                                   </span>
@@ -2289,7 +2289,7 @@ const CaseDetails = () => {
                               <div className="flex items-center gap-3">
                                 <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
                                 <div>
-                                  <span className="text-slate-400 text-sm">Room:</span>
+                                  <span className="text-slate-400 text-xs">Room:</span>
                                   <span className="text-white font-medium ml-2">
                                     {currentCase.courtDetails.courtRoom}
                                   </span>
@@ -2311,7 +2311,7 @@ const CaseDetails = () => {
                       <div className="w-8 h-8 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-lg flex items-center justify-center">
                         <FaCalendar className="w-4 h-4 text-green-400" />
                       </div>
-                      <h4 className="text-white font-semibold text-lg">Next Hearing Date</h4>
+                      <h4 className="text-white font-semibold text-xs">Next Hearing Date</h4>
                     </div>
                     <div className="relative">
                       <FaCalendar className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
@@ -2327,7 +2327,7 @@ const CaseDetails = () => {
                         }
                       />
                     </div>
-                    <p className="text-slate-400 text-sm mt-2">
+                    <p className="text-slate-400 text-xs mt-2">
                       Set the next scheduled court hearing date and time
                     </p>
                   </div>
@@ -2338,7 +2338,7 @@ const CaseDetails = () => {
                       <div className="w-8 h-8 bg-gradient-to-br from-purple-500/20 to-indigo-500/20 rounded-lg flex items-center justify-center">
                         <FaCalendar className="w-4 h-4 text-purple-400" />
                       </div>
-                      <h4 className="text-white font-semibold text-lg">Mentioning Date</h4>
+                      <h4 className="text-white font-semibold text-xs">Mentioning Date</h4>
                     </div>
                     <div className="relative">
                       <FaCalendar className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
@@ -2354,7 +2354,7 @@ const CaseDetails = () => {
                         }
                       />
                     </div>
-                    <p className="text-slate-400 text-sm mt-2">
+                    <p className="text-slate-400 text-xs mt-2">
                       Set the mentioning date for case updates and status checks
                     </p>
                   </div>
@@ -2365,7 +2365,7 @@ const CaseDetails = () => {
                       <div className="w-8 h-8 bg-gradient-to-br from-blue-500/20 to-indigo-500/20 rounded-lg flex items-center justify-center">
                         <FaCalendar className="w-4 h-4 text-blue-400" />
                       </div>
-                      <h4 className="text-white font-semibold text-lg">Main Court Date</h4>
+                      <h4 className="text-white font-semibold text-xs">Main Court Date</h4>
                     </div>
                     <div className="relative">
                       <FaCalendar className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
@@ -2381,7 +2381,7 @@ const CaseDetails = () => {
                         }
                       />
                     </div>
-                    <p className="text-slate-400 text-sm mt-2">
+                    <p className="text-slate-400 text-xs mt-2">
                       Set the main court date for proceedings and hearings
                     </p>
                   </div>
@@ -2392,7 +2392,7 @@ const CaseDetails = () => {
                       <div className="w-8 h-8 bg-gradient-to-br from-orange-500/20 to-red-500/20 rounded-lg flex items-center justify-center">
                         <FaBuilding className="w-4 h-4 text-orange-400" />
                       </div>
-                      <h4 className="text-white font-semibold text-lg">Court Room</h4>
+                      <h4 className="text-white font-semibold text-xs">Court Room</h4>
                     </div>
                     <input
                       type="text"
@@ -2406,7 +2406,7 @@ const CaseDetails = () => {
                         })
                       }
                     />
-                    <p className="text-slate-400 text-sm mt-2">
+                    <p className="text-slate-400 text-xs mt-2">
                       Specify the court room for hearings
                     </p>
                   </div>
@@ -2417,7 +2417,7 @@ const CaseDetails = () => {
                       <div className="w-8 h-8 bg-gradient-to-br from-red-500/20 to-pink-500/20 rounded-lg flex items-center justify-center">
                         <FaUserTie className="w-4 h-4 text-red-400" />
                       </div>
-                      <h4 className="text-white font-semibold text-lg">Judge Assigned</h4>
+                      <h4 className="text-white font-semibold text-xs">Judge Assigned</h4>
                     </div>
                     <div className="relative">
                       <FaUserTie className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
@@ -2434,7 +2434,7 @@ const CaseDetails = () => {
                         }
                       />
                     </div>
-                    <p className="text-slate-400 text-sm mt-2">
+                    <p className="text-slate-400 text-xs mt-2">
                       Assign or update the presiding judge
                     </p>
                   </div>
@@ -2448,7 +2448,7 @@ const CaseDetails = () => {
                       <div className="w-8 h-8 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 rounded-lg flex items-center justify-center">
                         <FaFileAlt className="w-4 h-4 text-indigo-400" />
                       </div>
-                      <h4 className="text-white font-semibold text-lg">Hearing Notes</h4>
+                      <h4 className="text-white font-semibold text-xs">Hearing Notes</h4>
                     </div>
                     <textarea
                       className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all duration-200 resize-none"
@@ -2462,7 +2462,7 @@ const CaseDetails = () => {
                         })
                       }
                     />
-                    <p className="text-slate-400 text-sm mt-2">
+                    <p className="text-slate-400 text-xs mt-2">
                       Document important details from the hearing
                     </p>
                   </div>
@@ -2473,7 +2473,7 @@ const CaseDetails = () => {
                       <div className="w-8 h-8 bg-gradient-to-br from-yellow-500/20 to-orange-500/20 rounded-lg flex items-center justify-center">
                         <FaExclamationTriangle className="w-4 h-4 text-yellow-400" />
                       </div>
-                      <h4 className="text-white font-semibold text-lg">Adjournment Reason</h4>
+                      <h4 className="text-white font-semibold text-xs">Adjournment Reason</h4>
                     </div>
                     <textarea
                       className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-yellow-500/50 focus:border-yellow-500/50 transition-all duration-200 resize-none"
@@ -2487,7 +2487,7 @@ const CaseDetails = () => {
                         })
                       }
                     />
-                    <p className="text-slate-400 text-sm mt-2">
+                    <p className="text-slate-400 text-xs mt-2">
                       Specify reason if case was adjourned
                     </p>
                   </div>
@@ -2501,7 +2501,7 @@ const CaseDetails = () => {
                         <FaInfoCircle className="w-4 h-4 text-blue-400" />
                       </div>
                       <div>
-                        <h4 className="text-blue-300 font-semibold text-lg mb-3">
+                        <h4 className="text-blue-300 font-semibold text-xs mb-3">
                           What happens when you update court dates?
                         </h4>
                         <ul className="text-slate-300 space-y-2">
@@ -2566,10 +2566,10 @@ const CaseDetails = () => {
                     <FaMoneyBillWave className="w-6 h-6 text-green-400" />
                   </div>
                   <div>
-                    <h3 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-green-400 via-emerald-500 to-teal-500 bg-clip-text text-transparent">
+                    <h3 className="text-xs sm:text-xs font-bold bg-gradient-to-r from-green-400 via-emerald-500 to-teal-500 bg-clip-text text-transparent">
                       Add Payment
                     </h3>
-                    <p className="text-slate-300 text-lg mt-1">
+                    <p className="text-slate-300 text-xs mt-1">
                       Record an installment payment for this case
                     </p>
                   </div>
@@ -2587,7 +2587,7 @@ const CaseDetails = () => {
               <form onSubmit={handleAddPayment} className="space-y-6">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-semibold text-white mb-2">
+                    <label className="block text-xs font-semibold text-white mb-2">
                       Amount *
                     </label>
                     <input
@@ -2602,7 +2602,7 @@ const CaseDetails = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-white mb-2">
+                    <label className="block text-xs font-semibold text-white mb-2">
                       Currency
                     </label>
                     <select
@@ -2617,7 +2617,7 @@ const CaseDetails = () => {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-white mb-2">
+                    <label className="block text-xs font-semibold text-white mb-2">
                       Payment Date *
                     </label>
                     <input
@@ -2629,7 +2629,7 @@ const CaseDetails = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-white mb-2">
+                    <label className="block text-xs font-semibold text-white mb-2">
                       Payment Method
                     </label>
                     <select
@@ -2645,7 +2645,7 @@ const CaseDetails = () => {
                     </select>
                   </div>
                   <div className="sm:col-span-2">
-                    <label className="block text-sm font-semibold text-white mb-2">
+                    <label className="block text-xs font-semibold text-white mb-2">
                       Payment Reference
                     </label>
                     <input
@@ -2657,7 +2657,7 @@ const CaseDetails = () => {
                     />
                   </div>
                   <div className="sm:col-span-2">
-                    <label className="block text-sm font-semibold text-white mb-2">
+                    <label className="block text-xs font-semibold text-white mb-2">
                       Notes
                     </label>
                     <textarea
@@ -2708,10 +2708,10 @@ const CaseDetails = () => {
                     <FaHistory className="w-6 h-6 text-purple-400" />
                   </div>
                   <div>
-                    <h3 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-purple-400 via-indigo-500 to-pink-500 bg-clip-text text-transparent">
+                    <h3 className="text-xs sm:text-xs font-bold bg-gradient-to-r from-purple-400 via-indigo-500 to-pink-500 bg-clip-text text-transparent">
                       Add Court Activity
                     </h3>
-                    <p className="text-slate-300 text-lg mt-1">
+                    <p className="text-slate-300 text-xs mt-1">
                       Record a court proceeding, hearing, or activity
                     </p>
                   </div>
@@ -2729,7 +2729,7 @@ const CaseDetails = () => {
               <form onSubmit={handleAddCourtActivity} className="space-y-6">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-semibold text-white mb-2">
+                    <label className="block text-xs font-semibold text-white mb-2">
                       Activity Type *
                     </label>
                     <select
@@ -2747,7 +2747,7 @@ const CaseDetails = () => {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-white mb-2">
+                    <label className="block text-xs font-semibold text-white mb-2">
                       Activity Date *
                     </label>
                     <input
@@ -2759,7 +2759,7 @@ const CaseDetails = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-white mb-2">
+                    <label className="block text-xs font-semibold text-white mb-2">
                       Next Hearing Date
                     </label>
                     <input
@@ -2770,7 +2770,7 @@ const CaseDetails = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-white mb-2">
+                    <label className="block text-xs font-semibold text-white mb-2">
                       Judge Name
                     </label>
                     <input
@@ -2782,7 +2782,7 @@ const CaseDetails = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-white mb-2">
+                    <label className="block text-xs font-semibold text-white mb-2">
                       Court Room
                     </label>
                     <input
@@ -2794,7 +2794,7 @@ const CaseDetails = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-white mb-2">
+                    <label className="block text-xs font-semibold text-white mb-2">
                       Outcome
                     </label>
                     <input
@@ -2806,7 +2806,7 @@ const CaseDetails = () => {
                     />
                   </div>
                   <div className="sm:col-span-2">
-                    <label className="block text-sm font-semibold text-white mb-2">
+                    <label className="block text-xs font-semibold text-white mb-2">
                       Notes
                     </label>
                     <textarea

@@ -59,14 +59,14 @@ export const createCreditCase = async (req, res) => {
 
     const newCase = new CreditCase({
       title,
-      description,
+      description: description && description.trim() ? description.trim() : undefined,
       debtorName,
       debtorEmail,
       debtorContact,
       creditorName,
       creditorEmail,
       creditorContact,
-      debtAmount,
+      debtAmount: debtAmount && debtAmount !== '' ? Number(debtAmount) : undefined,
       caseReference,
       assignedTo, // Add assignment
       department: department._id, // Assign to appropriate department

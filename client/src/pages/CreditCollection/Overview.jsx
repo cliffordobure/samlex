@@ -33,6 +33,9 @@ const CreditOverview = () => {
     inProgress: 0,
     resolved: 0,
     overdue: 0,
+    totalDebt: 0,
+    totalPaid: 0,
+    remainingBalance: 0,
   });
 
   // Filter cases assigned to the current user
@@ -73,11 +76,17 @@ const CreditOverview = () => {
     socket.on("caseAssigned", refetchCases);
     socket.on("caseMoved", refetchCases);
     socket.on("caseCreated", refetchCases);
+    socket.on("promisedPaymentAdded", refetchCases);
+    socket.on("promisedPaymentUpdated", refetchCases);
+    socket.on("paymentStatusUpdated", refetchCases);
 
     return () => {
       socket.off("caseAssigned", refetchCases);
       socket.off("caseMoved", refetchCases);
       socket.off("caseCreated", refetchCases);
+      socket.off("promisedPaymentAdded", refetchCases);
+      socket.off("promisedPaymentUpdated", refetchCases);
+      socket.off("paymentStatusUpdated", refetchCases);
     };
   }, [dispatch, user]);
 
@@ -100,12 +109,34 @@ const CreditOverview = () => {
         !["resolved", "closed"].includes(c.status)
     );
 
+    // Calculate payment statistics
+    let totalDebt = 0;
+    let totalPaid = 0;
+    
+    relevantCases.forEach((case_) => {
+      const debtAmount = parseFloat(case_.debtAmount) || 0;
+      totalDebt += debtAmount;
+      
+      // Calculate total paid from promised payments
+      if (case_.promisedPayments && Array.isArray(case_.promisedPayments)) {
+        const casePaid = case_.promisedPayments
+          .filter((p) => p.status === "paid")
+          .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+        totalPaid += casePaid;
+      }
+    });
+    
+    const remainingBalance = totalDebt - totalPaid;
+
     setStats({
       totalCases: relevantCases.length,
       assignedToMe: assignedCases.length, // Only cases assigned to current user
       inProgress: inProgress.length,
       resolved: resolved.length,
       overdue: overdue.length,
+      totalDebt,
+      totalPaid,
+      remainingBalance: remainingBalance > 0 ? remainingBalance : 0,
     });
   }, [assignedCases, cases, user]);
 
@@ -128,8 +159,8 @@ const CreditOverview = () => {
           <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full mb-4">
             <FaSpinner className="w-8 h-8 text-white animate-spin" />
           </div>
-          <p className="text-xl font-semibold text-white">Loading Dashboard...</p>
-          <p className="text-slate-400 mt-2">Please wait while we fetch your data</p>
+          <p className="text-xs font-semibold text-white">Loading Dashboard...</p>
+          <p className="text-xs text-slate-400 mt-2">Please wait while we fetch your data</p>
         </div>
       </div>
     );
@@ -142,13 +173,13 @@ const CreditOverview = () => {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
           <div className="flex items-center space-x-4">
             <div className="p-3 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl">
-              <FaFolderOpen className="w-8 h-8 text-white" />
+              <FaFolderOpen className="w-4 h-4 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white">
+              <h1 className="text-xs font-bold text-white">
                 Credit Collection Dashboard
               </h1>
-              <p className="text-slate-300 mt-2 text-sm sm:text-base">
+              <p className="text-xs text-slate-300 mt-2">
                 Welcome back, <span className="font-semibold text-blue-400">{user?.firstName}</span>! Here's your credit collection overview.
               </p>
             </div>
@@ -157,70 +188,90 @@ const CreditOverview = () => {
             to="/credit-collection/cases/create" 
             className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-xl font-semibold transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
           >
-            <FaPlus className="w-5 h-5 mr-2" />
+              <FaPlus className="w-4 h-4 mr-2" />
             Create New Case
           </Link>
         </div>
       </div>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6">
-        <div className="bg-gradient-to-r from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl p-6 border border-slate-600/50 shadow-2xl hover:shadow-blue-500/25 transition-all duration-200 cursor-pointer group">
-          <div className="flex items-center">
-            <div className="p-3 bg-gradient-to-r from-blue-500/20 to-indigo-500/20 rounded-xl group-hover:scale-110 transition-transform duration-200">
-              <FaFolderOpen className="w-6 h-6 text-blue-400" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 sm:gap-6">
+        <div className="bg-gradient-to-r from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl hover:shadow-blue-500/25 transition-all duration-200 cursor-pointer group">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex-1 min-w-0 pr-1">
+              <p className="text-xs font-medium text-slate-400 mb-1">Total Cases</p>
+              <p className="text-[10px] sm:text-xs font-bold text-white group-hover:text-blue-400 transition-colors break-words leading-tight">{stats.totalCases}</p>
             </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-slate-400">Total Cases</p>
-              <p className="text-2xl font-bold text-white">{stats.totalCases}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-gradient-to-r from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl p-6 border border-slate-600/50 shadow-2xl hover:shadow-green-500/25 transition-all duration-200 cursor-pointer group">
-          <div className="flex items-center">
-            <div className="p-3 bg-gradient-to-r from-green-500/20 to-emerald-500/20 rounded-xl group-hover:scale-110 transition-transform duration-200">
-              <FaUser className="w-6 h-6 text-green-400" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-slate-400">Assigned to Me</p>
-              <p className="text-2xl font-bold text-white">{stats.assignedToMe}</p>
+            <div className="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-br from-blue-500/20 to-indigo-500/20 rounded-lg flex items-center justify-center group-hover:bg-blue-500/30 transition-all duration-300 flex-shrink-0">
+              <FaFolderOpen className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-400 group-hover:text-blue-300 transition-colors" />
             </div>
           </div>
         </div>
 
-        <div className="bg-gradient-to-r from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl p-6 border border-slate-600/50 shadow-2xl hover:shadow-yellow-500/25 transition-all duration-200 cursor-pointer group">
-          <div className="flex items-center">
-            <div className="p-3 bg-gradient-to-r from-yellow-500/20 to-orange-500/20 rounded-xl group-hover:scale-110 transition-transform duration-200">
-              <FaClock className="w-6 h-6 text-yellow-400" />
+        <div className="bg-gradient-to-r from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl hover:shadow-green-500/25 transition-all duration-200 cursor-pointer group">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex-1 min-w-0 pr-1">
+              <p className="text-xs font-medium text-slate-400 mb-1">Assigned to Me</p>
+              <p className="text-[10px] sm:text-xs font-bold text-white group-hover:text-green-400 transition-colors break-words leading-tight">{stats.assignedToMe}</p>
             </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-slate-400">In Progress</p>
-              <p className="text-2xl font-bold text-white">{stats.inProgress}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-gradient-to-r from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl p-6 border border-slate-600/50 shadow-2xl hover:shadow-purple-500/25 transition-all duration-200 cursor-pointer group">
-          <div className="flex items-center">
-            <div className="p-3 bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-xl group-hover:scale-110 transition-transform duration-200">
-              <FaCheckCircle className="w-6 h-6 text-purple-400" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-slate-400">Resolved</p>
-              <p className="text-2xl font-bold text-white">{stats.resolved}</p>
+            <div className="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-lg flex items-center justify-center group-hover:bg-green-500/30 transition-all duration-300 flex-shrink-0">
+              <FaUser className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-400 group-hover:text-green-300 transition-colors" />
             </div>
           </div>
         </div>
 
-        <div className="bg-gradient-to-r from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl p-6 border border-slate-600/50 shadow-2xl hover:shadow-red-500/25 transition-all duration-200 cursor-pointer group">
-          <div className="flex items-center">
-            <div className="p-3 bg-gradient-to-r from-red-500/20 to-pink-500/20 rounded-xl group-hover:scale-110 transition-transform duration-200">
-              <FaExclamationTriangle className="w-6 h-6 text-red-400" />
+        <div className="bg-gradient-to-r from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl hover:shadow-yellow-500/25 transition-all duration-200 cursor-pointer group">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex-1 min-w-0 pr-1">
+              <p className="text-xs font-medium text-slate-400 mb-1">In Progress</p>
+              <p className="text-[10px] sm:text-xs font-bold text-white group-hover:text-yellow-400 transition-colors break-words leading-tight">{stats.inProgress}</p>
             </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-slate-400">Overdue</p>
-              <p className="text-2xl font-bold text-white">{stats.overdue}</p>
+            <div className="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-br from-yellow-500/20 to-orange-500/20 rounded-lg flex items-center justify-center group-hover:bg-yellow-500/30 transition-all duration-300 flex-shrink-0">
+              <FaClock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-yellow-400 group-hover:text-yellow-300 transition-colors" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-r from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl hover:shadow-purple-500/25 transition-all duration-200 cursor-pointer group">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex-1 min-w-0 pr-1">
+              <p className="text-xs font-medium text-slate-400 mb-1">Resolved</p>
+              <p className="text-[10px] sm:text-xs font-bold text-white group-hover:text-purple-400 transition-colors break-words leading-tight">{stats.resolved}</p>
+            </div>
+            <div className="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-lg flex items-center justify-center group-hover:bg-purple-500/30 transition-all duration-300 flex-shrink-0">
+              <FaCheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-purple-400 group-hover:text-purple-300 transition-colors" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-r from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl hover:shadow-red-500/25 transition-all duration-200 cursor-pointer group">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex-1 min-w-0 pr-1">
+              <p className="text-xs font-medium text-slate-400 mb-1">Overdue</p>
+              <p className="text-[10px] sm:text-xs font-bold text-white group-hover:text-red-400 transition-colors break-words leading-tight">{stats.overdue}</p>
+            </div>
+            <div className="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-br from-red-500/20 to-pink-500/20 rounded-lg flex items-center justify-center group-hover:bg-red-500/30 transition-all duration-300 flex-shrink-0">
+              <FaExclamationTriangle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-red-400 group-hover:text-red-300 transition-colors" />
+            </div>
+          </div>
+        </div>
+
+        {/* Remaining Balance Card */}
+        <div className="bg-gradient-to-r from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl hover:shadow-orange-500/25 transition-all duration-200 cursor-pointer group">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex-1 min-w-0 pr-1">
+              <p className="text-xs font-medium text-slate-400 mb-1">Remaining Balance</p>
+              <p className="text-[10px] sm:text-xs font-bold text-white group-hover:text-orange-400 transition-colors break-words leading-tight">
+                KES {stats.remainingBalance.toLocaleString()}
+              </p>
+              <div className="flex items-center mt-1">
+                <span className="text-xs text-slate-500 break-words">
+                  {stats.totalDebt > 0 ? `${((stats.totalPaid / stats.totalDebt) * 100).toFixed(1)}% paid` : 'No payments yet'}
+                </span>
+              </div>
+            </div>
+            <div className="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-br from-orange-500/20 to-red-500/20 rounded-lg flex items-center justify-center group-hover:bg-orange-500/30 transition-all duration-300 flex-shrink-0">
+              <FaMoneyBillWave className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-orange-400 group-hover:text-orange-300 transition-colors" />
             </div>
           </div>
         </div>
@@ -236,7 +287,7 @@ const CreditOverview = () => {
                   <div className="p-2 bg-gradient-to-r from-blue-500/20 to-indigo-500/20 rounded-lg">
                     <FaFileAlt className="w-5 h-5 text-blue-400" />
                   </div>
-                  <h3 className="text-xl font-semibold text-white">Recent Cases</h3>
+                  <h3 className="text-xs font-semibold text-white">Recent Cases</h3>
                 </div>
                 <Link
                   to="/credit-collection/cases"
@@ -261,10 +312,10 @@ const CreditOverview = () => {
                         className="flex items-center justify-between p-4 bg-slate-700/50 rounded-xl border border-slate-600/50 hover:bg-slate-700/70 transition-all duration-200"
                       >
                         <div className="flex-1">
-                          <h4 className="font-semibold text-white text-lg">
+                          <h4 className="font-semibold text-white text-xs">
                             {case_.title}
                           </h4>
-                          <div className="flex items-center space-x-4 mt-2 text-sm text-slate-300">
+                          <div className="flex items-center space-x-4 mt-2 text-xs text-slate-300">
                             <span className="flex items-center space-x-1">
                               <FaUser className="w-4 h-4 text-slate-400" />
                               <span>{case_.debtorName}</span>
@@ -274,6 +325,29 @@ const CreditOverview = () => {
                               <span>KES {case_.debtAmount?.toLocaleString()}</span>
                             </span>
                           </div>
+                          {/* Remaining Balance */}
+                          {(() => {
+                            const totalPaid = case_.promisedPayments
+                              ? case_.promisedPayments
+                                  .filter((p) => p.status === "paid")
+                                  .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0)
+                              : 0;
+                            const remaining = (parseFloat(case_.debtAmount) || 0) - totalPaid;
+                            return remaining > 0 ? (
+                              <div className="mt-2 flex items-center space-x-1">
+                                <span className="text-xs text-orange-400 font-medium">
+                                  Remaining: KES {remaining.toLocaleString()}
+                                </span>
+                              </div>
+                            ) : totalPaid > 0 ? (
+                              <div className="mt-2 flex items-center space-x-1">
+                                <FaCheckCircle className="w-3 h-3 text-green-400" />
+                                <span className="text-xs text-green-400 font-medium">
+                                  Fully Paid
+                                </span>
+                              </div>
+                            ) : null;
+                          })()}
                         </div>
                         <div className="text-right ml-4">
                           <span
@@ -296,10 +370,10 @@ const CreditOverview = () => {
                   <div className="w-16 h-16 mx-auto bg-slate-700/50 rounded-full flex items-center justify-center mb-4">
                     <FaFileAlt className="w-8 h-8 text-slate-500" />
                   </div>
-                  <h3 className="text-lg font-medium text-slate-300 mb-2">
+                  <h3 className="text-xs font-medium text-slate-300 mb-2">
                     No cases yet
                   </h3>
-                  <p className="text-slate-400 mb-6">
+                  <p className="text-xs text-slate-400 mb-6">
                     Get started by creating your first case.
                   </p>
                   <Link
@@ -323,7 +397,7 @@ const CreditOverview = () => {
                 <div className="p-2 bg-gradient-to-r from-green-500/20 to-emerald-500/20 rounded-lg">
                   <FaPlus className="w-5 h-5 text-green-400" />
                 </div>
-                <h3 className="text-xl font-semibold text-white">Quick Actions</h3>
+                <h3 className="text-xs font-semibold text-white">Quick Actions</h3>
               </div>
             </div>
             <div className="p-6 space-y-4">
@@ -372,7 +446,7 @@ const CreditOverview = () => {
                 <div className="p-2 bg-gradient-to-r from-red-500/20 to-pink-500/20 rounded-lg">
                   <FaExclamationTriangle className="w-5 h-5 text-red-400" />
                 </div>
-                <h3 className="text-xl font-semibold text-white">Priority Cases</h3>
+                <h3 className="text-xs font-semibold text-white">Priority Cases</h3>
               </div>
             </div>
             <div className="p-6">
@@ -389,7 +463,7 @@ const CreditOverview = () => {
                         className="p-4 bg-slate-700/50 rounded-xl border border-slate-600/50 hover:bg-slate-700/70 transition-all duration-200"
                       >
                         <div className="flex items-center justify-between mb-2">
-                          <h4 className="font-semibold text-white text-sm">
+                          <h4 className="font-semibold text-white text-xs">
                             {case_.title}
                           </h4>
                           <span
@@ -414,7 +488,7 @@ const CreditOverview = () => {
                   <div className="w-12 h-12 mx-auto bg-slate-700/50 rounded-full flex items-center justify-center mb-3">
                     <FaCheckCircle className="w-6 h-6 text-slate-500" />
                   </div>
-                  <p className="text-slate-400 text-sm">
+                  <p className="text-xs text-slate-400">
                     No priority cases at the moment.
                   </p>
                 </div>

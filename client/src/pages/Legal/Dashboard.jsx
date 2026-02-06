@@ -9,7 +9,6 @@ import CourtCalendar from "./CourtCalendar";
 import EscalatedCases from "./EscalatedCases";
 import CompleteCaseInfo from "./CompleteCaseInfo";
 import Documents from "./Documents";
-import Reports from "./Reports";
 import RevenueTargets from "../LawFirmAdmin/RevenueTargets";
 
 // Protected Route component for escalated cases
@@ -42,7 +41,6 @@ const LegalDashboard = () => {
         />
         <Route path="/cases/:id/complete" element={<CompleteCaseInfo />} />
         <Route path="/documents" element={<Documents />} />
-        <Route path="/reports" element={<Reports />} />
         <Route path="/revenue-targets" element={<RevenueTargets />} />
       </Routes>
     </LegalLayout>

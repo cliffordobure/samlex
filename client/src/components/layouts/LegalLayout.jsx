@@ -8,7 +8,6 @@ import {
   FaFolderOpen,
   FaCalendarAlt,
   FaFileAlt,
-  FaChartBar,
   FaBars,
   FaTimes,
   FaSearch,
@@ -64,12 +63,6 @@ const LegalLayout = ({ children }) => {
       href: "/legal/documents",
       icon: <FaFileAlt className="w-5 h-5" />,
       description: "Legal documents and filings"
-    },
-    {
-      name: "Reports",
-      href: "/legal/reports",
-      icon: <FaChartBar className="w-5 h-5" />,
-      description: "Performance analytics and reports"
     },
     ...(user?.role === "legal_head"
       ? [

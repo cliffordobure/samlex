@@ -119,7 +119,7 @@ const creditCaseSchema = new mongoose.Schema(
     },
     description: {
       type: String,
-      required: [true, "Case description is required"],
+      required: false,
       trim: true,
     },
     lawFirm: {
@@ -166,7 +166,7 @@ const creditCaseSchema = new mongoose.Schema(
     },
     debtAmount: {
       type: Number,
-      required: [true, "Debt amount is required"],
+      required: false,
       min: [0, "Debt amount cannot be negative"],
     },
     currency: {
