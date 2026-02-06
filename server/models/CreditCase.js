@@ -311,37 +311,115 @@ creditCaseSchema.pre("save", function (next) {
   next();
 });
 
+// Add a counter schema for atomic case number generation (shared with LegalCase)
+const caseNumberCounterSchema = new mongoose.Schema({
+  _id: { type: String, required: true },
+  sequence: { type: Number, default: 1 },
+  year: { type: Number, required: true },
+  prefix: { type: String, required: true },
+  lawFirm: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "LawFirm",
+    required: true,
+  },
+  department: { type: mongoose.Schema.Types.ObjectId, ref: "Department" },
+  escalated: { type: Boolean, default: false },
+});
+
+// Use existing model if it exists, otherwise create it
+let CaseNumberCounter;
+try {
+  CaseNumberCounter = mongoose.model("CaseNumberCounter");
+} catch (e) {
+  CaseNumberCounter = mongoose.model("CaseNumberCounter", caseNumberCounterSchema);
+}
+
 // Pre-save hook to generate case number (must be after resolvedAt hook)
 creditCaseSchema.pre("save", async function (next) {
-  if (!this.caseNumber) {
-    if (!this.lawFirm || !this.department) {
-      // Fallback: generate a simple case number
-      this.caseNumber = "CASE-" + Date.now();
+  try {
+    // Only generate case number if it doesn't already exist
+    if (this.caseNumber) {
+      this.lastActivity = new Date();
       return next();
     }
+
+    if (!this.lawFirm || !this.department) {
+      // Fallback: generate a simple case number with timestamp to ensure uniqueness
+      this.caseNumber = "CC-" + Date.now() + "-" + Math.random().toString(36).substr(2, 5);
+      this.lastActivity = new Date();
+      return next();
+    }
+
     const year = new Date().getFullYear();
     const department = await mongoose
       .model("Department")
       .findById(this.department);
     const lawFirm = await mongoose.model("LawFirm").findById(this.lawFirm);
 
-    const prefix = `${lawFirm.firmCode}-${department.code}`;
-    const count = await this.constructor.countDocuments({
-      lawFirm: this.lawFirm,
-      department: this.department,
-      createdAt: {
-        $gte: new Date(year, 0, 1),
-        $lt: new Date(year + 1, 0, 1),
-      },
-    });
+    if (!lawFirm || !department) {
+      return next(new Error("Law Firm or Department not found"));
+    }
 
-    this.caseNumber = `${prefix}-${year}-${(count + 1)
+    const prefix = `${lawFirm.firmCode || "CC"}-${department.code || "CC"}`;
+
+    // Use atomic findAndModify to get the next sequence number
+    // This prevents race conditions when multiple cases are created simultaneously
+    const counter = await CaseNumberCounter.findOneAndUpdate(
+      {
+        year: year,
+        prefix: prefix,
+        lawFirm: this.lawFirm,
+        department: this.department,
+        escalated: false,
+      },
+      { $inc: { sequence: 1 } },
+      {
+        new: true,
+        upsert: true,
+        setDefaultsOnInsert: true,
+      }
+    );
+
+    this.caseNumber = `${prefix}-${year}-${counter.sequence
       .toString()
       .padStart(4, "0")}`;
-  }
 
-  this.lastActivity = new Date();
-  next();
+    // Safety check: verify the case number doesn't already exist
+    // This handles edge cases where the counter might have been reset or corrupted
+    const existingCase = await this.constructor.findOne({
+      caseNumber: this.caseNumber,
+      _id: { $ne: this._id }, // Exclude current document if updating
+    });
+
+    if (existingCase) {
+      console.error(`Duplicate case number detected: ${this.caseNumber}. Retrying with incremented sequence...`);
+      // Retry with incremented sequence
+      const retryCounter = await CaseNumberCounter.findOneAndUpdate(
+        {
+          year: year,
+          prefix: prefix,
+          lawFirm: this.lawFirm,
+          department: this.department,
+          escalated: false,
+        },
+        { $inc: { sequence: 1 } },
+        {
+          new: true,
+          upsert: true,
+          setDefaultsOnInsert: true,
+        }
+      );
+      this.caseNumber = `${prefix}-${year}-${retryCounter.sequence
+        .toString()
+        .padStart(4, "0")}`;
+    }
+
+    this.lastActivity = new Date();
+    next();
+  } catch (error) {
+    console.error("Error in CreditCase pre-save hook:", error);
+    next(error);
+  }
 });
 
 // Update lastActivity on note addition
