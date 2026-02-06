@@ -57,25 +57,52 @@ export const createCreditCase = async (req, res) => {
       });
     }
 
-    const newCase = new CreditCase({
-      title,
-      description: description && description.trim() ? description.trim() : undefined,
-      debtorName,
-      debtorEmail,
-      debtorContact,
-      creditorName,
-      creditorEmail,
-      creditorContact,
-      debtAmount: debtAmount && debtAmount !== '' ? Number(debtAmount) : undefined,
-      caseReference,
-      assignedTo, // Add assignment
-      department: department._id, // Assign to appropriate department
-      documents: Array.isArray(documents) ? documents : [documents],
-      status: assignedTo ? "assigned" : "new", // Set status based on assignment
-      lawFirm: req.user.lawFirm,
-      createdBy: req.user._id, // Enable createdBy
-    });
-    const savedCase = await newCase.save();
+    // Retry logic to handle duplicate case number errors
+    let savedCase;
+    let retryCount = 0;
+    const maxRetries = 3;
+    
+    while (retryCount < maxRetries) {
+      try {
+        const newCase = new CreditCase({
+          title,
+          description: description && description.trim() ? description.trim() : undefined,
+          debtorName,
+          debtorEmail,
+          debtorContact,
+          creditorName,
+          creditorEmail,
+          creditorContact,
+          debtAmount: debtAmount && debtAmount !== '' ? Number(debtAmount) : undefined,
+          caseReference,
+          assignedTo, // Add assignment
+          department: department._id, // Assign to appropriate department
+          documents: Array.isArray(documents) ? documents : [documents],
+          status: assignedTo ? "assigned" : "new", // Set status based on assignment
+          lawFirm: req.user.lawFirm,
+          createdBy: req.user._id, // Enable createdBy
+        });
+        
+        savedCase = await newCase.save();
+        break; // Success, exit retry loop
+      } catch (error) {
+        // Check if it's a duplicate key error for caseNumber
+        if (error.code === 11000 && error.keyPattern && error.keyPattern.caseNumber) {
+          retryCount++;
+          if (retryCount >= maxRetries) {
+            console.error(`Failed to create case after ${maxRetries} retries due to duplicate case number`);
+            throw error; // Re-throw if max retries reached
+          }
+          console.warn(`Duplicate case number detected, retrying... (Attempt ${retryCount}/${maxRetries})`);
+          // Wait a bit before retrying (exponential backoff)
+          await new Promise(resolve => setTimeout(resolve, 100 * retryCount));
+          continue; // Retry
+        } else {
+          // Not a duplicate key error, throw immediately
+          throw error;
+        }
+      }
+    }
 
     console.log("=== DEBUG: Credit Case Created ===");
     console.log("Saved Case ID:", savedCase._id);

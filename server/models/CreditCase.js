@@ -362,6 +362,57 @@ creditCaseSchema.pre("save", async function (next) {
 
     const prefix = `${lawFirm.firmCode || "CC"}-${department.code || "CC"}`;
 
+    // Check if counter exists, if not, initialize it based on existing cases
+    const existingCounter = await CaseNumberCounter.findOne({
+      year: year,
+      prefix: prefix,
+      lawFirm: this.lawFirm,
+      department: this.department,
+      escalated: false,
+    });
+
+    // If counter doesn't exist, find the highest existing case number and set counter accordingly
+    if (!existingCounter) {
+      const existingCases = await this.constructor.find({
+        lawFirm: this.lawFirm,
+        department: this.department,
+        caseNumber: { $regex: `^${prefix}-${year}-` },
+      }).sort({ caseNumber: -1 }).limit(1);
+
+      let initialSequence = 0;
+      if (existingCases.length > 0) {
+        // Extract sequence number from the highest case number
+        const lastCaseNumber = existingCases[0].caseNumber;
+        const match = lastCaseNumber.match(new RegExp(`^${prefix}-${year}-(\\d+)$`));
+        if (match) {
+          initialSequence = parseInt(match[1], 10);
+        }
+      }
+
+      // Create counter with the next sequence number
+      await CaseNumberCounter.findOneAndUpdate(
+        {
+          year: year,
+          prefix: prefix,
+          lawFirm: this.lawFirm,
+          department: this.department,
+          escalated: false,
+        },
+        {
+          sequence: initialSequence,
+          year: year,
+          prefix: prefix,
+          lawFirm: this.lawFirm,
+          department: this.department,
+          escalated: false,
+        },
+        {
+          upsert: true,
+          setDefaultsOnInsert: true,
+        }
+      );
+    }
+
     // Use atomic findAndModify to get the next sequence number
     // This prevents race conditions when multiple cases are created simultaneously
     const counter = await CaseNumberCounter.findOneAndUpdate(
@@ -386,14 +437,23 @@ creditCaseSchema.pre("save", async function (next) {
 
     // Safety check: verify the case number doesn't already exist
     // This handles edge cases where the counter might have been reset or corrupted
-    const existingCase = await this.constructor.findOne({
-      caseNumber: this.caseNumber,
-      _id: { $ne: this._id }, // Exclude current document if updating
-    });
+    let maxRetries = 5;
+    let retryCount = 0;
+    
+    while (retryCount < maxRetries) {
+      const existingCase = await this.constructor.findOne({
+        caseNumber: this.caseNumber,
+        _id: { $ne: this._id }, // Exclude current document if updating
+      });
 
-    if (existingCase) {
-      console.error(`Duplicate case number detected: ${this.caseNumber}. Retrying with incremented sequence...`);
-      // Retry with incremented sequence
+      if (!existingCase) {
+        // Case number is unique, we're good
+        break;
+      }
+
+      console.warn(`Duplicate case number detected: ${this.caseNumber}. Retrying with incremented sequence... (Attempt ${retryCount + 1}/${maxRetries})`);
+      
+      // Increment the counter and generate a new case number
       const retryCounter = await CaseNumberCounter.findOneAndUpdate(
         {
           year: year,
@@ -409,9 +469,18 @@ creditCaseSchema.pre("save", async function (next) {
           setDefaultsOnInsert: true,
         }
       );
+      
       this.caseNumber = `${prefix}-${year}-${retryCounter.sequence
         .toString()
         .padStart(4, "0")}`;
+      
+      retryCount++;
+    }
+
+    // If we still have a duplicate after retries, use a fallback with timestamp
+    if (retryCount >= maxRetries) {
+      console.error(`Failed to generate unique case number after ${maxRetries} retries. Using fallback.`);
+      this.caseNumber = `${prefix}-${year}-${Date.now().toString().slice(-4)}`;
     }
 
     this.lastActivity = new Date();
