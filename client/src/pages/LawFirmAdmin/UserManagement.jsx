@@ -919,6 +919,7 @@ const CreateUser = () => {
                     <option value="legal_head">Legal Head</option>
                     <option value="advocate">Advocate</option>
                     <option value="receptionist">Receptionist</option>
+                    <option value="accountant">Accountant</option>
                     <option value="client">Client</option>
                   </select>
                 </div>
@@ -1316,6 +1317,7 @@ const EditUser = () => {
                     <option value="legal_head">Legal Head</option>
                     <option value="advocate">Advocate</option>
                     <option value="receptionist">Receptionist</option>
+                    <option value="accountant">Accountant</option>
                     <option value="client">Client</option>
                   </select>
                 </div>
