@@ -845,9 +845,9 @@ const CaseDetails = () => {
             <div className="space-y-3">
               <div className="text-center">
                 <div className="text-2xl sm:text-3xl font-bold text-white">
-                  {debtAmount.toLocaleString()}
+                  {(debtAmount || 0).toLocaleString()}
                 </div>
-                <div className="text-slate-400 text-xs sm:text-sm font-medium">{currency}</div>
+                <div className="text-slate-400 text-xs sm:text-sm font-medium">{currency || "KES"}</div>
               </div>
             </div>
           </div>
@@ -1058,7 +1058,7 @@ const CaseDetails = () => {
                     it to the legal department.
                   </p>
                   <p className="text-yellow-400 text-sm">
-                    Escalation Fee: {escalationFee.toLocaleString()} KES
+                    Escalation Fee: {(escalationFee || 0).toLocaleString()} KES
                   </p>
                 </div>
 
@@ -1310,7 +1310,7 @@ const CaseDetails = () => {
                 <div className="flex justify-between mb-2">
                   <span className="text-gray-400">Amount:</span>
                   <span className="text-white">
-                    {paymentDetails.amount.toLocaleString()} KES
+                    {(paymentDetails?.amount || 0).toLocaleString()} KES
                   </span>
                 </div>
                 <div className="flex justify-between">

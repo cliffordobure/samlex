@@ -813,7 +813,7 @@ const AdminCaseManagement = () => {
                         >
                           <td className="px-2 sm:px-4 py-2 sm:py-3 font-medium text-white">
                             <Link
-                              to={`/credit-collection/cases/${case_._id}`}
+                              to={`/admin/credit-case/${case_._id}`}
                               className="text-blue-400 hover:text-blue-300 transition-colors"
                             >
                               {case_.caseNumber}
@@ -882,7 +882,7 @@ const AdminCaseManagement = () => {
                                 ))}
                               </select>
                               <Link
-                                to={`/credit-collection/cases/${case_._id}`}
+                                to={`/admin/credit-case/${case_._id}`}
                                 className="w-full sm:w-auto px-3 py-1 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-400 hover:text-blue-300 rounded-lg text-xs transition-all duration-300 flex items-center justify-center gap-1"
                               >
                                 <FaEye className="w-3 h-3" />
@@ -1138,7 +1138,7 @@ const AdminCaseManagement = () => {
                         >
                           <td className="px-2 sm:px-4 py-2 sm:py-3 font-medium text-white">
                             <Link
-                              to={`/credit-collection/cases/${case_._id}`}
+                              to={`/admin/credit-case/${case_._id}`}
                               className="text-blue-400 hover:text-blue-300 transition-colors"
                             >
                               {case_.caseNumber}
