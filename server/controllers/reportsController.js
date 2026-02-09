@@ -6075,13 +6075,19 @@ export const getAccountantDashboard = async (req, res) => {
 
     // 1. Financial Tracking - Money coming into the company
     const [legalCases, creditCases, payments, departments, revenueTargets] = await Promise.all([
-      LegalCase.find({ lawFirm: lawFirmId }).lean(),
-      CreditCase.find({ lawFirm: lawFirmId }).lean(),
+      LegalCase.find({ lawFirm: lawFirmId })
+        .populate("client", "firstName lastName email")
+        .lean(),
+      CreditCase.find({ lawFirm: lawFirmId })
+        .populate("client", "firstName lastName email")
+        .lean(),
       Payment.find({ 
         lawFirm: lawFirmId, 
         status: "completed",
         createdAt: { $gte: daysAgo }
-      }).lean(),
+      })
+      .populate("client", "firstName lastName email")
+      .lean(),
       Department.find({ lawFirm: lawFirmId, isActive: true }).lean(),
       RevenueTarget.find({ lawFirm: lawFirmId }).populate("department", "name code").lean()
     ]);
@@ -6112,21 +6118,130 @@ export const getAccountantDashboard = async (req, res) => {
       return sum;
     }, 0);
 
-    // Recent payments
-    const recentPayments = payments
-      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-      .slice(0, 10)
-      .map(p => ({
+    // Recent payments - combine payments from Payment collection, legal cases, and credit cases
+    const allRecentPayments = [];
+    
+    // 1. Payments from Payment collection
+    payments.forEach(p => {
+      allRecentPayments.push({
+        _id: p._id,
         id: p._id,
+        paymentId: p.paymentId,
         amount: p.amount,
         currency: p.currency,
         paymentMethod: p.paymentMethod,
         purpose: p.purpose,
         status: p.status,
         createdAt: p.createdAt,
-        client: p.client,
+        paymentDate: p.createdAt,
+        client: p.client ? {
+          _id: p.client._id,
+          firstName: p.client.firstName,
+          lastName: p.client.lastName,
+          email: p.client.email
+        } : null,
         case: p.case
-      }));
+      });
+    });
+    
+    // 2. Payments from legal cases (filing fees and case payments)
+    legalCases.forEach(legalCase => {
+      // Filing fees
+      if (legalCase.filingFee && legalCase.filingFee.paid && legalCase.filingFee.paidAt >= daysAgo) {
+        allRecentPayments.push({
+          _id: legalCase._id,
+          id: `filing-${legalCase._id}`,
+          paymentId: `FILING-${legalCase.caseNumber || legalCase._id}`,
+          amount: legalCase.filingFee.amount,
+          currency: legalCase.filingFee.currency || "KES",
+          paymentMethod: "bank_transfer", // Default
+          purpose: "filing_fee",
+          status: "completed",
+          createdAt: legalCase.filingFee.paidAt,
+          paymentDate: legalCase.filingFee.paidAt,
+          client: legalCase.client ? {
+            _id: legalCase.client._id || legalCase.client,
+            firstName: legalCase.client.firstName,
+            lastName: legalCase.client.lastName,
+            email: legalCase.client.email
+          } : null,
+          case: {
+            caseId: legalCase._id,
+            caseType: "legal",
+            caseNumber: legalCase.caseNumber
+          }
+        });
+      }
+      
+      // Case payments
+      if (legalCase.payments && Array.isArray(legalCase.payments)) {
+        legalCase.payments.forEach(payment => {
+          if (new Date(payment.paymentDate || payment.createdAt) >= daysAgo) {
+            allRecentPayments.push({
+              _id: payment._id || `${legalCase._id}-${payment.paymentDate}`,
+              id: `legal-payment-${legalCase._id}-${payment.paymentDate}`,
+              paymentId: `LEGAL-${legalCase.caseNumber || legalCase._id}`,
+              amount: payment.amount,
+              currency: payment.currency || "KES",
+              paymentMethod: payment.paymentMethod || "bank_transfer",
+              purpose: "case_payment",
+              status: "completed",
+              createdAt: payment.paymentDate || payment.createdAt,
+              paymentDate: payment.paymentDate || payment.createdAt,
+              client: legalCase.client ? {
+                _id: legalCase.client._id || legalCase.client,
+                firstName: legalCase.client.firstName,
+                lastName: legalCase.client.lastName,
+                email: legalCase.client.email
+              } : null,
+              case: {
+                caseId: legalCase._id,
+                caseType: "legal",
+                caseNumber: legalCase.caseNumber
+              }
+            });
+          }
+        });
+      }
+    });
+    
+    // 3. Payments from credit cases (promised payments that are paid)
+    creditCases.forEach(creditCase => {
+      if (creditCase.promisedPayments && Array.isArray(creditCase.promisedPayments)) {
+        creditCase.promisedPayments.forEach(promisedPayment => {
+          if (promisedPayment.status === "paid" && promisedPayment.paidAt && new Date(promisedPayment.paidAt) >= daysAgo) {
+            allRecentPayments.push({
+              _id: promisedPayment._id || `${creditCase._id}-${promisedPayment.paidAt}`,
+              id: `credit-payment-${creditCase._id}-${promisedPayment.paidAt}`,
+              paymentId: `CREDIT-${creditCase.caseNumber || creditCase._id}`,
+              amount: promisedPayment.amount,
+              currency: promisedPayment.currency || "KES",
+              paymentMethod: promisedPayment.paymentMethod || "bank_transfer",
+              purpose: "credit_collection",
+              status: "completed",
+              createdAt: promisedPayment.paidAt,
+              paymentDate: promisedPayment.paidAt,
+              client: creditCase.client ? {
+                _id: creditCase.client._id || creditCase.client,
+                firstName: creditCase.client.firstName,
+                lastName: creditCase.client.lastName,
+                email: creditCase.client.email
+              } : null,
+              case: {
+                caseId: creditCase._id,
+                caseType: "credit",
+                caseNumber: creditCase.caseNumber
+              }
+            });
+          }
+        });
+      }
+    });
+    
+    // Sort by date and limit to most recent
+    const recentPayments = allRecentPayments
+      .sort((a, b) => new Date(b.createdAt || b.paymentDate) - new Date(a.createdAt || a.paymentDate))
+      .slice(0, 50); // Increased limit to show more payments
 
     // 2. Department Reviews
     const departmentReviews = await Promise.all(
