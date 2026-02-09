@@ -2,7 +2,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { getCreditCaseById } from "../../store/slices/creditCaseSlice";
+import { getCreditCaseById, updateCreditCase } from "../../store/slices/creditCaseSlice";
 import socket from "../../utils/socket";
 import creditCaseApi from "../../store/api/creditCaseApi";
 import userApi from "../../store/api/userApi";
@@ -33,7 +33,8 @@ import {
   FaEnvelope, 
   FaBuilding,
   FaGavel,
-  FaChartLine
+  FaChartLine,
+  FaEdit
 } from "react-icons/fa";
 
 const API_BASE = API_URL;
@@ -101,6 +102,11 @@ const CaseDetails = () => {
   // Promised payments state
   const [showPromisedPaymentsModal, setShowPromisedPaymentsModal] =
     useState(false);
+
+  // Edit case state
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editFormData, setEditFormData] = useState({});
+  const [editLoading, setEditLoading] = useState(false);
 
   // Fetch case details, comments, assignable users
   useEffect(() => {
@@ -440,6 +446,42 @@ const CaseDetails = () => {
     dispatch(getCreditCaseById(id)); // Refresh case details
   };
 
+  // Handle edit case
+  const handleEditCase = async (e) => {
+    e.preventDefault();
+    setEditLoading(true);
+
+    try {
+      const updateData = {
+        ...editFormData,
+        debtAmount: editFormData.debtAmount ? parseFloat(editFormData.debtAmount) : undefined,
+      };
+
+      // Remove empty strings
+      Object.keys(updateData).forEach((key) => {
+        if (updateData[key] === "") {
+          delete updateData[key];
+        }
+      });
+
+      await dispatch(updateCreditCase({ id, data: updateData })).unwrap();
+      toast.success("Case updated successfully");
+      setShowEditModal(false);
+      dispatch(getCreditCaseById(id)); // Refresh case details
+    } catch (error) {
+      toast.error(error || "Failed to update case");
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  // Check if user can edit case
+  const assignedToId = typeof assignedTo === 'string' ? assignedTo : assignedTo?._id;
+  const canEditCase = 
+    isAdmin || 
+    isHeadOfCredit || 
+    (currentUser.role === "debt_collector" && assignedToId && (assignedToId === currentUser._id || assignedToId.toString() === currentUser._id.toString()));
+
   // Helper to extract filename from URL or path
   const getDocumentFilename = (doc, idx) => {
     if (doc.startsWith("http")) {
@@ -720,13 +762,24 @@ const CaseDetails = () => {
         <div className="bg-gradient-to-r from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl p-4 sm:p-6 border border-slate-600/50 shadow-2xl">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
             <div className="flex flex-col sm:flex-row sm:items-center space-y-3 sm:space-y-0 sm:space-x-4">
-              <Link
-                to="/credit-collection/cases"
-                className="inline-flex items-center justify-center space-x-2 px-3 sm:px-4 py-2 bg-gradient-to-r from-blue-500/20 to-indigo-500/20 hover:from-blue-500/30 hover:to-indigo-500/30 text-blue-400 rounded-xl transition-all duration-200 border border-blue-500/30 hover:border-blue-500/50 text-sm sm:text-base"
-              >
-                <FaArrowLeft className="w-4 h-4" />
-                <span className="font-medium">Back to Cases</span>
-              </Link>
+              <div className="flex items-center space-x-2 sm:space-x-3">
+                <Link
+                  to="/credit-collection/cases"
+                  className="inline-flex items-center justify-center space-x-2 px-3 sm:px-4 py-2 bg-gradient-to-r from-blue-500/20 to-indigo-500/20 hover:from-blue-500/30 hover:to-indigo-500/30 text-blue-400 rounded-xl transition-all duration-200 border border-blue-500/30 hover:border-blue-500/50 text-sm sm:text-base"
+                >
+                  <FaArrowLeft className="w-4 h-4" />
+                  <span className="font-medium">Back to Cases</span>
+                </Link>
+                {canEditCase && (
+                  <button
+                    onClick={() => setShowEditModal(true)}
+                    className="inline-flex items-center justify-center space-x-2 px-3 sm:px-4 py-2 bg-gradient-to-r from-green-500/20 to-emerald-500/20 hover:from-green-500/30 hover:to-emerald-500/30 text-green-400 rounded-xl transition-all duration-200 border border-green-500/30 hover:border-green-500/50 text-sm sm:text-base"
+                  >
+                    <FaEdit className="w-4 h-4" />
+                    <span className="font-medium">Edit Case</span>
+                  </button>
+                )}
+              </div>
               <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-3">
                 <span className="text-xs sm:text-sm text-slate-400 font-mono bg-slate-700/50 px-2 sm:px-3 py-1 rounded-lg border border-slate-600/50 text-center">
                   #{caseNumber}
@@ -1495,6 +1548,208 @@ const CaseDetails = () => {
           </button>
         </div>
       </div>
+
+      {/* Edit Case Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-gradient-to-br from-slate-800 to-slate-700 rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-slate-600/50 shadow-2xl">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold text-white">Edit Case</h2>
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="text-slate-400 hover:text-white transition-colors"
+              >
+                <FaTimes className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditCase} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Title *
+                  </label>
+                  <input
+                    type="text"
+                    value={editFormData.title || ""}
+                    onChange={(e) => setEditFormData({ ...editFormData, title: e.target.value })}
+                    className="w-full px-4 py-2 bg-slate-700/80 border border-slate-600/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Priority
+                  </label>
+                  <select
+                    value={editFormData.priority || "medium"}
+                    onChange={(e) => setEditFormData({ ...editFormData, priority: e.target.value })}
+                    className="w-full px-4 py-2 bg-slate-700/80 border border-slate-600/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                  >
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                    <option value="urgent">Urgent</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Debt Amount
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={editFormData.debtAmount || ""}
+                    onChange={(e) => setEditFormData({ ...editFormData, debtAmount: e.target.value })}
+                    className="w-full px-4 py-2 bg-slate-700/80 border border-slate-600/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                    placeholder="Enter debt amount"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Currency
+                  </label>
+                  <select
+                    value={editFormData.currency || "KES"}
+                    onChange={(e) => setEditFormData({ ...editFormData, currency: e.target.value })}
+                    className="w-full px-4 py-2 bg-slate-700/80 border border-slate-600/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                  >
+                    <option value="KES">KES</option>
+                    <option value="USD">USD</option>
+                    <option value="EUR">EUR</option>
+                    <option value="GBP">GBP</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Debtor Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={editFormData.debtorName || ""}
+                    onChange={(e) => setEditFormData({ ...editFormData, debtorName: e.target.value })}
+                    className="w-full px-4 py-2 bg-slate-700/80 border border-slate-600/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Debtor Email
+                  </label>
+                  <input
+                    type="email"
+                    value={editFormData.debtorEmail || ""}
+                    onChange={(e) => setEditFormData({ ...editFormData, debtorEmail: e.target.value })}
+                    className="w-full px-4 py-2 bg-slate-700/80 border border-slate-600/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Debtor Contact
+                  </label>
+                  <input
+                    type="text"
+                    value={editFormData.debtorContact || ""}
+                    onChange={(e) => setEditFormData({ ...editFormData, debtorContact: e.target.value })}
+                    className="w-full px-4 py-2 bg-slate-700/80 border border-slate-600/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Creditor Name
+                  </label>
+                  <input
+                    type="text"
+                    value={editFormData.creditorName || ""}
+                    onChange={(e) => setEditFormData({ ...editFormData, creditorName: e.target.value })}
+                    className="w-full px-4 py-2 bg-slate-700/80 border border-slate-600/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Creditor Email
+                  </label>
+                  <input
+                    type="email"
+                    value={editFormData.creditorEmail || ""}
+                    onChange={(e) => setEditFormData({ ...editFormData, creditorEmail: e.target.value })}
+                    className="w-full px-4 py-2 bg-slate-700/80 border border-slate-600/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Creditor Contact
+                  </label>
+                  <input
+                    type="text"
+                    value={editFormData.creditorContact || ""}
+                    onChange={(e) => setEditFormData({ ...editFormData, creditorContact: e.target.value })}
+                    className="w-full px-4 py-2 bg-slate-700/80 border border-slate-600/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Description
+                  </label>
+                  <textarea
+                    value={editFormData.description || ""}
+                    onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
+                    rows={4}
+                    className="w-full px-4 py-2 bg-slate-700/80 border border-slate-600/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Case Reference
+                  </label>
+                  <input
+                    type="text"
+                    value={editFormData.caseReference || ""}
+                    onChange={(e) => setEditFormData({ ...editFormData, caseReference: e.target.value })}
+                    className="w-full px-4 py-2 bg-slate-700/80 border border-slate-600/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowEditModal(false)}
+                  className="px-4 py-2 bg-slate-600/50 hover:bg-slate-600/70 text-white rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={editLoading}
+                  className="px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-lg transition-colors disabled:opacity-50 flex items-center space-x-2"
+                >
+                  {editLoading ? (
+                    <>
+                      <FaSpinner className="w-4 h-4 animate-spin" />
+                      <span>Saving...</span>
+                    </>
+                  ) : (
+                    <span>Save Changes</span>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

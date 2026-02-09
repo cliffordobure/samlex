@@ -4,33 +4,120 @@ import config from "../config/config.js";
 
 class EmailService {
   constructor() {
-    this.transporter = nodemailer.createTransport({
+    // Check if email configuration is available
+    if (!config.EMAIL_HOST || !config.EMAIL_USER || !config.EMAIL_PASS) {
+      console.warn("⚠️ Email configuration is missing. Emails will not be sent.");
+      console.warn("Required environment variables: EMAIL_HOST, EMAIL_USER, EMAIL_PASS");
+      this.transporter = null;
+      return;
+    }
+
+    // Determine if we should use secure connection
+    const isSecure = config.EMAIL_PORT === 465;
+    const port = parseInt(config.EMAIL_PORT) || 587;
+
+    // Configure transporter based on email provider
+    let transporterConfig = {
       host: config.EMAIL_HOST,
-      port: config.EMAIL_PORT,
-      secure: false, // true for 465, false for other ports
+      port: port,
+      secure: isSecure, // true for 465, false for other ports
       auth: {
         user: config.EMAIL_USER,
         pass: config.EMAIL_PASS,
       },
-    });
+    };
+
+    // Gmail-specific configuration
+    if (config.EMAIL_HOST.includes("gmail.com")) {
+      transporterConfig = {
+        service: "gmail",
+        auth: {
+          user: config.EMAIL_USER,
+          pass: config.EMAIL_PASS,
+        },
+      };
+    }
+
+    // Outlook/Hotmail-specific configuration
+    if (config.EMAIL_HOST.includes("outlook.com") || config.EMAIL_HOST.includes("hotmail.com") || config.EMAIL_HOST.includes("live.com")) {
+      transporterConfig = {
+        host: "smtp-mail.outlook.com",
+        port: 587,
+        secure: false,
+        auth: {
+          user: config.EMAIL_USER,
+          pass: config.EMAIL_PASS,
+        },
+        tls: {
+          ciphers: "SSLv3",
+        },
+      };
+    }
+
+    try {
+      this.transporter = nodemailer.createTransport(transporterConfig);
+      console.log("✅ Email transporter configured successfully");
+      console.log(`📧 Email Host: ${config.EMAIL_HOST}`);
+      console.log(`📧 Email User: ${config.EMAIL_USER}`);
+    } catch (error) {
+      console.error("❌ Error creating email transporter:", error);
+      this.transporter = null;
+    }
   }
 
   async sendEmail(options) {
     try {
+      // Check if transporter is configured
+      if (!this.transporter) {
+        const error = new Error("Email service is not configured. Please set EMAIL_HOST, EMAIL_USER, and EMAIL_PASS environment variables.");
+        console.error("❌ Email sending failed:", error.message);
+        throw error;
+      }
+
+      // Validate required fields
+      if (!options.to) {
+        throw new Error("Recipient email address is required");
+      }
+      if (!options.subject) {
+        throw new Error("Email subject is required");
+      }
+      if (!options.html && !options.text) {
+        throw new Error("Email content (html or text) is required");
+      }
+
       const mailOptions = {
         from: `"Samlex" <${config.EMAIL_USER}>`,
         to: options.to,
         subject: options.subject,
-        text: options.text,
+        text: options.text || options.html?.replace(/<[^>]*>/g, ""), // Plain text fallback
         html: options.html,
       };
 
+      console.log(`📧 Attempting to send email to: ${options.to}`);
+      console.log(`📧 Subject: ${options.subject}`);
+
       const info = await this.transporter.sendMail(mailOptions);
-      console.log("Email sent:", info.messageId);
+      console.log("✅ Email sent successfully!");
+      console.log(`📧 Message ID: ${info.messageId}`);
+      console.log(`📧 Response: ${info.response}`);
       return info;
     } catch (error) {
-      console.error("Email sending failed:", error);
-      throw error;
+      console.error("❌ Email sending failed:");
+      console.error(`   Error: ${error.message}`);
+      console.error(`   Code: ${error.code}`);
+      console.error(`   Command: ${error.command}`);
+      console.error(`   Response: ${error.response}`);
+      
+      // Provide helpful error messages
+      if (error.code === "EAUTH") {
+        throw new Error("Email authentication failed. Please check your EMAIL_USER and EMAIL_PASS credentials.");
+      } else if (error.code === "ECONNECTION") {
+        throw new Error(`Cannot connect to email server (${config.EMAIL_HOST}:${config.EMAIL_PORT}). Please check your EMAIL_HOST and EMAIL_PORT settings.`);
+      } else if (error.code === "ETIMEDOUT") {
+        throw new Error("Email server connection timed out. Please check your network connection and email server settings.");
+      } else {
+        throw error;
+      }
     }
   }
 
@@ -261,11 +348,27 @@ class EmailService {
   // Method to verify email configuration
   async verifyConnection() {
     try {
+      if (!this.transporter) {
+        console.error("❌ Email transporter is not configured");
+        return false;
+      }
+
+      console.log("🔍 Verifying email service connection...");
       await this.transporter.verify();
-      console.log("Email service is ready to send emails");
+      console.log("✅ Email service is ready to send emails");
       return true;
     } catch (error) {
-      console.error("Email service verification failed:", error);
+      console.error("❌ Email service verification failed:");
+      console.error(`   Error: ${error.message}`);
+      console.error(`   Code: ${error.code}`);
+      
+      if (error.code === "EAUTH") {
+        console.error("   ⚠️ Authentication failed. Check EMAIL_USER and EMAIL_PASS");
+      } else if (error.code === "ECONNECTION") {
+        console.error(`   ⚠️ Cannot connect to ${config.EMAIL_HOST}:${config.EMAIL_PORT}`);
+        console.error("   ⚠️ Check EMAIL_HOST and EMAIL_PORT settings");
+      }
+      
       return false;
     }
   }

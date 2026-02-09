@@ -329,18 +329,47 @@ export const forgotPassword = async (req, res, next) => {
     await user.save({ validateBeforeSave: false });
 
     try {
+      // Verify email service is ready
+      const emailServiceReady = await emailService.verifyConnection();
+      console.log("📧 Email service ready for password reset:", emailServiceReady);
+
+      if (!emailServiceReady) {
+        console.error("❌ Email service is not ready - cannot send password reset email");
+        // Clear reset fields if email service is not ready
+        user.passwordResetToken = undefined;
+        user.passwordResetExpires = undefined;
+        await user.save({ validateBeforeSave: false });
+        return errorResponse(
+          res,
+          "Email service is not configured. Please contact your administrator.",
+          500
+        );
+      }
+
       await emailService.sendPasswordResetEmail(user, resetToken);
+      console.log("✅ Password reset email sent successfully to:", user.email);
 
       successResponse(res, null, "Password reset email sent");
     } catch (error) {
-      console.error("Email sending failed:", error);
+      console.error("❌ Email sending failed:", error);
+      console.error("❌ Password reset email error details:", {
+        message: error.message,
+        code: error.code,
+        command: error.command,
+        response: error.response,
+        userEmail: user.email,
+      });
 
       // Clear reset fields if email fails
       user.passwordResetToken = undefined;
       user.passwordResetExpires = undefined;
       await user.save({ validateBeforeSave: false });
 
-      return errorResponse(res, "Email could not be sent", 500);
+      return errorResponse(
+        res,
+        `Email could not be sent: ${error.message}. Please check your email configuration or contact support.`,
+        500
+      );
     }
   } catch (error) {
     next(error);

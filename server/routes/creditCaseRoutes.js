@@ -2,6 +2,7 @@ import express from "express";
 import multer from "multer";
 import {
   createCreditCase,
+  updateCreditCase,
   moveCreditCase,
   assignCreditCase,
   commentOnCreditCase,
@@ -70,6 +71,9 @@ router.get("/import-batch/:batchId", protect, getCasesByBatchId);
 
 // Create a new credit collection case
 router.post("/", protect, createCreditCase);
+
+// Update a credit case
+router.put("/:id", protect, updateCreditCase);
 
 // Delete a credit case (admin only)
 router.delete("/:id", protect, deleteCreditCase);

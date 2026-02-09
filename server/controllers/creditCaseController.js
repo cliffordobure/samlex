@@ -1677,6 +1677,117 @@ export const updatePromisedPaymentStatus = async (req, res) => {
  * @route   DELETE /api/credit-cases/:id
  * @access  Private (law_firm_admin only)
  */
+/**
+ * @desc    Update credit case
+ * @route   PUT /api/credit-cases/:id
+ * @access  Private (debt_collector, credit_head, law_firm_admin)
+ */
+export const updateCreditCase = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid case ID",
+      });
+    }
+
+    const creditCase = await CreditCase.findById(id);
+    if (!creditCase) {
+      return res.status(404).json({
+        success: false,
+        message: "Credit case not found",
+      });
+    }
+
+    // Verify the case belongs to the user's law firm
+    if (creditCase.lawFirm.toString() !== req.user.lawFirm._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: "You can only update cases from your law firm",
+      });
+    }
+
+    // Check permissions
+    // Debt collectors can only update cases assigned to them
+    // Credit heads and admins can update any case
+    if (
+      req.user.role === "debt_collector" &&
+      creditCase.assignedTo?.toString() !== req.user._id.toString()
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "You can only update cases assigned to you",
+      });
+    }
+
+    // Allowed roles
+    if (
+      !["debt_collector", "credit_head", "law_firm_admin", "admin"].includes(
+        req.user.role
+      )
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "You don't have permission to update credit cases",
+      });
+    }
+
+    // Fields that can be updated
+    const allowedFields = [
+      "title",
+      "description",
+      "debtorName",
+      "debtorEmail",
+      "debtorContact",
+      "creditorName",
+      "creditorEmail",
+      "creditorContact",
+      "debtAmount",
+      "currency",
+      "priority",
+      "caseReference",
+    ];
+
+    // Filter update data to only include allowed fields
+    const filteredUpdateData = {};
+    Object.keys(updateData).forEach((key) => {
+      if (allowedFields.includes(key)) {
+        filteredUpdateData[key] = updateData[key];
+      }
+    });
+
+    // Update the case
+    Object.assign(creditCase, filteredUpdateData);
+    creditCase.lastActivity = new Date();
+    const updatedCase = await creditCase.save();
+
+    // Emit socket event for real-time updates
+    req.app
+      .get("io")
+      .to(`lawfirm-${creditCase.lawFirm.toString()}`)
+      .emit("creditCaseUpdated", {
+        caseId: updatedCase._id,
+        ...filteredUpdateData,
+      });
+
+    res.json({
+      success: true,
+      message: "Credit case updated successfully",
+      data: updatedCase,
+    });
+  } catch (error) {
+    console.error("Error updating credit case:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error updating credit case",
+      error: error.message,
+    });
+  }
+};
+
 export const deleteCreditCase = async (req, res) => {
   try {
     const { id } = req.params;
