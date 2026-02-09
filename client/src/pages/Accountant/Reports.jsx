@@ -74,10 +74,14 @@ const Reports = () => {
 
       if (response.data.success) {
         setReportData(response.data.data);
+      } else {
+        toast.error(response.data.message || "Failed to load report data");
       }
     } catch (error) {
       console.error("Error loading report:", error);
-      toast.error("Failed to load report data");
+      const errorMessage = error.response?.data?.message || error.message || "Failed to load report data";
+      toast.error(errorMessage);
+      console.error("Full error:", error.response?.data || error);
     } finally {
       setLoading(false);
     }

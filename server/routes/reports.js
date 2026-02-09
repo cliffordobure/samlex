@@ -68,12 +68,12 @@ router.get(
 );
 router.get(
   "/department-performance/:lawFirmId",
-  authorize("law_firm_admin"),
+  authorize("law_firm_admin", "accountant"),
   getDepartmentPerformance
 );
 router.get(
   "/revenue-analytics/:lawFirmId",
-  authorize("law_firm_admin"),
+  authorize("law_firm_admin", "accountant"),
   getRevenueAnalytics
 );
 router.get(

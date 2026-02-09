@@ -347,7 +347,7 @@ export const getDepartmentPerformance = async (req, res) => {
 
     // Check if user has access to this law firm
     if (
-      req.user.role === "law_firm_admin" &&
+      (req.user.role === "law_firm_admin" || req.user.role === "accountant") &&
       lawFirmId !== req.user.lawFirm._id.toString()
     ) {
       return res.status(403).json({
@@ -571,7 +571,7 @@ export const getRevenueAnalytics = async (req, res) => {
 
     // Check if user has access to this law firm
     if (
-      req.user.role === "law_firm_admin" &&
+      (req.user.role === "law_firm_admin" || req.user.role === "accountant") &&
       lawFirmId !== req.user.lawFirm._id.toString()
     ) {
       return res.status(403).json({
