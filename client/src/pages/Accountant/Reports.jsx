@@ -74,8 +74,10 @@ const Reports = () => {
 
       if (response.data.success) {
         setReportData(response.data.data);
+        console.log("Report data loaded:", response.data.data);
       } else {
         toast.error(response.data.message || "Failed to load report data");
+        setReportData(null);
       }
     } catch (error) {
       console.error("Error loading report:", error);
@@ -383,15 +385,143 @@ const Reports = () => {
                   Period: Last {period} days | Generated: {new Date().toLocaleDateString()}
                 </p>
               </div>
-              {reportData.totalRevenue !== undefined && (
+              
+              {/* Total Revenue Summary */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="bg-slate-700/50 rounded-xl p-4">
                   <p className="text-xs text-slate-400 mb-2">Total Revenue</p>
                   <p className="text-xs font-bold text-white">
-                    {formatCurrency(reportData.totalRevenue || 0)}
+                    {formatCurrency(
+                      reportData.overview?.totalRevenue ||
+                      (reportData.totalRevenue || 0) +
+                      (reportData.totalPaidFilingFees || reportData.totalFilingFees || 0) +
+                      (reportData.totalPaidEscalationFees || reportData.totalEscalationFees || 0) +
+                      (reportData.totalPaidPromisedAmount || reportData.totalPromisedPayments || 0)
+                    )}
                   </p>
                 </div>
+                
+                <div className="bg-slate-700/50 rounded-xl p-4">
+                  <p className="text-xs text-slate-400 mb-2">Filing Fees</p>
+                  <p className="text-xs font-bold text-white">
+                    {formatCurrency(
+                      reportData.overview?.totalPaidFilingFees ||
+                      reportData.totalPaidFilingFees ||
+                      reportData.totalFilingFees ||
+                      0
+                    )}
+                  </p>
+                  {(reportData.overview?.totalFilingFees || reportData.totalFilingFees) && (
+                    <p className="text-[10px] text-slate-500 mt-1">
+                      Total: {formatCurrency(reportData.overview?.totalFilingFees || reportData.totalFilingFees)}
+                    </p>
+                  )}
+                </div>
+                
+                <div className="bg-slate-700/50 rounded-xl p-4">
+                  <p className="text-xs text-slate-400 mb-2">Escalation Fees</p>
+                  <p className="text-xs font-bold text-white">
+                    {formatCurrency(
+                      reportData.overview?.totalPaidEscalationFees ||
+                      reportData.totalPaidEscalationFees ||
+                      reportData.totalEscalationFees ||
+                      0
+                    )}
+                  </p>
+                  {(reportData.overview?.totalEscalationFees || reportData.totalEscalationFees) && (
+                    <p className="text-[10px] text-slate-500 mt-1">
+                      Total: {formatCurrency(reportData.overview?.totalEscalationFees || reportData.totalEscalationFees)}
+                    </p>
+                  )}
+                </div>
+                
+                <div className="bg-slate-700/50 rounded-xl p-4">
+                  <p className="text-xs text-slate-400 mb-2">Promised Payments</p>
+                  <p className="text-xs font-bold text-white">
+                    {formatCurrency(
+                      reportData.overview?.totalPaidPromisedAmount ||
+                      reportData.totalPaidPromisedAmount ||
+                      reportData.totalPromisedPayments ||
+                      0
+                    )}
+                  </p>
+                  {(reportData.overview?.totalPromisedAmount || reportData.totalPromisedAmount) && (
+                    <p className="text-[10px] text-slate-500 mt-1">
+                      Total: {formatCurrency(reportData.overview?.totalPromisedAmount || reportData.totalPromisedAmount)}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Monthly Trends */}
+              {(reportData.monthlyTrends || reportData.filingFeesStats) && (
+                <div className="bg-slate-700/50 rounded-xl p-4">
+                  <h3 className="text-xs font-bold text-white mb-3">Monthly Trends</h3>
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {reportData.filingFeesStats && Array.isArray(reportData.filingFeesStats) && reportData.filingFeesStats.length > 0 ? (
+                      reportData.filingFeesStats.slice(-6).map((stat, index) => (
+                        <div key={index} className="flex items-center justify-between text-xs">
+                          <span className="text-slate-400">
+                            {stat._id?.year}-{String(stat._id?.month || 1).padStart(2, '0')}
+                          </span>
+                          <div className="flex items-center space-x-4">
+                            <span className="text-slate-300">
+                              Paid: {formatCurrency(stat.paidFilingFees || 0)}
+                            </span>
+                            <span className="text-slate-400">
+                              Total: {formatCurrency(stat.totalFilingFees || 0)}
+                            </span>
+                          </div>
+                        </div>
+                      ))
+                    ) : reportData.monthlyTrends && Array.isArray(reportData.monthlyTrends) ? (
+                      reportData.monthlyTrends.slice(-6).map((trend, index) => (
+                        <div key={index} className="flex items-center justify-between text-xs">
+                          <span className="text-slate-400">
+                            {trend.month || `${trend._id?.year || trend.year}-${String(trend._id?.month || trend.month || 1).padStart(2, '0')}`}
+                          </span>
+                          <span className="text-white font-semibold">
+                            {formatCurrency(trend.revenue || trend.total || trend.totalFilingFees || 0)}
+                          </span>
+                        </div>
+                      ))
+                    ) : null}
+                  </div>
+                </div>
               )}
-              {/* Add more revenue analytics details here */}
+
+              {/* Recent Revenue */}
+              {reportData.recentRevenue && (
+                <div className="bg-slate-700/50 rounded-xl p-4">
+                  <h3 className="text-xs font-bold text-white mb-3">Recent Revenue (Last {period} days)</h3>
+                  <div className="grid grid-cols-2 gap-4 text-xs">
+                    <div>
+                      <span className="text-slate-400">Filing Fees: </span>
+                      <span className="text-white font-semibold">
+                        {formatCurrency(reportData.recentRevenue.paidFilingFees || 0)}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400">Escalation Fees: </span>
+                      <span className="text-white font-semibold">
+                        {formatCurrency(reportData.recentRevenue.paidEscalationFees || 0)}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400">Promised Payments: </span>
+                      <span className="text-white font-semibold">
+                        {formatCurrency(reportData.recentRevenue.paidPromisedPayments || 0)}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400">Total: </span>
+                      <span className="text-white font-semibold">
+                        {formatCurrency(reportData.recentRevenue.total || 0)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -404,26 +534,65 @@ const Reports = () => {
                   Period: Last {period} days | Generated: {new Date().toLocaleDateString()}
                 </p>
               </div>
-              {reportData.departments && Array.isArray(reportData.departments) && (
+              {Array.isArray(reportData) && reportData.length > 0 ? (
                 <div className="space-y-4">
-                  {reportData.departments.map((dept) => (
-                    <div key={dept._id || dept.id} className="bg-slate-700/50 rounded-xl p-4">
-                      <h3 className="text-xs font-bold text-white mb-3">{dept.name}</h3>
-                      <div className="grid grid-cols-2 gap-4 text-xs">
-                        <div>
-                          <span className="text-slate-400">Revenue: </span>
-                          <span className="text-white font-semibold">
-                            {formatCurrency(dept.revenue || 0)}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="text-slate-400">Cases: </span>
-                          <span className="text-white font-semibold">{dept.totalCases || 0}</span>
-                        </div>
+                  {reportData.map((dept) => (
+                    <div key={dept.department?._id || dept._id || dept.id} className="bg-slate-700/50 rounded-xl p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="text-xs font-bold text-white">
+                          {dept.department?.name || dept.name || "Unknown Department"}
+                        </h3>
+                        {dept.department?.code && (
+                          <span className="text-[10px] text-slate-400">{dept.department.code}</span>
+                        )}
                       </div>
+                      {dept.stats && (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-xs">
+                          <div>
+                            <span className="text-slate-400">Total Cases: </span>
+                            <span className="text-white font-semibold">
+                              {(dept.stats.totalCreditCases || 0) + (dept.stats.totalLegalCases || 0)}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400">Credit Cases: </span>
+                            <span className="text-white font-semibold">
+                              {dept.stats.totalCreditCases || 0}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400">Legal Cases: </span>
+                            <span className="text-white font-semibold">
+                              {dept.stats.totalLegalCases || 0}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400">Users: </span>
+                            <span className="text-white font-semibold">
+                              {dept.stats.totalUsers || 0}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400">Completion Rate: </span>
+                            <span className="text-white font-semibold">
+                              {dept.stats.completionRate?.toFixed(1) || 0}%
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400">Total Debt: </span>
+                            <span className="text-white font-semibold">
+                              {formatCurrency(dept.stats.totalDebtAmount || 0)}
+                            </span>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
+              ) : (
+                <p className="text-xs text-slate-400 text-center py-8">
+                  No department performance data available
+                </p>
               )}
             </div>
           )}
@@ -437,39 +606,107 @@ const Reports = () => {
                   Year: {year} | Generated: {new Date().toLocaleDateString()}
                 </p>
               </div>
-              {Array.isArray(reportData) && reportData.length > 0 ? (
-                <div className="space-y-4">
-                  {reportData.map((item) => (
-                    <div key={item._id || item.id} className="bg-slate-700/50 rounded-xl p-4">
-                      <h3 className="text-xs font-bold text-white mb-3">
-                        {item.department?.name || "Company Wide"}
-                      </h3>
-                      <div className="grid grid-cols-3 gap-4 text-xs">
-                        <div>
-                          <span className="text-slate-400">Target: </span>
-                          <span className="text-white font-semibold">
-                            {formatCurrency(item.yearlyTarget || 0)}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="text-slate-400">Actual: </span>
-                          <span className="text-white font-semibold">
-                            {formatCurrency(item.actualRevenue || 0)}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="text-slate-400">Progress: </span>
-                          <span className="text-white font-semibold">
-                            {item.progress?.toFixed(1) || 0}%
-                          </span>
-                        </div>
-                      </div>
+              
+              {/* Summary */}
+              {reportData.summary && (
+                <div className="bg-slate-700/50 rounded-xl p-4 mb-6">
+                  <h3 className="text-xs font-bold text-white mb-3">Summary</h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
+                    <div>
+                      <span className="text-slate-400">Total Target: </span>
+                      <span className="text-white font-semibold">
+                        {formatCurrency(reportData.summary.totalTarget || 0)}
+                      </span>
                     </div>
-                  ))}
+                    <div>
+                      <span className="text-slate-400">Total Actual: </span>
+                      <span className="text-white font-semibold">
+                        {formatCurrency(reportData.summary.totalActual || 0)}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400">Overall Progress: </span>
+                      <span className="text-white font-semibold">
+                        {reportData.summary.overallPercentage?.toFixed(1) || 0}%
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400">Status: </span>
+                      <span className={`font-semibold ${
+                        reportData.summary.overallStatus === "on_track" ? "text-green-400" :
+                        reportData.summary.overallStatus === "at_risk" ? "text-yellow-400" :
+                        "text-red-400"
+                      }`}>
+                        {reportData.summary.overallStatus?.replace("_", " ").toUpperCase() || "UNKNOWN"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Performance Details */}
+              {reportData.performance && Array.isArray(reportData.performance) && reportData.performance.length > 0 ? (
+                <div className="space-y-4">
+                  {reportData.performance.map((item, index) => {
+                    const target = item.target;
+                    const actual = item.actual;
+                    const perf = item.performance;
+                    const deptName = target?.department?.name || "Company Wide";
+                    const targetAmount = target?.periodTarget || target?.yearlyTarget || 0;
+                    const actualAmount = actual?.total || 0;
+                    const progress = perf?.percentage || (targetAmount > 0 ? (actualAmount / targetAmount) * 100 : 0);
+
+                    return (
+                      <div key={target?._id || index} className="bg-slate-700/50 rounded-xl p-4">
+                        <h3 className="text-xs font-bold text-white mb-3">{deptName}</h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs mb-3">
+                          <div>
+                            <span className="text-slate-400">Target: </span>
+                            <span className="text-white font-semibold">
+                              {formatCurrency(targetAmount)}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400">Actual: </span>
+                            <span className="text-white font-semibold">
+                              {formatCurrency(actualAmount)}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400">Progress: </span>
+                            <span className="text-white font-semibold">
+                              {progress.toFixed(1)}%
+                            </span>
+                          </div>
+                        </div>
+                        <div className="w-full bg-slate-600/50 rounded-full h-2">
+                          <div
+                            className={`h-2 rounded-full transition-all duration-300 ${
+                              progress >= 100 ? "bg-gradient-to-r from-green-500 to-emerald-600" :
+                              progress >= 75 ? "bg-gradient-to-r from-blue-500 to-cyan-600" :
+                              progress >= 50 ? "bg-gradient-to-r from-yellow-500 to-orange-600" :
+                              "bg-gradient-to-r from-red-500 to-pink-600"
+                            }`}
+                            style={{ width: `${Math.min(progress, 100)}%` }}
+                          />
+                        </div>
+                        {perf?.difference !== undefined && (
+                          <div className="mt-2 text-xs">
+                            <span className="text-slate-400">Variance: </span>
+                            <span className={`font-semibold ${
+                              perf.difference >= 0 ? "text-green-400" : "text-red-400"
+                            }`}>
+                              {formatCurrency(perf.difference)}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               ) : (
                 <p className="text-xs text-slate-400 text-center py-8">
-                  No target performance data available
+                  No target performance data available for this year
                 </p>
               )}
             </div>
