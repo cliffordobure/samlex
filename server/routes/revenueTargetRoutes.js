@@ -15,7 +15,7 @@ router.use(protect);
 // Create or update revenue target
 router.post(
   "/",
-  authorize("law_firm_admin", "credit_head", "legal_head"),
+  authorize("law_firm_admin", "credit_head", "legal_head", "accountant"),
   createOrUpdateRevenueTarget
 );
 
