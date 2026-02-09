@@ -9,6 +9,7 @@ import {
   FaChartLine,
   FaArrowUp,
   FaArrowDown,
+  FaArrowRight,
   FaSpinner,
   FaFileInvoiceDollar,
   FaCheckCircle,
