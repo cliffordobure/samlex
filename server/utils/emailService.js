@@ -28,7 +28,7 @@ class EmailService {
     };
 
     // Gmail-specific configuration
-    if (config.EMAIL_HOST.includes("gmail.com")) {
+    if (config.EMAIL_HOST.includes("gmail.com") || config.EMAIL_USER?.includes("@gmail.com")) {
       transporterConfig = {
         service: "gmail",
         auth: {
@@ -36,6 +36,8 @@ class EmailService {
           pass: config.EMAIL_PASS,
         },
       };
+      console.log("📧 Using Gmail service configuration");
+      console.log("📧 Make sure you're using an App Password, not your regular Gmail password");
     }
 
     // Outlook/Hotmail-specific configuration
@@ -110,7 +112,15 @@ class EmailService {
       
       // Provide helpful error messages
       if (error.code === "EAUTH") {
-        throw new Error("Email authentication failed. Please check your EMAIL_USER and EMAIL_PASS credentials.");
+        let errorMsg = "Email authentication failed. ";
+        if (config.EMAIL_HOST?.includes("gmail.com") || config.EMAIL_USER?.includes("@gmail.com")) {
+          errorMsg += "For Gmail, you MUST use an App Password, not your regular password. ";
+          errorMsg += "Steps: 1) Enable 2-Factor Authentication, 2) Go to https://myaccount.google.com/apppasswords, ";
+          errorMsg += "3) Generate an App Password for 'Mail', 4) Use that 16-character password as EMAIL_PASS.";
+        } else {
+          errorMsg += "Please check your EMAIL_USER and EMAIL_PASS credentials.";
+        }
+        throw new Error(errorMsg);
       } else if (error.code === "ECONNECTION") {
         throw new Error(`Cannot connect to email server (${config.EMAIL_HOST}:${config.EMAIL_PORT}). Please check your EMAIL_HOST and EMAIL_PORT settings.`);
       } else if (error.code === "ETIMEDOUT") {
@@ -364,6 +374,16 @@ class EmailService {
       
       if (error.code === "EAUTH") {
         console.error("   ⚠️ Authentication failed. Check EMAIL_USER and EMAIL_PASS");
+        if (config.EMAIL_HOST?.includes("gmail.com") || config.EMAIL_USER?.includes("@gmail.com")) {
+          console.error("   📧 GMAIL USERS: You MUST use an App Password, not your regular password!");
+          console.error("   📧 Steps to fix:");
+          console.error("      1. Enable 2-Factor Authentication on your Google Account");
+          console.error("      2. Go to: https://myaccount.google.com/apppasswords");
+          console.error("      3. Select 'Mail' and 'Other (Custom name)'");
+          console.error("      4. Enter 'Samlex' as the name and click Generate");
+          console.error("      5. Copy the 16-character password (remove spaces)");
+          console.error("      6. Set EMAIL_PASS environment variable to that App Password");
+        }
       } else if (error.code === "ECONNECTION") {
         console.error(`   ⚠️ Cannot connect to ${config.EMAIL_HOST}:${config.EMAIL_PORT}`);
         console.error("   ⚠️ Check EMAIL_HOST and EMAIL_PORT settings");
