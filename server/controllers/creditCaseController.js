@@ -821,11 +821,31 @@ export const getCreditCases = async (req, res) => {
     console.log("Filter used:", filter);
     console.log("User law firm ID:", userLawFirmId);
 
-    const cases = await CreditCase.find(filter)
-      .populate("assignedTo", "firstName lastName email role")
-      .sort({ createdAt: -1 });
+    // Basic pagination support – default 10 per page
+    const page = parseInt(req.query.page || "1", 10);
+    const limit = parseInt(req.query.limit || "10", 10);
+    const skip = (page - 1) * limit;
+
+    const [cases, total] = await Promise.all([
+      CreditCase.find(filter)
+        .populate("assignedTo", "firstName lastName email role")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      CreditCase.countDocuments(filter),
+    ]);
+
     console.log("Cases found:", cases.length);
-    res.json({ success: true, data: cases });
+    res.json({
+      success: true,
+      data: cases,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(total / limit),
+        totalCount: total,
+        limit,
+      },
+    });
   } catch (error) {
     console.error("Error in getCreditCases:", error);
     res.status(500).json({

@@ -50,12 +50,16 @@ const AdminCaseManagement = () => {
     role: user?.role,
     lawFirm: user?.lawFirm?._id,
   });
-  const { cases: creditCases, isLoading: creditLoading } = useSelector(
-    (state) => state.creditCases
-  );
-  const { cases: legalCases, isLoading: legalLoading } = useSelector(
-    (state) => state.legalCases
-  );
+  const {
+    cases: creditCases,
+    isLoading: creditLoading,
+    pagination: creditPagination,
+  } = useSelector((state) => state.creditCases);
+  const {
+    cases: legalCases,
+    isLoading: legalLoading,
+    pagination: legalPagination,
+  } = useSelector((state) => state.legalCases);
 
   const { users } = useSelector((state) => state.users);
 
@@ -85,6 +89,9 @@ const AdminCaseManagement = () => {
     caseNumber: null,
   });
   const [isDeleting, setIsDeleting] = useState(false);
+  const [creditPage, setCreditPage] = useState(1);
+  const [legalPage, setLegalPage] = useState(1);
+  const pageSize = 10;
 
   // Fetch escalated cases - moved before useEffect to fix scoping
   const fetchEscalatedCases = useCallback(async () => {
@@ -108,9 +115,21 @@ const AdminCaseManagement = () => {
     if (user?.lawFirm?._id) {
       console.log("🔄 Loading cases for law firm:", user.lawFirm._id);
       console.log("🔄 User object:", user);
-      // Load all cases for the law firm
-      dispatch(getCreditCases({ lawFirm: user.lawFirm._id }));
-      dispatch(getLegalCases({ lawFirm: user.lawFirm._id }));
+      // Load paginated cases for the law firm
+      dispatch(
+        getCreditCases({
+          lawFirm: user.lawFirm._id,
+          page: creditPage,
+          limit: pageSize,
+        })
+      );
+      dispatch(
+        getLegalCases({
+          lawFirm: user.lawFirm._id,
+          page: legalPage,
+          limit: pageSize,
+        })
+      );
 
       // Load users for assignment
       dispatch(getUsers({ lawFirm: user.lawFirm._id }));
@@ -118,7 +137,7 @@ const AdminCaseManagement = () => {
       // Load escalated cases
       fetchEscalatedCases();
     }
-  }, [dispatch, user?.lawFirm?._id, fetchEscalatedCases]);
+  }, [dispatch, user?.lawFirm?._id, fetchEscalatedCases, creditPage, legalPage]);
 
   // Socket listeners for real-time updates
   useEffect(() => {
@@ -126,8 +145,20 @@ const AdminCaseManagement = () => {
 
     // Refetch cases when assignments occur
     const refetchCases = () => {
-      dispatch(getCreditCases({ lawFirm: user.lawFirm._id }));
-      dispatch(getLegalCases({ lawFirm: user.lawFirm._id }));
+      dispatch(
+        getCreditCases({
+          lawFirm: user.lawFirm._id,
+          page: creditPage,
+          limit: pageSize,
+        })
+      );
+      dispatch(
+        getLegalCases({
+          lawFirm: user.lawFirm._id,
+          page: legalPage,
+          limit: pageSize,
+        })
+      );
     };
 
     // Listen for case escalated events
@@ -166,7 +197,7 @@ const AdminCaseManagement = () => {
       socket.off("creditCaseUpdated", handleCreditCaseUpdated);
       socket.emit("leave-law-firm", user.lawFirm._id);
     };
-  }, [dispatch, user?.lawFirm?._id, fetchEscalatedCases]);
+  }, [dispatch, user?.lawFirm?._id, fetchEscalatedCases, creditPage, legalPage]);
 
   const handleAssignCase = async (caseId, userId, caseType = "credit") => {
     try {
@@ -905,6 +936,43 @@ const AdminCaseManagement = () => {
                     </tbody>
                   </table>
                 </div>
+
+                {creditPagination && creditPagination.totalPages > 1 && (
+                  <div className="flex items-center justify-between px-4 py-3 border-t border-slate-700 mt-2 text-sm text-slate-300">
+                    <span>
+                      Page {creditPagination.currentPage} of{" "}
+                      {creditPagination.totalPages}{" "}
+                      <span className="text-slate-500">
+                        ({creditPagination.totalCount} cases)
+                      </span>
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() =>
+                          setCreditPage(Math.max(1, creditPage - 1))
+                        }
+                        disabled={creditPage === 1}
+                        className="px-3 py-1 rounded-lg border border-slate-600 bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-700 transition-colors"
+                      >
+                        Previous
+                      </button>
+                      <button
+                        onClick={() =>
+                          setCreditPage(
+                            Math.min(
+                              creditPagination.totalPages,
+                              creditPage + 1
+                            )
+                          )
+                        }
+                        disabled={creditPage === creditPagination.totalPages}
+                        className="px-3 py-1 rounded-lg border border-slate-600 bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-700 transition-colors"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </div>
+                )}
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full border-collapse">
@@ -1052,6 +1120,43 @@ const AdminCaseManagement = () => {
                     </tbody>
                   </table>
                 </div>
+
+                {legalPagination && legalPagination.totalPages > 1 && (
+                  <div className="flex items-center justify-between px-4 py-3 border-t border-slate-700 mt-2 text-sm text-slate-300">
+                    <span>
+                      Page {legalPagination.currentPage} of{" "}
+                      {legalPagination.totalPages}{" "}
+                      <span className="text-slate-500">
+                        ({legalPagination.totalCount} cases)
+                      </span>
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() =>
+                          setLegalPage(Math.max(1, legalPage - 1))
+                        }
+                        disabled={legalPage === 1}
+                        className="px-3 py-1 rounded-lg border border-slate-600 bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-700 transition-colors"
+                      >
+                        Previous
+                      </button>
+                      <button
+                        onClick={() =>
+                          setLegalPage(
+                            Math.min(
+                              legalPagination.totalPages,
+                              legalPage + 1
+                            )
+                          )
+                        }
+                        disabled={legalPage === legalPagination.totalPages}
+                        className="px-3 py-1 rounded-lg border border-slate-600 bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-700 transition-colors"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </div>
+                )}
               )}
             </div>
           </div>

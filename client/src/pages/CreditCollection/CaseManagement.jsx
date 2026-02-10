@@ -46,6 +46,9 @@ const CaseListView = ({
   getStatusBadgeClass,
   getPriorityBadgeClass,
   onDeleteCase,
+  pagination,
+  currentPage,
+  onPageChange,
 }) => (
   <div className="bg-gradient-to-r from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl border border-slate-600/50 shadow-2xl">
     <div className="p-6">
@@ -58,6 +61,7 @@ const CaseListView = ({
           <p className="text-slate-400 mt-2">Please wait while we fetch your data</p>
         </div>
       ) : cases.length > 0 ? (
+        <>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
@@ -187,6 +191,38 @@ const CaseListView = ({
             </tbody>
           </table>
         </div>
+
+        {pagination && pagination.totalPages > 1 && (
+          <div className="flex items-center justify-between px-4 py-3 border-t border-slate-700 mt-2 text-sm text-slate-300">
+            <span>
+              Page {pagination.currentPage} of {pagination.totalPages}{" "}
+              <span className="text-slate-500">
+                ({pagination.totalCount} cases)
+              </span>
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => onPageChange(Math.max(1, currentPage - 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1 rounded-lg border border-slate-600 bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-700 transition-colors"
+              >
+                Previous
+              </button>
+              <button
+                onClick={() =>
+                  onPageChange(
+                    Math.min(pagination.totalPages, currentPage + 1)
+                  )
+                }
+                disabled={currentPage === pagination.totalPages}
+                className="px-3 py-1 rounded-lg border border-slate-600 bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-700 transition-colors"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
+        </>
       ) : (
         <div className="text-center py-12">
           <div className="w-16 h-16 mx-auto bg-slate-700/50 rounded-full flex items-center justify-center mb-4">
@@ -213,7 +249,7 @@ const CaseListView = ({
 
 const CaseManagement = () => {
   const dispatch = useDispatch();
-  const { cases, isLoading } = useSelector((state) => state.creditCases);
+  const { cases, isLoading, pagination } = useSelector((state) => state.creditCases);
   const { users } = useSelector((state) => state.users);
   const { user } = useSelector((state) => state.auth);
 
@@ -232,30 +268,32 @@ const CaseManagement = () => {
     caseNumber: null,
   });
   const [isDeleting, setIsDeleting] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
 
   // Fetch cases and users
   useEffect(() => {
     if (!user) return;
     if (user.role === "credit_head" && user.lawFirm?._id) {
-      dispatch(getCreditCases({ lawFirm: user.lawFirm._id }));
+      dispatch(getCreditCases({ lawFirm: user.lawFirm._id, page: currentPage, limit: pageSize }));
     } else if (user.role === "debt_collector") {
-      dispatch(getCreditCases({ assignedTo: user._id }));
+      dispatch(getCreditCases({ assignedTo: user._id, page: currentPage, limit: pageSize }));
     } else {
-      dispatch(getCreditCases());
+      dispatch(getCreditCases({ page: currentPage, limit: pageSize }));
     }
     dispatch(getUsers({ role: "debt_collector" }));
-  }, [dispatch, user]);
+  }, [dispatch, user, currentPage]);
 
   // Socket listeners for real-time updates
   useEffect(() => {
     const refetchCases = () => {
       if (!user) return;
       if (user.role === "credit_head" && user.lawFirm?._id) {
-        dispatch(getCreditCases({ lawFirm: user.lawFirm._id }));
+        dispatch(getCreditCases({ lawFirm: user.lawFirm._id, page: currentPage, limit: pageSize }));
       } else if (user.role === "debt_collector") {
-        dispatch(getCreditCases({ assignedTo: user._id }));
+        dispatch(getCreditCases({ assignedTo: user._id, page: currentPage, limit: pageSize }));
       } else {
-        dispatch(getCreditCases());
+        dispatch(getCreditCases({ page: currentPage, limit: pageSize }));
       }
     };
 
@@ -268,7 +306,7 @@ const CaseManagement = () => {
       socket.off("caseMoved", refetchCases);
       socket.off("caseCreated", refetchCases);
     };
-  }, [dispatch, user]);
+  }, [dispatch, user, currentPage]);
 
   useEffect(() => {
     // Only run filter if user and cases are loaded
@@ -318,11 +356,11 @@ const CaseManagement = () => {
       toast.success("Case status updated successfully!");
       // Immediately refetch cases to show updated status
       if (user.role === "credit_head" && user.lawFirm?._id) {
-        dispatch(getCreditCases({ lawFirm: user.lawFirm._id }));
+        dispatch(getCreditCases({ lawFirm: user.lawFirm._id, page: currentPage, limit: pageSize }));
       } else if (user.role === "debt_collector") {
-        dispatch(getCreditCases({ assignedTo: user._id }));
+        dispatch(getCreditCases({ assignedTo: user._id, page: currentPage, limit: pageSize }));
       } else {
-        dispatch(getCreditCases());
+        dispatch(getCreditCases({ page: currentPage, limit: pageSize }));
       }
     } catch (error) {
       toast.error(error || "Failed to update case status");
@@ -605,17 +643,20 @@ const CaseManagement = () => {
                   </div>
                 </div>
               ) : viewMode === "list" ? (
-                <CaseListView
-                  cases={filteredCases}
-                  isLoading={isLoading}
-                  user={user}
-                  users={users}
-                  onStatusChange={handleStatusChange}
-                  onAssignCase={handleAssignCase}
-                  getStatusBadgeClass={getStatusBadgeClass}
-                  getPriorityBadgeClass={getPriorityBadgeClass}
-                  onDeleteCase={handleDeleteCase}
-                />
+          <CaseListView
+            cases={filteredCases}
+            isLoading={isLoading}
+            user={user}
+            users={users}
+            onStatusChange={handleStatusChange}
+            onAssignCase={handleAssignCase}
+            getStatusBadgeClass={getStatusBadgeClass}
+            getPriorityBadgeClass={getPriorityBadgeClass}
+            onDeleteCase={handleDeleteCase}
+            pagination={pagination}
+            currentPage={currentPage}
+            onPageChange={setCurrentPage}
+          />
               ) : (
                 <KanbanBoard cases={filteredCases} isLoading={isLoading} />
               )}
