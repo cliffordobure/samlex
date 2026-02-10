@@ -37,6 +37,13 @@ const CreateCase = () => {
   const [error, setError] = useState("");
   const [debtorSelectionMode, setDebtorSelectionMode] = useState("new"); // "existing" or "new"
   const [selectedDebtorId, setSelectedDebtorId] = useState("");
+  // Per-case SMS preferences (admin can configure who gets SMS on creation)
+  const [smsPreferences, setSmsPreferences] = useState({
+    sendSmsToAssigned: true,
+    // By default, don't send SMS to external parties when creating a case
+    sendSmsToDebtor: false,
+    sendSmsToCreditor: false,
+  });
 
   // Load users for assignment
   useEffect(() => {
@@ -175,6 +182,8 @@ const CreateCase = () => {
         debtAmount: Number(form.debtAmount),
         assignedTo: form.assignedTo || undefined,
         documents: documentUrls, // Send Cloudinary URLs instead of files
+        // Pass SMS preferences to backend so it can decide who to notify
+        ...smsPreferences,
       });
 
       // Show success message
@@ -251,6 +260,101 @@ const CreateCase = () => {
                       className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                     />
                   </div>
+                </div>
+              </div>
+
+              {/* SMS Notification Settings */}
+              <div className="bg-gradient-to-br from-slate-700/50 to-slate-600/50 rounded-xl p-6 border border-slate-600/30">
+                <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                  <svg
+                    className="w-5 h-5 text-emerald-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M7 8h10M7 12h6m-6 4h4M5 5a2 2 0 012-2h10a2 2 0 012 2v9.586a1 1 0 01-.293.707l-3.414 3.414A1 1 0 0114.586 19H7a2 2 0 01-2-2V5z"
+                    />
+                  </svg>
+                  SMS Notifications on Case Creation
+                </h3>
+                <p className="text-sm text-slate-300 mb-4">
+                  Choose who should receive SMS notifications immediately after this
+                  case is created. You can always send additional SMS later from the
+                  SMS tools.
+                </p>
+                <div className="space-y-3">
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="mt-1 w-4 h-4 text-emerald-500 bg-slate-700 border-slate-600 rounded focus:ring-emerald-500"
+                      checked={smsPreferences.sendSmsToAssigned}
+                      onChange={(e) =>
+                        setSmsPreferences((prev) => ({
+                          ...prev,
+                          sendSmsToAssigned: e.target.checked,
+                        }))
+                      }
+                    />
+                    <div>
+                      <span className="text-sm font-medium text-slate-200">
+                        Notify assigned debt collector
+                      </span>
+                      <p className="text-xs text-slate-400">
+                        Sends an SMS to the staff member the case is assigned to (recommended).
+                      </p>
+                    </div>
+                  </label>
+
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="mt-1 w-4 h-4 text-emerald-500 bg-slate-700 border-slate-600 rounded focus:ring-emerald-500"
+                      checked={smsPreferences.sendSmsToDebtor}
+                      onChange={(e) =>
+                        setSmsPreferences((prev) => ({
+                          ...prev,
+                          sendSmsToDebtor: e.target.checked,
+                        }))
+                      }
+                    />
+                    <div>
+                      <span className="text-sm font-medium text-slate-200">
+                        Notify debtor (client) on creation
+                      </span>
+                      <p className="text-xs text-slate-400">
+                        When enabled, the debtor receives an SMS as soon as the case is
+                        created and assigned. Leave this off if you want to contact
+                        them later manually.
+                      </p>
+                    </div>
+                  </label>
+
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="mt-1 w-4 h-4 text-emerald-500 bg-slate-700 border-slate-600 rounded focus:ring-emerald-500"
+                      checked={smsPreferences.sendSmsToCreditor}
+                      onChange={(e) =>
+                        setSmsPreferences((prev) => ({
+                          ...prev,
+                          sendSmsToCreditor: e.target.checked,
+                        }))
+                      }
+                    />
+                    <div>
+                      <span className="text-sm font-medium text-slate-200">
+                        Notify creditor on creation
+                      </span>
+                      <p className="text-xs text-slate-400">
+                        When enabled, the creditor receives an SMS confirmation that the
+                        case has been created and assigned.
+                      </p>
+                    </div>
+                  </label>
                 </div>
               </div>
 
