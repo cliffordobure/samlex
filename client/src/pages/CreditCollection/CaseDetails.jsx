@@ -454,7 +454,9 @@ const CaseDetails = () => {
     try {
       const updateData = {
         ...editFormData,
-        debtAmount: editFormData.debtAmount ? parseFloat(editFormData.debtAmount) : undefined,
+        debtAmount: editFormData.debtAmount
+          ? parseFloat(editFormData.debtAmount)
+          : undefined,
       };
 
       // Remove empty strings
@@ -474,13 +476,6 @@ const CaseDetails = () => {
       setEditLoading(false);
     }
   };
-
-  // Check if user can edit case
-  const assignedToId = typeof assignedTo === 'string' ? assignedTo : assignedTo?._id;
-  const canEditCase = 
-    isAdmin || 
-    isHeadOfCredit || 
-    (currentUser.role === "debt_collector" && assignedToId && (assignedToId === currentUser._id || assignedToId.toString() === currentUser._id.toString()));
 
   // Helper to extract filename from URL or path
   const getDocumentFilename = (doc, idx) => {
@@ -565,6 +560,17 @@ const CaseDetails = () => {
   const canAssignCases = isHeadOfCredit || isAdmin;
 
   console.log("assignedTo", assignedTo, "currentUser._id", currentUser._id);
+
+  // Check if user can edit case (must be after assignedTo is defined)
+  const assignedToId =
+    typeof assignedTo === "string" ? assignedTo : assignedTo?._id;
+  const canEditCase =
+    isAdmin ||
+    isHeadOfCredit ||
+    (currentUser.role === "debt_collector" &&
+      assignedToId &&
+      (assignedToId === currentUser._id ||
+        assignedToId?.toString() === currentUser._id?.toString()));
 
   // --- Notes Section ---
   const renderNotesSection = () => (
