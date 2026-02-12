@@ -192,34 +192,45 @@ const CaseListView = ({
           </table>
         </div>
 
-        {pagination && pagination.totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-slate-700 mt-2 text-sm text-slate-300">
-            <span>
-              Page {pagination.currentPage} of {pagination.totalPages}{" "}
-              <span className="text-slate-500">
-                ({pagination.totalCount} cases)
-              </span>
+        {cases.length > 0 && (
+          <div className="flex items-center justify-between px-4 py-3 border-t border-slate-700 mt-4 bg-slate-800/50 rounded-lg">
+            <span className="text-sm text-slate-300">
+              {pagination ? (
+                <>
+                  Page <span className="font-semibold text-white">{pagination.currentPage || currentPage}</span> of{" "}
+                  <span className="font-semibold text-white">{pagination.totalPages || 1}</span>
+                  {pagination.totalCount !== undefined && (
+                    <span className="text-slate-500 ml-2">
+                      ({pagination.totalCount} total cases)
+                    </span>
+                  )}
+                </>
+              ) : (
+                <span>Showing {cases.length} cases</span>
+              )}
             </span>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => onPageChange(Math.max(1, currentPage - 1))}
-                disabled={currentPage === 1}
-                className="px-3 py-1 rounded-lg border border-slate-600 bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-700 transition-colors"
-              >
-                Previous
-              </button>
-              <button
-                onClick={() =>
-                  onPageChange(
-                    Math.min(pagination.totalPages, currentPage + 1)
-                  )
-                }
-                disabled={currentPage === pagination.totalPages}
-                className="px-3 py-1 rounded-lg border border-slate-600 bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-700 transition-colors"
-              >
-                Next
-              </button>
-            </div>
+            {pagination && pagination.totalPages > 1 && (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => onPageChange(Math.max(1, (pagination.currentPage || currentPage) - 1))}
+                  disabled={(pagination.currentPage || currentPage) === 1}
+                  className="px-4 py-2 rounded-lg border border-slate-600 bg-slate-700 hover:bg-slate-600 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors font-medium"
+                >
+                  Previous
+                </button>
+                <button
+                  onClick={() =>
+                    onPageChange(
+                      Math.min(pagination.totalPages, (pagination.currentPage || currentPage) + 1)
+                    )
+                  }
+                  disabled={(pagination.currentPage || currentPage) >= pagination.totalPages}
+                  className="px-4 py-2 rounded-lg border border-slate-600 bg-slate-700 hover:bg-slate-600 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors font-medium"
+                >
+                  Next
+                </button>
+              </div>
+            )}
           </div>
         )}
         </>
@@ -253,7 +264,6 @@ const CaseManagement = () => {
   const { users } = useSelector((state) => state.users);
   const { user } = useSelector((state) => state.auth);
 
-  const [filteredCases, setFilteredCases] = useState([]);
   const [filters, setFilters] = useState({
     status: "",
     priority: "",
@@ -271,29 +281,49 @@ const CaseManagement = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
 
-  // Fetch cases and users
+  // Helper function to build query params
+  const buildQueryParams = (page = currentPage) => ({
+    page,
+    limit: pageSize,
+    ...(filters.status && { status: filters.status }),
+    ...(filters.priority && { priority: filters.priority }),
+    ...(filters.assignedTo && { assignedTo: filters.assignedTo }),
+    ...(filters.search && { search: filters.search }),
+  });
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters.status, filters.priority, filters.assignedTo, filters.search]);
+
+  // Fetch cases and users with filters
   useEffect(() => {
     if (!user) return;
+    
+    const params = buildQueryParams();
+
     if (user.role === "credit_head" && user.lawFirm?._id) {
-      dispatch(getCreditCases({ lawFirm: user.lawFirm._id, page: currentPage, limit: pageSize }));
+      dispatch(getCreditCases({ lawFirm: user.lawFirm._id, ...params }));
     } else if (user.role === "debt_collector") {
-      dispatch(getCreditCases({ assignedTo: user._id, page: currentPage, limit: pageSize }));
+      dispatch(getCreditCases({ assignedTo: user._id, ...params }));
     } else {
-      dispatch(getCreditCases({ page: currentPage, limit: pageSize }));
+      dispatch(getCreditCases(params));
     }
     dispatch(getUsers({ role: "debt_collector" }));
-  }, [dispatch, user, currentPage]);
+  }, [dispatch, user, currentPage, filters.status, filters.priority, filters.assignedTo, filters.search]);
 
   // Socket listeners for real-time updates
   useEffect(() => {
     const refetchCases = () => {
       if (!user) return;
+      const params = buildQueryParams();
+
       if (user.role === "credit_head" && user.lawFirm?._id) {
-        dispatch(getCreditCases({ lawFirm: user.lawFirm._id, page: currentPage, limit: pageSize }));
+        dispatch(getCreditCases({ lawFirm: user.lawFirm._id, ...params }));
       } else if (user.role === "debt_collector") {
-        dispatch(getCreditCases({ assignedTo: user._id, page: currentPage, limit: pageSize }));
+        dispatch(getCreditCases({ assignedTo: user._id, ...params }));
       } else {
-        dispatch(getCreditCases({ page: currentPage, limit: pageSize }));
+        dispatch(getCreditCases(params));
       }
     };
 
@@ -306,47 +336,7 @@ const CaseManagement = () => {
       socket.off("caseMoved", refetchCases);
       socket.off("caseCreated", refetchCases);
     };
-  }, [dispatch, user, currentPage]);
-
-  useEffect(() => {
-    // Only run filter if user and cases are loaded
-    if (!user || !cases) return;
-
-    let filtered = cases;
-
-    // Role-based filtering
-    if (user?.role === "debt_collector") {
-      filtered = filtered.filter(
-        (case_) =>
-          case_.assignedTo?._id === user._id || !case_.assignedTo
-      );
-    }
-
-    // Apply filters
-    if (filters.status) {
-      filtered = filtered.filter((case_) => case_.status === filters.status);
-    }
-    if (filters.priority) {
-      filtered = filtered.filter((case_) => case_.priority === filters.priority);
-    }
-    if (filters.assignedTo) {
-      filtered = filtered.filter(
-        (case_) => case_.assignedTo?._id === filters.assignedTo
-      );
-    }
-    if (filters.search) {
-      const searchTerm = filters.search.toLowerCase();
-      filtered = filtered.filter(
-        (case_) =>
-          case_.title?.toLowerCase().includes(searchTerm) ||
-          case_.caseNumber?.toLowerCase().includes(searchTerm) ||
-          case_.debtorName?.toLowerCase().includes(searchTerm) ||
-          case_.caseReference?.toLowerCase().includes(searchTerm)
-      );
-    }
-
-    setFilteredCases(filtered);
-  }, [cases, filters, user]);
+  }, [dispatch, user, currentPage, filters.status, filters.priority, filters.assignedTo, filters.search]);
 
   const handleStatusChange = async (caseId, newStatus) => {
     try {
@@ -355,12 +345,13 @@ const CaseManagement = () => {
       ).unwrap();
       toast.success("Case status updated successfully!");
       // Immediately refetch cases to show updated status
+      const params = buildQueryParams();
       if (user.role === "credit_head" && user.lawFirm?._id) {
-        dispatch(getCreditCases({ lawFirm: user.lawFirm._id, page: currentPage, limit: pageSize }));
+        dispatch(getCreditCases({ lawFirm: user.lawFirm._id, ...params }));
       } else if (user.role === "debt_collector") {
-        dispatch(getCreditCases({ assignedTo: user._id, page: currentPage, limit: pageSize }));
+        dispatch(getCreditCases({ assignedTo: user._id, ...params }));
       } else {
-        dispatch(getCreditCases({ page: currentPage, limit: pageSize }));
+        dispatch(getCreditCases(params));
       }
     } catch (error) {
       toast.error(error || "Failed to update case status");
@@ -387,13 +378,14 @@ const CaseManagement = () => {
     try {
       await dispatch(deleteCreditCase(deleteModal.caseId)).unwrap();
       toast.success("Credit case deleted successfully");
-      // Refresh cases
+      // Refresh cases with current filters and pagination
+      const params = buildQueryParams();
       if (user.role === "credit_head" && user.lawFirm?._id) {
-        dispatch(getCreditCases({ lawFirm: user.lawFirm._id }));
+        dispatch(getCreditCases({ lawFirm: user.lawFirm._id, ...params }));
       } else if (user.role === "debt_collector") {
-        dispatch(getCreditCases({ assignedTo: user._id }));
+        dispatch(getCreditCases({ assignedTo: user._id, ...params }));
       } else {
-        dispatch(getCreditCases());
+        dispatch(getCreditCases(params));
       }
       setDeleteModal({ isOpen: false, caseId: null, caseNumber: null });
     } catch (error) {
@@ -416,12 +408,13 @@ const CaseManagement = () => {
       ).unwrap();
       toast.success("Case assigned successfully!");
       // Immediately refetch cases to show updated assignment
+      const params = buildQueryParams();
       if (user.role === "credit_head" && user.lawFirm?._id) {
-        dispatch(getCreditCases({ lawFirm: user.lawFirm._id }));
+        dispatch(getCreditCases({ lawFirm: user.lawFirm._id, ...params }));
       } else if (user.role === "debt_collector") {
-        dispatch(getCreditCases({ assignedTo: user._id }));
+        dispatch(getCreditCases({ assignedTo: user._id, ...params }));
       } else {
-        dispatch(getCreditCases());
+        dispatch(getCreditCases(params));
       }
     } catch (error) {
       toast.error(error || "Failed to assign case");
@@ -644,7 +637,7 @@ const CaseManagement = () => {
                 </div>
               ) : viewMode === "list" ? (
           <CaseListView
-            cases={filteredCases}
+            cases={cases}
             isLoading={isLoading}
             user={user}
             users={users}
@@ -658,7 +651,7 @@ const CaseManagement = () => {
             onPageChange={setCurrentPage}
           />
               ) : (
-                <KanbanBoard cases={filteredCases} isLoading={isLoading} />
+                <KanbanBoard cases={cases} isLoading={isLoading} />
               )}
 
               {/* Delete Confirmation Modal */}

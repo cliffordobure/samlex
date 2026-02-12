@@ -937,40 +937,50 @@ const AdminCaseManagement = () => {
                   </table>
                 </div>
 
-                {creditPagination && creditPagination.totalPages > 1 && (
-                  <div className="flex items-center justify-between px-4 py-3 border-t border-slate-700 mt-2 text-sm text-slate-300">
-                    <span>
-                      Page {creditPagination.currentPage} of{" "}
-                      {creditPagination.totalPages}{" "}
-                      <span className="text-slate-500">
-                        ({creditPagination.totalCount} cases)
-                      </span>
+                {(creditPagination || filteredCreditCases.length > 0) && (
+                  <div className="flex items-center justify-between px-4 py-3 border-t border-slate-700 mt-4 bg-slate-800/50 rounded-lg">
+                    <span className="text-sm text-slate-300">
+                      {creditPagination ? (
+                        <>
+                          Page <span className="font-semibold text-white">{creditPagination.currentPage || creditPage}</span> of{" "}
+                          <span className="font-semibold text-white">{creditPagination.totalPages || 1}</span>
+                          {creditPagination.totalCount !== undefined && (
+                            <span className="text-slate-500 ml-2">
+                              ({creditPagination.totalCount} total cases)
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        <span>Showing {filteredCreditCases.length} cases</span>
+                      )}
                     </span>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() =>
-                          setCreditPage(Math.max(1, creditPage - 1))
-                        }
-                        disabled={creditPage === 1}
-                        className="px-3 py-1 rounded-lg border border-slate-600 bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-700 transition-colors"
-                      >
-                        Previous
-                      </button>
-                      <button
-                        onClick={() =>
-                          setCreditPage(
-                            Math.min(
-                              creditPagination.totalPages,
-                              creditPage + 1
+                    {creditPagination && creditPagination.totalPages > 1 && (
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() =>
+                            setCreditPage(Math.max(1, creditPage - 1))
+                          }
+                          disabled={creditPage === 1}
+                          className="px-4 py-2 rounded-lg border border-slate-600 bg-slate-700 hover:bg-slate-600 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors font-medium"
+                        >
+                          Previous
+                        </button>
+                        <button
+                          onClick={() =>
+                            setCreditPage(
+                              Math.min(
+                                creditPagination.totalPages,
+                                creditPage + 1
+                              )
                             )
-                          )
-                        }
-                        disabled={creditPage === creditPagination.totalPages}
-                        className="px-3 py-1 rounded-lg border border-slate-600 bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-700 transition-colors"
-                      >
-                        Next
-                      </button>
-                    </div>
+                          }
+                          disabled={creditPage >= creditPagination.totalPages}
+                          className="px-4 py-2 rounded-lg border border-slate-600 bg-slate-700 hover:bg-slate-600 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors font-medium"
+                        >
+                          Next
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               ) : (
@@ -1121,40 +1131,50 @@ const AdminCaseManagement = () => {
                   </table>
                 </div>
 
-                {legalPagination && legalPagination.totalPages > 1 && (
-                  <div className="flex items-center justify-between px-4 py-3 border-t border-slate-700 mt-2 text-sm text-slate-300">
-                    <span>
-                      Page {legalPagination.currentPage} of{" "}
-                      {legalPagination.totalPages}{" "}
-                      <span className="text-slate-500">
-                        ({legalPagination.totalCount} cases)
-                      </span>
+                {(legalPagination || filteredLegalCases.length > 0) && (
+                  <div className="flex items-center justify-between px-4 py-3 border-t border-slate-700 mt-4 bg-slate-800/50 rounded-lg">
+                    <span className="text-sm text-slate-300">
+                      {legalPagination ? (
+                        <>
+                          Page <span className="font-semibold text-white">{legalPagination.currentPage || legalPage}</span> of{" "}
+                          <span className="font-semibold text-white">{legalPagination.totalPages || 1}</span>
+                          {legalPagination.totalCount !== undefined && (
+                            <span className="text-slate-500 ml-2">
+                              ({legalPagination.totalCount} total cases)
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        <span>Showing {filteredLegalCases.length} cases</span>
+                      )}
                     </span>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() =>
-                          setLegalPage(Math.max(1, legalPage - 1))
-                        }
-                        disabled={legalPage === 1}
-                        className="px-3 py-1 rounded-lg border border-slate-600 bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-700 transition-colors"
-                      >
-                        Previous
-                      </button>
-                      <button
-                        onClick={() =>
-                          setLegalPage(
-                            Math.min(
-                              legalPagination.totalPages,
-                              legalPage + 1
+                    {legalPagination && legalPagination.totalPages > 1 && (
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() =>
+                            setLegalPage(Math.max(1, legalPage - 1))
+                          }
+                          disabled={legalPage === 1}
+                          className="px-4 py-2 rounded-lg border border-slate-600 bg-slate-700 hover:bg-slate-600 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors font-medium"
+                        >
+                          Previous
+                        </button>
+                        <button
+                          onClick={() =>
+                            setLegalPage(
+                              Math.min(
+                                legalPagination.totalPages,
+                                legalPage + 1
+                              )
                             )
-                          )
-                        }
-                        disabled={legalPage === legalPagination.totalPages}
-                        className="px-3 py-1 rounded-lg border border-slate-600 bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-700 transition-colors"
-                      >
-                        Next
-                      </button>
-                    </div>
+                          }
+                          disabled={legalPage >= legalPagination.totalPages}
+                          className="px-4 py-2 rounded-lg border border-slate-600 bg-slate-700 hover:bg-slate-600 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors font-medium"
+                        >
+                          Next
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               )}

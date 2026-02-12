@@ -771,7 +771,7 @@ export const getCreditCases = async (req, res) => {
           : "null",
     });
 
-    const { assignedTo, lawFirm } = req.query;
+    const { assignedTo, lawFirm, status, priority, search } = req.query;
 
     // Check if user has law firm association
     if (!req.user.lawFirm) {
@@ -816,6 +816,26 @@ export const getCreditCases = async (req, res) => {
       (req.user.role === "admin" || req.user.role === "law_firm_admin")
     ) {
       filter.lawFirm = lawFirm;
+    }
+
+    // Add status filter
+    if (status) {
+      filter.status = status;
+    }
+
+    // Add priority filter
+    if (priority) {
+      filter.priority = priority;
+    }
+
+    // Add search filter (search in title, caseNumber, debtorName, caseReference)
+    if (search) {
+      filter.$or = [
+        { title: { $regex: search, $options: "i" } },
+        { caseNumber: { $regex: search, $options: "i" } },
+        { debtorName: { $regex: search, $options: "i" } },
+        { caseReference: { $regex: search, $options: "i" } },
+      ];
     }
 
     console.log("Filter used:", filter);
