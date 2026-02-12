@@ -45,7 +45,7 @@ const AdminCaseManagement = () => {
   const navigate = useNavigate();
   const { user } = useSelector((state) => state.auth);
 
-  console.log("🔍 AdminCaseManagement rendered:", {
+  console.log("AdminCaseManagement rendered:", {
     user: user?.email,
     role: user?.role,
     lawFirm: user?.lawFirm?._id,
@@ -113,8 +113,8 @@ const AdminCaseManagement = () => {
 
   useEffect(() => {
     if (user?.lawFirm?._id) {
-      console.log("🔄 Loading cases for law firm:", user.lawFirm._id);
-      console.log("🔄 User object:", user);
+      console.log("Loading cases for law firm:", user.lawFirm._id);
+      console.log("User object:", user);
       // Load paginated cases for the law firm
       dispatch(
         getCreditCases({
@@ -163,14 +163,14 @@ const AdminCaseManagement = () => {
 
     // Listen for case escalated events
     const handleCaseEscalated = (data) => {
-      console.log("🔄 Case escalated event received:", data);
+      console.log("Case escalated event received:", data);
       toast.success(`Case ${data.caseNumber} has been escalated to legal department`);
       fetchEscalatedCases(); // Refresh the escalated cases list
     };
 
     // Listen for credit case updates that might affect escalated cases
     const handleCreditCaseUpdated = (data) => {
-      console.log("🔄 Credit case updated event received:", data);
+      console.log("Credit case updated event received:", data);
       if (data.escalatedToLegal) {
         fetchEscalatedCases(); // Refresh the escalated cases list
       }
@@ -389,7 +389,7 @@ const AdminCaseManagement = () => {
   };
 
   const filteredCreditCases = useMemo(() => {
-    console.log("🔍 Credit cases loaded:", {
+    console.log("Credit cases loaded:", {
       total: creditCases?.length || 0,
       cases: creditCases?.map((c) => ({
         id: c._id,
@@ -398,7 +398,7 @@ const AdminCaseManagement = () => {
         lawFirm: c.lawFirm,
       })),
     });
-    console.log("🔍 Raw credit cases:", creditCases);
+    console.log("Raw credit cases:", creditCases);
 
     if (!creditCases) return [];
 
@@ -435,7 +435,7 @@ const AdminCaseManagement = () => {
   }, [creditCases, filters]);
 
   const filteredLegalCases = useMemo(() => {
-    console.log("🔍 Legal cases loaded:", {
+    console.log("Legal cases loaded:", {
       total: legalCases?.length || 0,
       cases: legalCases?.map((c) => ({
         id: c._id,
@@ -799,6 +799,7 @@ const AdminCaseManagement = () => {
               </h3>
 
               {activeTab === "credit" ? (
+                <>
                 <div className="overflow-x-auto">
                   <table className="w-full border-collapse">
                     <thead>
@@ -983,7 +984,9 @@ const AdminCaseManagement = () => {
                     )}
                   </div>
                 )}
+                </>
               ) : (
+                <>
                 <div className="overflow-x-auto">
                   <table className="w-full border-collapse">
                     <thead>
@@ -1028,7 +1031,7 @@ const AdminCaseManagement = () => {
                             <button
                               onClick={() => {
                                 console.log(
-                                  "🔗 Navigating to case via case number:",
+                                  "Navigating to case via case number:",
                                   case_._id
                                 );
                                 navigate(`/admin/case/${case_._id}`);
@@ -1101,7 +1104,7 @@ const AdminCaseManagement = () => {
                                 className="w-full sm:w-auto px-3 py-1 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-400 hover:text-blue-300 rounded-lg text-xs transition-all duration-300 flex items-center justify-center gap-1"
                                 onClick={() => {
                                   console.log(
-                                    "🔗 Navigating to case:",
+                                    "Navigating to case:",
                                     case_._id,
                                     "URL:",
                                     `/admin/case/${case_._id}`
@@ -1177,6 +1180,7 @@ const AdminCaseManagement = () => {
                     )}
                   </div>
                 )}
+                </>
               )}
             </div>
           </div>
@@ -1211,7 +1215,7 @@ const AdminCaseManagement = () => {
                 </div>
               ) : escalatedCases.length === 0 ? (
                 <div className="text-center py-8">
-                  <div className="text-4xl mb-4">🎉</div>
+                  <div className="text-4xl mb-4">✓</div>
                   <h4 className="text-lg font-semibold text-white mb-2">
                     No Escalated Cases
                   </h4>
@@ -1391,7 +1395,7 @@ const AdminCaseManagement = () => {
                 <strong>Type:</strong> {deleteModal.caseType === "legal" ? "Legal Case" : "Credit Collection Case"}
               </p>
               <p className="text-red-400 text-sm mt-2 font-semibold">
-                ⚠️ This will permanently delete the case and all associated data from the database.
+                WARNING: This will permanently delete the case and all associated data from the database.
               </p>
             </div>
 
