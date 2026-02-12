@@ -164,7 +164,7 @@ const creditCaseSlice = createSlice({
       })
       .addCase(getCreditCases.fulfilled, (state, action) => {
         state.isLoading = false;
-        console.log("📊 Credit Cases API Response:", action.payload);
+        console.log("Credit Cases API Response:", action.payload);
         
         // Handle different response structures
         if (action.payload && action.payload.data) {
@@ -200,8 +200,8 @@ const creditCaseSlice = createSlice({
           };
         }
         
-        console.log("📊 Processed Credit Cases:", state.cases.length);
-        console.log("📊 Pagination:", state.pagination);
+        console.log("Processed Credit Cases:", state.cases.length);
+        console.log("Pagination:", state.pagination);
       })
       .addCase(getCreditCases.rejected, (state, action) => {
         state.isLoading = false;

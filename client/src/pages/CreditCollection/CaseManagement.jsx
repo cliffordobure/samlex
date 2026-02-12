@@ -220,7 +220,7 @@ const CaseListView = ({
               <button
                 onClick={() => {
                   const nextPage = (pagination?.currentPage || currentPage) + 1;
-                  console.log("🔍 Next button clicked, going to page:", nextPage, "Current pagination:", pagination);
+                  console.log("Next button clicked, going to page:", nextPage, "Current pagination:", pagination);
                   onPageChange(nextPage);
                 }}
                 disabled={
@@ -268,7 +268,7 @@ const CaseManagement = () => {
 
   // Debug pagination
   useEffect(() => {
-    console.log("🔍 Pagination Debug:", {
+    console.log("Pagination Debug:", {
       pagination,
       casesCount: cases?.length,
       hasPagination: !!pagination,
