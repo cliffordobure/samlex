@@ -195,10 +195,10 @@ const CaseListView = ({
         {cases.length > 0 && (
           <div className="flex items-center justify-between px-4 py-3 border-t border-slate-700 mt-4 bg-slate-800/50 rounded-lg">
             <span className="text-sm text-slate-300">
-              {pagination ? (
+              {pagination && pagination.totalPages ? (
                 <>
                   Page <span className="font-semibold text-white">{pagination.currentPage || currentPage}</span> of{" "}
-                  <span className="font-semibold text-white">{pagination.totalPages || 1}</span>
+                  <span className="font-semibold text-white">{pagination.totalPages}</span>
                   {pagination.totalCount !== undefined && (
                     <span className="text-slate-500 ml-2">
                       ({pagination.totalCount} total cases)
@@ -209,28 +209,30 @@ const CaseListView = ({
                 <span>Showing {cases.length} cases</span>
               )}
             </span>
-            {pagination && pagination.totalPages > 1 && (
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => onPageChange(Math.max(1, (pagination.currentPage || currentPage) - 1))}
-                  disabled={(pagination.currentPage || currentPage) === 1}
-                  className="px-4 py-2 rounded-lg border border-slate-600 bg-slate-700 hover:bg-slate-600 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors font-medium"
-                >
-                  Previous
-                </button>
-                <button
-                  onClick={() =>
-                    onPageChange(
-                      Math.min(pagination.totalPages, (pagination.currentPage || currentPage) + 1)
-                    )
-                  }
-                  disabled={(pagination.currentPage || currentPage) >= pagination.totalPages}
-                  className="px-4 py-2 rounded-lg border border-slate-600 bg-slate-700 hover:bg-slate-600 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors font-medium"
-                >
-                  Next
-                </button>
-              </div>
-            )}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => onPageChange(Math.max(1, (pagination?.currentPage || currentPage) - 1))}
+                disabled={(pagination?.currentPage || currentPage) === 1}
+                className="px-4 py-2 rounded-lg border border-slate-600 bg-slate-700 hover:bg-slate-600 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors font-medium"
+              >
+                Previous
+              </button>
+              <button
+                onClick={() => {
+                  const nextPage = (pagination?.currentPage || currentPage) + 1;
+                  console.log("🔍 Next button clicked, going to page:", nextPage, "Current pagination:", pagination);
+                  onPageChange(nextPage);
+                }}
+                disabled={
+                  pagination?.totalPages 
+                    ? (pagination.currentPage || currentPage) >= pagination.totalPages
+                    : cases.length < pageSize // Disable only if we have fewer than 10 cases and no pagination data
+                }
+                className="px-4 py-2 rounded-lg border border-slate-600 bg-slate-700 hover:bg-slate-600 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors font-medium"
+              >
+                Next
+              </button>
+            </div>
           </div>
         )}
         </>
@@ -263,6 +265,19 @@ const CaseManagement = () => {
   const { cases, isLoading, pagination } = useSelector((state) => state.creditCases);
   const { users } = useSelector((state) => state.users);
   const { user } = useSelector((state) => state.auth);
+
+  // Debug pagination
+  useEffect(() => {
+    console.log("🔍 Pagination Debug:", {
+      pagination,
+      casesCount: cases?.length,
+      hasPagination: !!pagination,
+      totalPages: pagination?.totalPages,
+      totalCount: pagination?.totalCount,
+      currentPage: pagination?.currentPage,
+      shouldShowNext: pagination?.totalPages ? (pagination.currentPage || currentPage) < pagination.totalPages : cases.length === pageSize,
+    });
+  }, [pagination, cases, currentPage]);
 
   const [filters, setFilters] = useState({
     status: "",

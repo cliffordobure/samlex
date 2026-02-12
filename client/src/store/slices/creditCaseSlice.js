@@ -175,16 +175,33 @@ const creditCaseSlice = createSlice({
           } else {
             state.cases = [];
           }
-          state.pagination = action.payload.pagination || action.payload.data.pagination || {};
+          // Extract pagination - check both top level and nested
+          state.pagination = action.payload.pagination || action.payload.data?.pagination || {
+            currentPage: 1,
+            totalPages: 1,
+            totalCount: state.cases.length,
+            limit: 10,
+          };
         } else if (Array.isArray(action.payload)) {
           state.cases = action.payload;
-          state.pagination = {};
+          state.pagination = {
+            currentPage: 1,
+            totalPages: 1,
+            totalCount: action.payload.length,
+            limit: 10,
+          };
         } else {
           state.cases = [];
-          state.pagination = {};
+          state.pagination = {
+            currentPage: 1,
+            totalPages: 1,
+            totalCount: 0,
+            limit: 10,
+          };
         }
         
         console.log("📊 Processed Credit Cases:", state.cases.length);
+        console.log("📊 Pagination:", state.pagination);
       })
       .addCase(getCreditCases.rejected, (state, action) => {
         state.isLoading = false;
