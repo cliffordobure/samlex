@@ -108,6 +108,28 @@ const CaseDetails = () => {
   const [editFormData, setEditFormData] = useState({});
   const [editLoading, setEditLoading] = useState(false);
 
+  // Initialize edit form data when modal opens
+  useEffect(() => {
+    if (showEditModal && caseDetails) {
+      setEditFormData({
+        title: caseDetails.title || "",
+        description: caseDetails.description || "",
+        debtorName: caseDetails.debtorName || "",
+        debtorEmail: caseDetails.debtorEmail || "",
+        debtorContact: caseDetails.debtorContact || "",
+        creditorName: caseDetails.creditorName || "",
+        creditorEmail: caseDetails.creditorEmail || "",
+        creditorContact: caseDetails.creditorContact || "",
+        debtAmount: caseDetails.debtAmount || "",
+        currency: caseDetails.currency || "KES",
+        priority: caseDetails.priority || "medium",
+        status: caseDetails.status || "new",
+        caseReference: caseDetails.caseReference || "",
+        assignedTo: caseDetails.assignedTo?._id || caseDetails.assignedTo || "",
+      });
+    }
+  }, [showEditModal, caseDetails]);
+
   // Fetch case details, comments, assignable users
   useEffect(() => {
     dispatch(getCreditCaseById(id));
@@ -459,9 +481,14 @@ const CaseDetails = () => {
           : undefined,
       };
 
-      // Remove empty strings
+      // Handle assignedTo - set to null if empty string
+      if (updateData.assignedTo === "") {
+        updateData.assignedTo = null;
+      }
+
+      // Remove empty strings (except assignedTo which we handled above)
       Object.keys(updateData).forEach((key) => {
-        if (updateData[key] === "") {
+        if (updateData[key] === "" && key !== "assignedTo") {
           delete updateData[key];
         }
       });
@@ -471,7 +498,7 @@ const CaseDetails = () => {
       setShowEditModal(false);
       dispatch(getCreditCaseById(id)); // Refresh case details
     } catch (error) {
-      toast.error(error || "Failed to update case");
+      toast.error(error?.message || error || "Failed to update case");
     } finally {
       setEditLoading(false);
     }
@@ -1602,6 +1629,25 @@ const CaseDetails = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Status
+                  </label>
+                  <select
+                    value={editFormData.status || "new"}
+                    onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value })}
+                    className="w-full px-4 py-2 bg-slate-700/80 border border-slate-600/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                  >
+                    <option value="new">New</option>
+                    <option value="assigned">Assigned</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="follow_up_required">Follow Up Required</option>
+                    <option value="escalated_to_legal">Escalated to Legal</option>
+                    <option value="resolved">Resolved</option>
+                    <option value="closed">Closed</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
                     Debt Amount
                   </label>
                   <input
@@ -1727,6 +1773,26 @@ const CaseDetails = () => {
                     className="w-full px-4 py-2 bg-slate-700/80 border border-slate-600/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                   />
                 </div>
+
+                {canAssignCases && (
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Assign To
+                    </label>
+                    <select
+                      value={editFormData.assignedTo || ""}
+                      onChange={(e) => setEditFormData({ ...editFormData, assignedTo: e.target.value })}
+                      className="w-full px-4 py-2 bg-slate-700/80 border border-slate-600/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                    >
+                      <option value="">Unassigned</option>
+                      {assignableUsers.map((user) => (
+                        <option key={user._id} value={user._id}>
+                          {user.firstName} {user.lastName} ({user.role?.replace("_", " ")})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center justify-end space-x-3 pt-4">
