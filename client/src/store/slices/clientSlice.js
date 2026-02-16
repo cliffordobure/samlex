@@ -131,6 +131,7 @@ const initialState = {
     department: "",
     sortBy: "createdAt",
     sortOrder: "desc",
+    page: 1,
   },
 };
 

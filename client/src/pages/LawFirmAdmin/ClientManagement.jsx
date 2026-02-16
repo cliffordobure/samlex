@@ -5,7 +5,6 @@ import {
   createClient,
   updateClient,
   deleteClient,
-  searchClients,
   fetchClientStats,
   setFilters,
   clearFilters,
@@ -39,9 +38,14 @@ const ClientManagement = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [selectedClient, setSelectedClient] = useState(null);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(filters.search || "");
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [clientToDelete, setClientToDelete] = useState(null);
+
+  // Sync searchQuery with filters.search
+  useEffect(() => {
+    setSearchQuery(filters.search || "");
+  }, [filters.search]);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -71,20 +75,39 @@ const ClientManagement = () => {
   });
 
   useEffect(() => {
-    dispatch(fetchClients(filters));
+    // Combine filters with pagination limit for the API call
+    const params = {
+      ...filters,
+      limit: pagination.limit,
+    };
+    dispatch(fetchClients(params));
+  }, [dispatch, filters, pagination.limit]);
+
+  // Fetch stats and departments only once on mount
+  useEffect(() => {
     dispatch(fetchClientStats());
     dispatch(getDepartments());
-  }, [dispatch, filters]);
+  }, [dispatch]);
 
   const handleSearch = (e) => {
     e.preventDefault();
-    if (searchQuery.trim()) {
-      dispatch(searchClients({ query: searchQuery }));
-    }
+    // Update search filter and reset to page 1
+    dispatch(setFilters({ search: searchQuery.trim(), page: 1 }));
   };
 
   const handleFilterChange = (key, value) => {
-    dispatch(setFilters({ [key]: value, page: 1 }));
+    // Update the filter, and reset to page 1 unless we're changing the page itself
+    if (key === "page") {
+      dispatch(setFilters({ page: value }));
+    } else {
+      dispatch(setFilters({ [key]: value, page: 1 }));
+    }
+  };
+
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= pagination.pages) {
+      dispatch(setFilters({ page: newPage }));
+    }
   };
 
   const handleCreateClient = async (e) => {
@@ -532,15 +555,15 @@ const ClientManagement = () => {
             </div>
             <div className="flex space-x-2">
               <button
-                onClick={() => handleFilterChange("page", pagination.page - 1)}
+                onClick={() => handlePageChange(pagination.page - 1)}
                 disabled={pagination.page === 1}
                 className="px-3 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-600/50 transition-colors"
               >
                 Previous
               </button>
               <button
-                onClick={() => handleFilterChange("page", pagination.page + 1)}
-                disabled={pagination.page === pagination.pages}
+                onClick={() => handlePageChange(pagination.page + 1)}
+                disabled={pagination.page >= pagination.pages}
                 className="px-3 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-600/50 transition-colors"
               >
                 Next
