@@ -43,10 +43,43 @@ const ClientManagement = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [clientToDelete, setClientToDelete] = useState(null);
 
-  // Sync searchQuery with filters.search
+  // Sync searchQuery with filters.search (only when filter changes externally, not from our own updates)
   useEffect(() => {
-    setSearchQuery(filters.search || "");
+    // Only update if the filter search is different from current searchQuery
+    // This prevents loops when we update filters from searchQuery
+    if (filters.search !== searchQuery) {
+      setSearchQuery(filters.search || "");
+    }
   }, [filters.search]);
+
+  // Handle real-time search with debounce
+  useEffect(() => {
+    let timeoutId;
+
+    // If search query is empty, clear the filter immediately
+    if (searchQuery.trim() === "") {
+      if (filters.search) {
+        dispatch(setFilters({ search: "", page: 1 }));
+      }
+      return;
+    }
+
+    // If search query has content, debounce the search
+    timeoutId = setTimeout(() => {
+      // Only update if the search query is different from current filter
+      if (searchQuery.trim() !== filters.search) {
+        dispatch(setFilters({ search: searchQuery.trim(), page: 1 }));
+      }
+    }, 500); // 500ms debounce
+
+    // Cleanup function
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery]); // Only depend on searchQuery to avoid loops
 
   // Form state
   const [formData, setFormData] = useState({
@@ -315,12 +348,14 @@ const ClientManagement = () => {
                 <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
                 <input
                   type="text"
-                  placeholder="Search clients by name, email, phone, company..."
+                  placeholder="Search by name, email, phone, company, ID, or registration number..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
-                      handleSearch(e);
+                      e.preventDefault();
+                      // Search immediately on Enter (bypasses debounce)
+                      dispatch(setFilters({ search: searchQuery.trim() || "", page: 1 }));
                     }
                   }}
                   className="w-full pl-10 pr-10 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"

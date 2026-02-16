@@ -147,6 +147,7 @@ export const getClients = async (req, res) => {
         { phoneNumber: { $regex: search, $options: "i" } },
         { companyName: { $regex: search, $options: "i" } },
         { idNumber: { $regex: search, $options: "i" } },
+        { registrationNumber: { $regex: search, $options: "i" } },
       ];
     }
 
