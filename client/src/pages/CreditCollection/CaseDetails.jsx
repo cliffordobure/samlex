@@ -1,6 +1,6 @@
 /* eslint-disable no-unused-vars */
 import React, { useEffect, useState, useRef } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { getCreditCaseById, updateCreditCase } from "../../store/slices/creditCaseSlice";
 import socket from "../../utils/socket";
@@ -58,6 +58,7 @@ const statusColors = {
 
 const CaseDetails = () => {
   const { id } = useParams();
+  const location = useLocation();
   const dispatch = useDispatch();
   const { caseDetails, caseDetailsLoading, caseDetailsError } = useSelector(
     (state) => state.creditCases
@@ -66,6 +67,10 @@ const CaseDetails = () => {
   console.log("Redux user object:", user);
   const getUser = (user) => user?.data || user || {};
   const currentUser = getUser(user);
+
+  // Determine if we're in admin context
+  const isAdminContext = location.pathname.includes('/admin');
+  const backToCasesPath = isAdminContext ? '/admin/cases' : '/credit-collection/cases';
 
   // Comments state
   const [comments, setComments] = useState([]);
@@ -797,7 +802,7 @@ const CaseDetails = () => {
             <div className="flex flex-col sm:flex-row sm:items-center space-y-3 sm:space-y-0 sm:space-x-4">
               <div className="flex items-center space-x-2 sm:space-x-3">
                 <Link
-                  to="/credit-collection/cases"
+                  to={backToCasesPath}
                   className="inline-flex items-center justify-center space-x-2 px-3 sm:px-4 py-2 bg-gradient-to-r from-blue-500/20 to-indigo-500/20 hover:from-blue-500/30 hover:to-indigo-500/30 text-blue-400 rounded-xl transition-all duration-200 border border-blue-500/30 hover:border-blue-500/50 text-sm sm:text-base"
                 >
                   <FaArrowLeft className="w-4 h-4" />
