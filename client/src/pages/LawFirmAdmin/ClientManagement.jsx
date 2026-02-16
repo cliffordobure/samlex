@@ -26,6 +26,7 @@ import {
   FaCalendar,
   FaTag,
   FaExclamationTriangle,
+  FaTimes,
 } from "react-icons/fa";
 
 const ClientManagement = () => {
@@ -76,10 +77,15 @@ const ClientManagement = () => {
 
   useEffect(() => {
     // Combine filters with pagination limit for the API call
+    // Remove empty search string to avoid sending it to the API
     const params = {
       ...filters,
       limit: pagination.limit,
     };
+    // Only include search if it's not empty
+    if (!params.search || params.search.trim() === "") {
+      delete params.search;
+    }
     dispatch(fetchClients(params));
   }, [dispatch, filters, pagination.limit]);
 
@@ -90,9 +96,24 @@ const ClientManagement = () => {
   }, [dispatch]);
 
   const handleSearch = (e) => {
-    e.preventDefault();
+    if (e) {
+      e.preventDefault();
+    }
+    const trimmedQuery = searchQuery.trim();
     // Update search filter and reset to page 1
-    dispatch(setFilters({ search: searchQuery.trim(), page: 1 }));
+    // Use empty string for empty search to clear the filter
+    const newFilters = { page: 1 };
+    if (trimmedQuery) {
+      newFilters.search = trimmedQuery;
+    } else {
+      newFilters.search = "";
+    }
+    dispatch(setFilters(newFilters));
+  };
+
+  const handleClearSearch = () => {
+    setSearchQuery("");
+    dispatch(setFilters({ search: "", page: 1 }));
   };
 
   const handleFilterChange = (key, value) => {
@@ -294,11 +315,26 @@ const ClientManagement = () => {
                 <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
                 <input
                   type="text"
-                  placeholder="Search clients..."
+                  placeholder="Search clients by name, email, phone, company..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      handleSearch(e);
+                    }
+                  }}
+                  className="w-full pl-10 pr-10 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={handleClearSearch}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-white transition-colors"
+                    title="Clear search"
+                  >
+                    <FaTimes className="w-4 h-4" />
+                  </button>
+                )}
               </div>
             </form>
 
