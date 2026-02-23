@@ -357,6 +357,19 @@ const CaseManagement = () => {
     };
   }, [user, refetchCases]);
 
+  // Debug pagination - moved after all function definitions to avoid initialization issues
+  useEffect(() => {
+    console.log("Pagination Debug:", {
+      pagination,
+      casesCount: cases?.length,
+      hasPagination: !!pagination,
+      totalPages: pagination?.totalPages,
+      totalCount: pagination?.totalCount,
+      currentPage: pagination?.currentPage,
+      shouldShowNext: pagination?.totalPages ? (pagination.currentPage || currentPage) < pagination.totalPages : cases.length < pageSize,
+    });
+  }, [pagination, cases, currentPage, pageSize]);
+
   const handleStatusChange = async (caseId, newStatus) => {
     try {
       await dispatch(
