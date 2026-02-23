@@ -330,11 +330,15 @@ const CaseManagement = () => {
   }, [filters.status, filters.priority, filters.assignedTo, filters.search]);
 
   // Fetch cases and users with filters
+  // Use a ref to track if this is the initial mount to avoid double-fetching
   useEffect(() => {
     if (!user) return;
     
-    fetchCases();
-    dispatch(getUsers({ role: "debt_collector" }));
+    // Ensure fetchCases is defined before calling
+    if (typeof fetchCases === 'function') {
+      fetchCases();
+      dispatch(getUsers({ role: "debt_collector" }));
+    }
   }, [dispatch, user, fetchCases]);
 
   // Refetch function for socket listeners - wrapped in useCallback
