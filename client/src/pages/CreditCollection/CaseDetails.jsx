@@ -1,5 +1,5 @@
 /* eslint-disable no-unused-vars */
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, Link, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { getCreditCaseById, updateCreditCase } from "../../store/slices/creditCaseSlice";
@@ -135,45 +135,18 @@ const CaseDetails = () => {
     }
   }, [showEditModal, caseDetails]);
 
-  // Fetch case details, comments, assignable users
-  useEffect(() => {
-    dispatch(getCreditCaseById(id));
-    fetchComments();
-    fetchAssignableUsers();
-    fetchEscalationFee();
-    // Join socket room for this case
-    socket.emit("join-case", id);
-    // Listen for new comments and assignment updates
-    socket.on("newComment", handleNewComment);
-    socket.on("caseAssigned", handleCaseAssigned);
-    socket.on("caseEscalated", handleCaseEscalated);
-    return () => {
-      socket.off("newComment", handleNewComment);
-      socket.off("caseAssigned", handleCaseAssigned);
-      socket.off("caseEscalated", handleCaseEscalated);
-    };
-    // eslint-disable-next-line
-  }, [dispatch, id]);
-
-  // Scroll to bottom when comments update
-  useEffect(() => {
-    if (commentsEndRef.current) {
-      commentsEndRef.current.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [comments]);
-
-  // Fetch comments from backend
-  async function fetchComments() {
+  // Fetch comments from backend - wrapped in useCallback
+  const fetchComments = useCallback(async () => {
     try {
       const res = await creditCaseApi.getCaseComments(id);
       if (res.data.success) setComments(res.data.data);
     } catch (err) {
       // handle error
     }
-  }
+  }, [id]);
 
-  // Fetch assignable users (debt collectors, credit heads, and admins)
-  async function fetchAssignableUsers() {
+  // Fetch assignable users (debt collectors, credit heads, and admins) - wrapped in useCallback
+  const fetchAssignableUsers = useCallback(async () => {
     try {
       // Get all users and filter for assignable roles
       const res = await userApi.getUsers();
@@ -192,26 +165,64 @@ const CaseDetails = () => {
     } catch (err) {
       setAssignableUsers([]);
     }
-  }
+  }, []);
 
-  // Handle new comment from socket
-  function handleNewComment(comment) {
+  // Fetch escalation fee - wrapped in useCallback
+  const fetchEscalationFee = useCallback(async () => {
+    try {
+      const res = await creditCaseApi.getEscalationFee(id);
+      if (res.data.success) {
+        setEscalationFee(res.data.data.escalationFee);
+      }
+    } catch (err) {
+      console.error("Error fetching escalation fee:", err);
+    }
+  }, [id]);
+
+  // Handle new comment from socket - wrapped in useCallback
+  const handleNewComment = useCallback((comment) => {
     setComments((prev) => [...prev, comment]);
-  }
+  }, []);
 
-  // Handle assignment update from socket
-  function handleCaseAssigned({ caseId, assignedTo }) {
+  // Handle assignment update from socket - wrapped in useCallback
+  const handleCaseAssigned = useCallback(({ caseId, assignedTo }) => {
     if (caseId === id) {
       dispatch(getCreditCaseById(id)); // Refresh case details
     }
-  }
+  }, [id, dispatch]);
 
-  // Handle case escalation from socket
-  function handleCaseEscalated({ caseId }) {
+  // Handle case escalation from socket - wrapped in useCallback
+  const handleCaseEscalated = useCallback(({ caseId }) => {
     if (caseId === id) {
       dispatch(getCreditCaseById(id)); // Refresh case details
     }
-  }
+  }, [id, dispatch]);
+
+  // Fetch case details, comments, assignable users
+  useEffect(() => {
+    dispatch(getCreditCaseById(id));
+    fetchComments();
+    fetchAssignableUsers();
+    fetchEscalationFee();
+    // Join socket room for this case
+    socket.emit("join-case", id);
+    // Listen for new comments and assignment updates
+    socket.on("newComment", handleNewComment);
+    socket.on("caseAssigned", handleCaseAssigned);
+    socket.on("caseEscalated", handleCaseEscalated);
+    return () => {
+      socket.off("newComment", handleNewComment);
+      socket.off("caseAssigned", handleCaseAssigned);
+      socket.off("caseEscalated", handleCaseEscalated);
+    };
+  }, [dispatch, id, fetchComments, fetchAssignableUsers, fetchEscalationFee, handleNewComment, handleCaseAssigned, handleCaseEscalated]);
+
+  // Scroll to bottom when comments update
+  useEffect(() => {
+    if (commentsEndRef.current) {
+      commentsEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [comments]);
 
   // Document viewer functions
   const handleDocumentClick = async (doc, filename) => {
@@ -323,18 +334,6 @@ const CaseDetails = () => {
       setUploadingDocuments(false);
     }
   };
-
-  // Fetch escalation fee
-  async function fetchEscalationFee() {
-    try {
-      const res = await creditCaseApi.getEscalationFee(id);
-      if (res.data.success) {
-        setEscalationFee(res.data.data.escalationFee);
-      }
-    } catch (err) {
-      console.error("Error fetching escalation fee:", err);
-    }
-  }
 
   // Initiate escalation
   async function handleInitiateEscalation() {

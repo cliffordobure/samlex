@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { getLegalCases } from "../../store/slices/legalCaseSlice";
 import { getLegalCaseStatistics } from "../../store/slices/legalCaseSlice";
@@ -147,64 +147,16 @@ const LegalReports = () => {
     },
   ];
 
-  useEffect(() => {
-    console.log("=== DEBUG: Reports useEffect ===");
-    console.log("User:", user);
-    console.log("User role:", user?.role);
-    console.log("User lawFirm:", user?.lawFirm?._id);
-    console.log("User ID:", user?._id);
-    
-    if (!user) return;
-
-    // Load cases based on user role
-    if (user.role === "legal_head") {
-      console.log("Loading cases for legal head - lawFirm:", user.lawFirm._id);
-      dispatch(getLegalCases({ lawFirm: user.lawFirm._id }));
-    } else if (user.role === "advocate") {
-      console.log("Loading cases for advocate - assignedTo:", user._id);
-      dispatch(getLegalCases({ assignedTo: user._id }));
-    } else if (user.role === "debt_collector") {
-      console.log("Loading debt collector data for user:", user._id);
-      // For debt collectors, we'll load credit collection data instead of legal cases
-      loadDebtCollectorData();
-    }
-
-    // Load statistics for legal users only
-    if (user.role !== "debt_collector") {
-      dispatch(getLegalCaseStatistics({ period: selectedPeriod }));
-    }
-  }, [dispatch, user, selectedPeriod]);
-
-  // Load enhanced reports when tab changes
-  useEffect(() => {
-    if (user?.lawFirm?._id && activeTab !== "overview") {
-      if (user.role === "debt_collector") {
-        loadDebtCollectorData();
-      } else {
-        loadEnhancedReports();
-      }
-    }
-  }, [activeTab, selectedPeriod, user?.lawFirm?._id]);
-
-  // Generate AI insights when cases are loaded
-  useEffect(() => {
-    if (user?.role === "debt_collector") {
-      // For debt collectors, use credit collection data for AI insights
-      if (debtCollectorStats && activeTab === "ai-insights") {
-        generateAiInsights();
-      }
-    } else {
-      // For legal users, use legal cases for AI insights
-      if (cases && cases.length > 0 && activeTab === "ai-insights") {
-        generateAiInsights();
-      }
-    }
-  }, [cases, debtCollectorStats, selectedPeriod, activeTab, user?.role]);
-
-  const loadDebtCollectorData = async () => {
+  // Define loadDebtCollectorData with useCallback to prevent initialization issues
+  const loadDebtCollectorData = useCallback(async () => {
     setLoadingReports(true);
     try {
-      console.log("🔍 Loading debt collector data for user:", user._id);
+      console.log("🔍 Loading debt collector data for user:", user?._id);
+      
+      if (!user?._id || !user?.lawFirm?._id) {
+        console.warn("⚠️ User or lawFirm not available");
+        return;
+      }
       
       // Fetch debt collector specific stats
       const collectorRes = await reportsApi.getDebtCollectorStatsById(user._id, { period: selectedPeriod });
@@ -238,9 +190,10 @@ const LegalReports = () => {
     } finally {
       setLoadingReports(false);
     }
-  };
+  }, [user, selectedPeriod]);
 
-  const loadEnhancedReports = async () => {
+  // Define loadEnhancedReports with useCallback
+  const loadEnhancedReports = useCallback(async () => {
     setLoadingReports(true);
     try {
       const params = { period: selectedPeriod };
@@ -277,9 +230,142 @@ const LegalReports = () => {
     } finally {
       setLoadingReports(false);
     }
+  }, [selectedPeriod, activeTab, user]);
+
+  useEffect(() => {
+    console.log("=== DEBUG: Reports useEffect ===");
+    console.log("User:", user);
+    console.log("User role:", user?.role);
+    console.log("User lawFirm:", user?.lawFirm?._id);
+    console.log("User ID:", user?._id);
+    
+    if (!user) return;
+
+    // Load cases based on user role
+    if (user.role === "legal_head") {
+      console.log("Loading cases for legal head - lawFirm:", user.lawFirm._id);
+      dispatch(getLegalCases({ lawFirm: user.lawFirm._id }));
+    } else if (user.role === "advocate") {
+      console.log("Loading cases for advocate - assignedTo:", user._id);
+      dispatch(getLegalCases({ assignedTo: user._id }));
+    } else if (user.role === "debt_collector") {
+      console.log("Loading debt collector data for user:", user._id);
+      // For debt collectors, we'll load credit collection data instead of legal cases
+      loadDebtCollectorData();
+    }
+
+    // Load statistics for legal users only
+    if (user.role !== "debt_collector") {
+      dispatch(getLegalCaseStatistics({ period: selectedPeriod }));
+    }
+  }, [dispatch, user, selectedPeriod, loadDebtCollectorData]);
+
+  // Load enhanced reports when tab changes
+  useEffect(() => {
+    if (user?.lawFirm?._id && activeTab !== "overview") {
+      if (user.role === "debt_collector") {
+        loadDebtCollectorData();
+      } else {
+        loadEnhancedReports();
+      }
+    }
+  }, [activeTab, selectedPeriod, user?.lawFirm?._id, user?.role, loadDebtCollectorData, loadEnhancedReports]);
+
+  // Helper functions for calculations
+  const calculateCaseTypeDistribution = useCallback(() => {
+    if (user?.role === "debt_collector") {
+      // For debt collectors, use credit case type distribution
+      const casesData = debtCollectorStats?.assignedCases || creditCollectionData?.assignedCases || [];
+      if (casesData.length === 0) return {};
+      const distribution = {};
+      casesData.forEach(case_ => {
+        distribution[case_.caseType] = (distribution[case_.caseType] || 0) + 1;
+      });
+      return distribution;
+    } else {
+      // For legal users, use legal case type distribution
+      if (!cases || cases.length === 0) return {};
+      const distribution = {};
+      cases.forEach(case_ => {
+        distribution[case_.caseType] = (distribution[case_.caseType] || 0) + 1;
+      });
+      return distribution;
+    }
+  }, [user?.role, debtCollectorStats, creditCollectionData, cases]);
+
+  // Format utility function (used in generateFallbackLegalInsights)
+  const formatCurrency = (amount) => {
+    return `Ksh ${new Intl.NumberFormat("en-KE").format(amount || 0)}`;
   };
 
-  const generateAiInsights = async () => {
+  const calculateStatusDistribution = useCallback(() => {
+    if (user?.role === "debt_collector") {
+      // For debt collectors, use credit case status distribution
+      const casesData = debtCollectorStats?.assignedCases || creditCollectionData?.assignedCases || [];
+      if (casesData.length === 0) return {};
+      const distribution = {};
+      casesData.forEach(case_ => {
+        distribution[case_.status] = (distribution[case_.status] || 0) + 1;
+      });
+      return distribution;
+    } else {
+      // For legal users, use legal case status distribution
+      if (!cases || cases.length === 0) return {};
+      const distribution = {};
+      cases.forEach(case_ => {
+        distribution[case_.status] = (distribution[case_.status] || 0) + 1;
+      });
+      return distribution;
+    }
+  }, [user?.role, debtCollectorStats, creditCollectionData, cases]);
+
+  // Format utility function (used in generateFallbackLegalInsights)
+  const formatCurrency = (amount) => {
+    return `Ksh ${new Intl.NumberFormat("en-KE").format(amount || 0)}`;
+  };
+
+  const generateFallbackLegalInsights = useCallback((data) => {
+    const totalCases = data.statistics.totalCases;
+    const resolvedCases = data.statistics.resolvedCases;
+    const resolutionRate = totalCases > 0 ? (resolvedCases / totalCases) * 100 : 0;
+
+    if (data.userRole === "debt_collector") {
+      const collectionRate = data.statistics.collectionRate || resolutionRate;
+      const totalAmountCollected = data.statistics.totalAmountCollected || 0;
+      const outstandingAmount = data.statistics.outstandingAmount || 0;
+
+      return {
+        summary: `You have ${totalCases} total cases with a ${collectionRate.toFixed(1)}% collection rate. You've collected ${formatCurrency(totalAmountCollected)} with ${formatCurrency(outstandingAmount)} outstanding.`,
+        recommendations: [
+          "Focus on high-value cases to maximize collection impact",
+          "Follow up on overdue cases to improve collection rate",
+          "Use different collection strategies for different case types"
+        ],
+        trends: "Collection performance shows steady progress with opportunities for improvement",
+        performance: {
+          score: Math.min(85, collectionRate + 20),
+          level: collectionRate > 70 ? "Excellent" : collectionRate > 50 ? "Good" : "Needs Improvement"
+        }
+      };
+    } else {
+      return {
+        summary: `You have ${totalCases} total cases with a ${resolutionRate.toFixed(1)}% resolution rate.`,
+        recommendations: [
+          "Focus on high-priority cases to improve resolution time",
+          "Consider case load distribution for better efficiency",
+          "Review case documentation for completeness"
+        ],
+        trends: "Case resolution rate is stable with room for improvement",
+        performance: {
+          score: Math.min(85, resolutionRate + 20),
+          level: resolutionRate > 70 ? "Excellent" : resolutionRate > 50 ? "Good" : "Needs Improvement"
+        }
+      };
+    }
+  }, []);
+
+  // Define generateAiInsights with useCallback
+  const generateAiInsights = useCallback(async () => {
     setAiLoading(true);
     try {
       let dataToAnalyze;
@@ -351,94 +437,24 @@ const LegalReports = () => {
     } finally {
       setAiLoading(false);
     }
-  };
+  }, [user, debtCollectorStats, creditCollectionData, cases, selectedPeriod, calculateCaseTypeDistribution, calculateStatusDistribution, generateFallbackLegalInsights]);
 
-  const calculateCaseTypeDistribution = () => {
+  // Generate AI insights when cases are loaded
+  useEffect(() => {
     if (user?.role === "debt_collector") {
-      // For debt collectors, use credit case type distribution
-      const casesData = debtCollectorStats?.assignedCases || creditCollectionData?.assignedCases || [];
-      if (casesData.length === 0) return {};
-      const distribution = {};
-      casesData.forEach(case_ => {
-        distribution[case_.caseType] = (distribution[case_.caseType] || 0) + 1;
-      });
-      return distribution;
+      // For debt collectors, use credit collection data for AI insights
+      if (debtCollectorStats && activeTab === "ai-insights") {
+        generateAiInsights();
+      }
     } else {
-      // For legal users, use legal case type distribution
-      if (!cases || cases.length === 0) return {};
-      const distribution = {};
-      cases.forEach(case_ => {
-        distribution[case_.caseType] = (distribution[case_.caseType] || 0) + 1;
-      });
-      return distribution;
+      // For legal users, use legal cases for AI insights
+      if (cases && cases.length > 0 && activeTab === "ai-insights") {
+        generateAiInsights();
+      }
     }
-  };
+  }, [cases, debtCollectorStats, selectedPeriod, activeTab, user?.role, generateAiInsights]);
 
-  const calculateStatusDistribution = () => {
-    if (user?.role === "debt_collector") {
-      // For debt collectors, use credit case status distribution
-      const casesData = debtCollectorStats?.assignedCases || creditCollectionData?.assignedCases || [];
-      if (casesData.length === 0) return {};
-      const distribution = {};
-      casesData.forEach(case_ => {
-        distribution[case_.status] = (distribution[case_.status] || 0) + 1;
-      });
-      return distribution;
-    } else {
-      // For legal users, use legal case status distribution
-      if (!cases || cases.length === 0) return {};
-      const distribution = {};
-      cases.forEach(case_ => {
-        distribution[case_.status] = (distribution[case_.status] || 0) + 1;
-      });
-      return distribution;
-    }
-  };
-
-  const generateFallbackLegalInsights = (data) => {
-    const totalCases = data.statistics.totalCases;
-    const resolvedCases = data.statistics.resolvedCases;
-    const resolutionRate = totalCases > 0 ? (resolvedCases / totalCases) * 100 : 0;
-
-    if (data.userRole === "debt_collector") {
-      const collectionRate = data.statistics.collectionRate || resolutionRate;
-      const totalAmountCollected = data.statistics.totalAmountCollected || 0;
-      const outstandingAmount = data.statistics.outstandingAmount || 0;
-
-      return {
-        summary: `You have ${totalCases} total cases with a ${collectionRate.toFixed(1)}% collection rate. You've collected ${formatCurrency(totalAmountCollected)} with ${formatCurrency(outstandingAmount)} outstanding.`,
-        recommendations: [
-          "Focus on high-value cases to maximize collection impact",
-          "Follow up on overdue cases to improve collection rate",
-          "Use different collection strategies for different case types"
-        ],
-        trends: "Collection performance shows steady progress with opportunities for improvement",
-        performance: {
-          score: Math.min(85, collectionRate + 20),
-          level: collectionRate > 70 ? "Excellent" : collectionRate > 50 ? "Good" : "Needs Improvement"
-        }
-      };
-    } else {
-      return {
-        summary: `You have ${totalCases} total cases with a ${resolutionRate.toFixed(1)}% resolution rate.`,
-        recommendations: [
-          "Focus on high-priority cases to improve resolution time",
-          "Consider case load distribution for better efficiency",
-          "Review case documentation for completeness"
-        ],
-        trends: "Case resolution rate is stable with room for improvement",
-        performance: {
-          score: Math.min(85, resolutionRate + 20),
-          level: resolutionRate > 70 ? "Excellent" : resolutionRate > 50 ? "Good" : "Needs Improvement"
-        }
-      };
-    }
-  };
-
-  const formatCurrency = (amount) => {
-    return `Ksh ${new Intl.NumberFormat("en-KE").format(amount || 0)}`;
-  };
-
+  // Format utility functions
   const formatPercentage = (value) => {
     if (value === null || value === undefined) return "0%";
     return `${Math.round(value * 100) / 100}%`;

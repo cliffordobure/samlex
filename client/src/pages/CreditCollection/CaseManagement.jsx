@@ -1,6 +1,6 @@
 /* eslint-disable no-unused-vars */
 // client/src/pages/CreditCollection/CaseManagement.jsx
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Link, Routes, Route } from "react-router-dom";
 import {
@@ -296,23 +296,18 @@ const CaseManagement = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
 
-  // Helper function to build query params
-  const buildQueryParams = (page = currentPage) => ({
+  // Helper function to build query params - wrapped in useCallback to prevent initialization issues
+  const buildQueryParams = useCallback((page = currentPage) => ({
     page,
     limit: pageSize,
     ...(filters.status && { status: filters.status }),
     ...(filters.priority && { priority: filters.priority }),
     ...(filters.assignedTo && { assignedTo: filters.assignedTo }),
     ...(filters.search && { search: filters.search }),
-  });
+  }), [currentPage, filters.status, filters.priority, filters.assignedTo, filters.search]);
 
-  // Reset to page 1 when filters change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [filters.status, filters.priority, filters.assignedTo, filters.search]);
-
-  // Fetch cases and users with filters
-  useEffect(() => {
+  // Function to fetch cases - wrapped in useCallback
+  const fetchCases = useCallback(() => {
     if (!user) return;
     
     const params = buildQueryParams();
@@ -324,22 +319,27 @@ const CaseManagement = () => {
     } else {
       dispatch(getCreditCases(params));
     }
+  }, [user, buildQueryParams, dispatch]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters.status, filters.priority, filters.assignedTo, filters.search]);
+
+  // Fetch cases and users with filters
+  useEffect(() => {
+    if (!user) return;
+    
+    fetchCases();
     dispatch(getUsers({ role: "debt_collector" }));
-  }, [dispatch, user, currentPage, filters.status, filters.priority, filters.assignedTo, filters.search]);
+  }, [dispatch, user, fetchCases]);
 
   // Socket listeners for real-time updates
   useEffect(() => {
-    const refetchCases = () => {
-      if (!user) return;
-      const params = buildQueryParams();
+    if (!user) return;
 
-      if (user.role === "credit_head" && user.lawFirm?._id) {
-        dispatch(getCreditCases({ lawFirm: user.lawFirm._id, ...params }));
-      } else if (user.role === "debt_collector") {
-        dispatch(getCreditCases({ assignedTo: user._id, ...params }));
-      } else {
-        dispatch(getCreditCases(params));
-      }
+    const refetchCases = () => {
+      fetchCases();
     };
 
     socket.on("caseAssigned", refetchCases);
@@ -351,7 +351,7 @@ const CaseManagement = () => {
       socket.off("caseMoved", refetchCases);
       socket.off("caseCreated", refetchCases);
     };
-  }, [dispatch, user, currentPage, filters.status, filters.priority, filters.assignedTo, filters.search]);
+  }, [user, fetchCases]);
 
   const handleStatusChange = async (caseId, newStatus) => {
     try {
@@ -360,14 +360,7 @@ const CaseManagement = () => {
       ).unwrap();
       toast.success("Case status updated successfully!");
       // Immediately refetch cases to show updated status
-      const params = buildQueryParams();
-      if (user.role === "credit_head" && user.lawFirm?._id) {
-        dispatch(getCreditCases({ lawFirm: user.lawFirm._id, ...params }));
-      } else if (user.role === "debt_collector") {
-        dispatch(getCreditCases({ assignedTo: user._id, ...params }));
-      } else {
-        dispatch(getCreditCases(params));
-      }
+      fetchCases();
     } catch (error) {
       toast.error(error || "Failed to update case status");
     }
@@ -394,14 +387,7 @@ const CaseManagement = () => {
       await dispatch(deleteCreditCase(deleteModal.caseId)).unwrap();
       toast.success("Credit case deleted successfully");
       // Refresh cases with current filters and pagination
-      const params = buildQueryParams();
-      if (user.role === "credit_head" && user.lawFirm?._id) {
-        dispatch(getCreditCases({ lawFirm: user.lawFirm._id, ...params }));
-      } else if (user.role === "debt_collector") {
-        dispatch(getCreditCases({ assignedTo: user._id, ...params }));
-      } else {
-        dispatch(getCreditCases(params));
-      }
+      fetchCases();
       setDeleteModal({ isOpen: false, caseId: null, caseNumber: null });
     } catch (error) {
       toast.error(error.message || "Failed to delete case");
@@ -423,14 +409,7 @@ const CaseManagement = () => {
       ).unwrap();
       toast.success("Case assigned successfully!");
       // Immediately refetch cases to show updated assignment
-      const params = buildQueryParams();
-      if (user.role === "credit_head" && user.lawFirm?._id) {
-        dispatch(getCreditCases({ lawFirm: user.lawFirm._id, ...params }));
-      } else if (user.role === "debt_collector") {
-        dispatch(getCreditCases({ assignedTo: user._id, ...params }));
-      } else {
-        dispatch(getCreditCases(params));
-      }
+      fetchCases();
     } catch (error) {
       toast.error(error || "Failed to assign case");
     }
