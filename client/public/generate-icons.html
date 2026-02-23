@@ -108,7 +108,22 @@
             link.download = `icon-${currentSize}x${currentSize}.png`;
             link.href = canvas.toDataURL('image/png');
             link.click();
+            console.log(`✅ Downloaded icon-${currentSize}x${currentSize}.png`);
+            alert(`Icon downloaded! Please save it as icon-${currentSize}x${currentSize}.png in the public folder.`);
         }
+        
+        // Auto-download both icons on page load (optional)
+        // Uncomment the lines below if you want auto-download
+        // window.addEventListener('load', () => {
+        //     setTimeout(() => {
+        //         generateIcon(192);
+        //         setTimeout(() => downloadIcon(), 500);
+        //         setTimeout(() => {
+        //             generateIcon(512);
+        //             setTimeout(() => downloadIcon(), 500);
+        //         }, 1000);
+        //     }, 1000);
+        // });
 
         // Generate initial icon
         generateIcon(192);
