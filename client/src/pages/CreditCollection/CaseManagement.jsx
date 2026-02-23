@@ -281,20 +281,7 @@ const CaseManagement = () => {
   });
   const [isDeleting, setIsDeleting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 10; // Define before useEffect that uses it
-
-  // Debug pagination - moved after pageSize definition
-  useEffect(() => {
-    console.log("Pagination Debug:", {
-      pagination,
-      casesCount: cases?.length,
-      hasPagination: !!pagination,
-      totalPages: pagination?.totalPages,
-      totalCount: pagination?.totalCount,
-      currentPage: pagination?.currentPage,
-      shouldShowNext: pagination?.totalPages ? (pagination.currentPage || currentPage) < pagination.totalPages : cases.length === pageSize,
-    });
-  }, [pagination, cases, currentPage, pageSize]);
+  const pageSize = 10; // Constant for pagination
 
   // Helper function to build query params - wrapped in useCallback to prevent initialization issues
   // Build object explicitly to avoid minification issues with conditional spreads
