@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import socket from "../../utils/socket";
 import { useSelector, useDispatch } from "react-redux";
@@ -91,18 +91,19 @@ const KanbanBoard = ({
   };
 
   // Allow admin and credit head to change status of all cases, debt collectors can change their assigned cases
-  const canChangeStatusForCase = (case_ = null) => {
+  // Wrapped in useCallback to prevent initialization issues
+  const canChangeStatusForCase = useCallback((case_ = null) => {
     if (isAdmin || isCreditHead) return true; // Admins and credit heads can change status of all cases
 
     // Debt collectors can only change status of cases assigned to them
     if (isDebtCollector && case_) {
       return (
-        case_.assignedTo === user._id || case_.assignedTo?._id === user._id
+        case_.assignedTo === user?._id || case_.assignedTo?._id === user?._id
       );
     }
 
     return false;
-  };
+  }, [isAdmin, isCreditHead, isDebtCollector, user?._id]);
 
   // Load users for assignment dropdown
   useEffect(() => {
@@ -123,11 +124,15 @@ const KanbanBoard = ({
     return localCases;
   }, [localCases, user, isDebtCollector]);
 
+  // Refetch function - wrapped in useCallback to prevent initialization issues
+  const refetch = useCallback(() => {
+    dispatch(getCreditCases());
+  }, [dispatch]);
+
   // Socket.IO listeners
   useEffect(() => {
     // You may want to refetch or update Redux state on socket events
     // For now, just refetch all cases on any event
-    const refetch = () => dispatch(getCreditCases());
     socket.on("caseMoved", refetch);
     socket.on("caseCreated", refetch);
     socket.on("caseAssigned", refetch);
@@ -143,10 +148,11 @@ const KanbanBoard = ({
       socket.off("caseEscalated", refetch);
       socket.off("caseCommented", refetch);
     };
-  }, [dispatch]);
+  }, [refetch]);
 
   // Handle drag end - only allow admins to change status (but not in admin view)
-  const onDragEnd = (result) => {
+  // Wrapped in useCallback to prevent initialization issues
+  const onDragEnd = useCallback((result) => {
     const { destination, source, draggableId } = result;
     if (!destination || destination.droppableId === source.droppableId) return;
 
@@ -192,7 +198,7 @@ const KanbanBoard = ({
     dispatch(
       updateCaseStatus({ id: draggableId, status: destination.droppableId })
     );
-  };
+  }, [localCases, canChangeStatusForCase, canEscalateCases, dispatch]);
 
   // Group cases by status
   const casesByStatus = STATUS_COLUMNS.reduce((acc, col) => {
