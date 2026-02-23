@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Icon Generator - Samlex PWA</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #1e293b;
+        }
+        canvas {
+            border: 2px solid #ddd;
+            margin: 20px 0;
+            display: block;
+        }
+        button {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #059669;
+        }
+        .instructions {
+            background: #f0f9ff;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+            border-left: 4px solid #10b981;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 PWA Icon Generator for Samlex</h1>
+        <div class="instructions">
+            <h3>Instructions:</h3>
+            <ol>
+                <li>Click "Generate 192x192 Icon" to create a 192x192 icon</li>
+                <li>Right-click the icon and "Save image as..." → Save as <code>icon-192x192.png</code> in the <code>public</code> folder</li>
+                <li>Click "Generate 512x512 Icon" to create a 512x512 icon</li>
+                <li>Right-click the icon and "Save image as..." → Save as <code>icon-512x512.png</code> in the <code>public</code> folder</li>
+                <li>Replace the placeholder design with your actual logo/icon</li>
+            </ol>
+        </div>
+        
+        <canvas id="iconCanvas" width="192" height="192"></canvas>
+        
+        <div>
+            <button onclick="generateIcon(192)">Generate 192x192 Icon</button>
+            <button onclick="generateIcon(512)">Generate 512x512 Icon</button>
+            <button onclick="downloadIcon()">Download Icon</button>
+        </div>
+        
+        <p><strong>Note:</strong> These are placeholder icons. Replace them with your actual app logo/icon for production.</p>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('iconCanvas');
+        const ctx = canvas.getContext('2d');
+        let currentSize = 192;
+
+        function generateIcon(size) {
+            currentSize = size;
+            canvas.width = size;
+            canvas.height = size;
+
+            // Background gradient
+            const gradient = ctx.createLinearGradient(0, 0, size, size);
+            gradient.addColorStop(0, '#1e293b');
+            gradient.addColorStop(1, '#0f172a');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, size, size);
+
+            // Draw "S" letter (for Samlex)
+            ctx.fillStyle = '#10b981';
+            ctx.font = `bold ${size * 0.5}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('S', size / 2, size / 2);
+
+            // Add a subtle border
+            ctx.strokeStyle = '#334155';
+            ctx.lineWidth = size * 0.02;
+            ctx.strokeRect(size * 0.05, size * 0.05, size * 0.9, size * 0.9);
+        }
+
+        function downloadIcon() {
+            const link = document.createElement('a');
+            link.download = `icon-${currentSize}x${currentSize}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+
+        // Generate initial icon
+        generateIcon(192);
+    </script>
+</body>
+</html>

@@ -13,6 +13,7 @@ import PublicRoute from "./components/auth/PublicRoute";
 import Loading from "./components/common/Loading";
 import NetworkStatus from "./components/common/NetworkStatus";
 import NetworkDebugger from "./components/common/NetworkDebugger";
+import InstallPrompt from "./components/common/InstallPrompt";
 import CreditCollectionLayout from "./components/layouts/CreditCollectionLayout";
 
 // Pages
@@ -268,6 +269,7 @@ function App() {
       )}
       <NetworkStatus />
       <NetworkDebugger />
+      <InstallPrompt />
       <Routes>
         {/* Public Routes */}
         <Route 
