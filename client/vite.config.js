@@ -35,19 +35,37 @@ export default defineConfig({
     target: 'es2015',
     sourcemap: false,
     chunkSizeWarningLimit: 1000,
-    // Simplified build - let Vite handle chunking automatically
-    // This prevents issues with chunk loading in production
+    // Use terser with conservative settings to avoid initialization issues
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        // Disable optimizations that can cause "Cannot access before initialization" errors
+        hoist_funs: false,
+        hoist_vars: false,
+        dead_code: true,
+        drop_console: false, // Keep console logs for debugging
+        keep_infinity: true,
+        passes: 1, // Reduce passes to avoid aggressive optimization
+      },
+      mangle: {
+        // Less aggressive variable mangling
+        keep_classnames: true,
+        keep_fnames: true,
+      },
+      format: {
+        comments: false,
+      },
+    },
+    cssMinify: true,
+    commonjsOptions: {
+      include: [/node_modules/],
+      transformMixedEsModules: true,
+    },
     rollupOptions: {
       output: {
         // Let Vite handle chunking automatically - more reliable
         // manualChunks: undefined,
       },
-    },
-    minify: 'esbuild',
-    cssMinify: true,
-    commonjsOptions: {
-      include: [/node_modules/],
-      transformMixedEsModules: true,
     },
   },
 });

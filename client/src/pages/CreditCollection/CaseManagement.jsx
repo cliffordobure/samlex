@@ -288,27 +288,35 @@ const CaseManagement = () => {
 
   // ALL useCallback functions defined BEFORE any useEffect hooks
   // Helper function to build query params
-  const buildQueryParams = useCallback((page) => {
+  // Using explicit parameter to avoid closure issues in minified code
+  const buildQueryParams = useCallback((pageParam) => {
+    const pageValue = pageParam !== undefined ? pageParam : currentPage;
     const params = {
-      page: page || currentPage,
-      limit: pageSize,
+      page: pageValue,
+      limit: 10, // Use literal instead of pageSize to avoid closure issues
     };
     
-    if (filters.status) {
-      params.status = filters.status;
+    // Use explicit checks to avoid minification issues
+    const statusValue = filters.status;
+    const priorityValue = filters.priority;
+    const assignedToValue = filters.assignedTo;
+    const searchValue = filters.search;
+    
+    if (statusValue) {
+      params.status = statusValue;
     }
-    if (filters.priority) {
-      params.priority = filters.priority;
+    if (priorityValue) {
+      params.priority = priorityValue;
     }
-    if (filters.assignedTo) {
-      params.assignedTo = filters.assignedTo;
+    if (assignedToValue) {
+      params.assignedTo = assignedToValue;
     }
-    if (filters.search) {
-      params.search = filters.search;
+    if (searchValue) {
+      params.search = searchValue;
     }
     
     return params;
-  }, [currentPage, filters.status, filters.priority, filters.assignedTo, filters.search, pageSize]);
+  }, [currentPage, filters.status, filters.priority, filters.assignedTo, filters.search]);
 
   // Function to fetch cases
   const fetchCases = useCallback(() => {
