@@ -45,6 +45,8 @@ server/uploads/
 *.jpg
 *.jpeg
 *.png
+# Exception: PWA icons should be tracked
+!client/public/assets/*.png
 *.gif
 *.pdf
 *.doc
