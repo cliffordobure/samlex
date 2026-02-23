@@ -4,27 +4,8 @@
   "installCommand": "npm install",
   "rewrites": [
     {
-      "source": "/((?!.*\\.(png|jpg|jpeg|gif|svg|ico|webp|json|js|css|woff|woff2|ttf|eot|mp4|webm|mp3|wav|ogg|zip|pdf|xml|txt)$).*)",
+      "source": "/((?!.*\\.[a-z0-9]{2,4}$|assets/).*)",
       "destination": "/index.html"
-    }
-  ],
-  "headers": [
-    {
-      "source": "/(.*)",
-      "headers": [
-        {
-          "key": "X-Content-Type-Options",
-          "value": "nosniff"
-        },
-        {
-          "key": "X-Frame-Options",
-          "value": "DENY"
-        },
-        {
-          "key": "X-XSS-Protection",
-          "value": "1; mode=block"
-        }
-      ]
     }
   ]
 }
