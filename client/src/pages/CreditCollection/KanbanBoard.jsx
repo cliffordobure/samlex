@@ -45,10 +45,6 @@ const KanbanBoard = ({
   const cases = propCases ?? reduxCases;
   // Optimistic UI: local state for cases
   const [localCases, setLocalCases] = useState(cases);
-  // Sync localCases with prop/Redux changes
-  useEffect(() => {
-    setLocalCases(cases);
-  }, [cases]);
   const isLoading = propIsLoading ?? reduxIsLoading;
   const [selectedCase, setSelectedCase] = useState(null);
   const [showModal, setShowModal] = useState(false);

@@ -1,5 +1,5 @@
 // Service Worker for Samlex Law Firm SaaS
-const CACHE_NAME = 'samlex-law-firm-v2'; // Updated version to clear old cache
+const CACHE_NAME = 'samlex-law-firm-v3'; // Updated version to force cache refresh
 const urlsToCache = [
   '/',
   '/index.html',
@@ -56,6 +56,14 @@ self.addEventListener('fetch', (event) => {
 
   // Always fetch manifest.json from network (never cache)
   if (event.request.url.includes('/manifest.json')) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
+
+  // NEVER cache JavaScript bundles - always fetch fresh to avoid initialization errors
+  // This prevents "Cannot access 'b' before initialization" errors from cached old code
+  if (event.request.url.includes('/assets/') && 
+      (event.request.url.endsWith('.js') || event.request.url.includes('.js?'))) {
     event.respondWith(fetch(event.request));
     return;
   }
