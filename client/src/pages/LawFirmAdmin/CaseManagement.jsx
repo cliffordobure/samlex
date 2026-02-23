@@ -104,12 +104,13 @@ const AdminCaseManagement = () => {
       console.log("Escalated cases response:", response.data);
       setEscalatedCases(response.data.data || []);
     } catch (error) {
-      console.error("Error fetching escalated cases:", error);
+      console.error("Error fetching escalated cases:", error);      
       toast.error("Failed to fetch escalated cases");
     } finally {
       setEscalatedLoading(false);
     }
   }, []);
+  //just a comment
 
   useEffect(() => {
     if (user?.lawFirm?._id) {
