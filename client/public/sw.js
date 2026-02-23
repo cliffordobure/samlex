@@ -1,11 +1,11 @@
 // Service Worker for Samlex Law Firm SaaS
-const CACHE_NAME = 'samlex-law-firm-v1';
+const CACHE_NAME = 'samlex-law-firm-v2'; // Updated version to clear old cache
 const urlsToCache = [
   '/',
   '/index.html',
   '/src/main.jsx',
-  '/src/App.jsx',
-  '/manifest.json'
+  '/src/App.jsx'
+  // Don't cache manifest.json - always fetch fresh
 ];
 
 // Install event - cache resources
@@ -51,6 +51,12 @@ self.addEventListener('fetch', (event) => {
 
   // Skip API requests - always use network
   if (event.request.url.includes('/api/')) {
+    return;
+  }
+
+  // Always fetch manifest.json from network (never cache)
+  if (event.request.url.includes('/manifest.json')) {
+    event.respondWith(fetch(event.request));
     return;
   }
 
