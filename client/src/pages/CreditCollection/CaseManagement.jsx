@@ -266,19 +266,6 @@ const CaseManagement = () => {
   const { users } = useSelector((state) => state.users);
   const { user } = useSelector((state) => state.auth);
 
-  // Debug pagination
-  useEffect(() => {
-    console.log("Pagination Debug:", {
-      pagination,
-      casesCount: cases?.length,
-      hasPagination: !!pagination,
-      totalPages: pagination?.totalPages,
-      totalCount: pagination?.totalCount,
-      currentPage: pagination?.currentPage,
-      shouldShowNext: pagination?.totalPages ? (pagination.currentPage || currentPage) < pagination.totalPages : cases.length === pageSize,
-    });
-  }, [pagination, cases, currentPage]);
-
   const [filters, setFilters] = useState({
     status: "",
     priority: "",
@@ -294,7 +281,20 @@ const CaseManagement = () => {
   });
   const [isDeleting, setIsDeleting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 10;
+  const pageSize = 10; // Define before useEffect that uses it
+
+  // Debug pagination - moved after pageSize definition
+  useEffect(() => {
+    console.log("Pagination Debug:", {
+      pagination,
+      casesCount: cases?.length,
+      hasPagination: !!pagination,
+      totalPages: pagination?.totalPages,
+      totalCount: pagination?.totalCount,
+      currentPage: pagination?.currentPage,
+      shouldShowNext: pagination?.totalPages ? (pagination.currentPage || currentPage) < pagination.totalPages : cases.length === pageSize,
+    });
+  }, [pagination, cases, currentPage, pageSize]);
 
   // Helper function to build query params - wrapped in useCallback to prevent initialization issues
   const buildQueryParams = useCallback((page = currentPage) => ({
