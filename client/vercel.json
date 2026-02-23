@@ -2,27 +2,9 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "installCommand": "npm install",
-  "cleanUrls": true,
-  "trailingSlash": false,
   "rewrites": [
     {
-      "source": "/icon-192x192.png",
-      "destination": "/icon-192x192.png"
-    },
-    {
-      "source": "/icon-512x512.png",
-      "destination": "/icon-512x512.png"
-    },
-    {
-      "source": "/manifest.json",
-      "destination": "/manifest.json"
-    },
-    {
-      "source": "/sw.js",
-      "destination": "/sw.js"
-    },
-    {
-      "source": "/(.*)",
+      "source": "/((?!.*\\.(png|jpg|jpeg|gif|svg|ico|webp|json|js|css|woff|woff2|ttf|eot|mp4|webm|mp3|wav|ogg|zip|pdf|xml|txt)$).*)",
       "destination": "/index.html"
     }
   ],
@@ -41,45 +23,6 @@
         {
           "key": "X-XSS-Protection",
           "value": "1; mode=block"
-        }
-      ]
-    },
-    {
-      "source": "/icon-:size.png",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=31536000, immutable"
-        },
-        {
-          "key": "Content-Type",
-          "value": "image/png"
-        }
-      ]
-    },
-    {
-      "source": "/manifest.json",
-      "headers": [
-        {
-          "key": "Content-Type",
-          "value": "application/manifest+json"
-        },
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=3600"
-        }
-      ]
-    },
-    {
-      "source": "/sw.js",
-      "headers": [
-        {
-          "key": "Content-Type",
-          "value": "application/javascript"
-        },
-        {
-          "key": "Cache-Control",
-          "value": "no-cache"
         }
       ]
     }
