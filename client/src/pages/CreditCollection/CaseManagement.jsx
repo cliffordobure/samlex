@@ -297,17 +297,28 @@ const CaseManagement = () => {
   }, [pagination, cases, currentPage, pageSize]);
 
   // Helper function to build query params - wrapped in useCallback to prevent initialization issues
-  // Note: pageSize is a constant, so we don't need it in dependencies, but we reference it directly
+  // Build object explicitly to avoid minification issues with conditional spreads
   const buildQueryParams = useCallback((page = currentPage) => {
-    const limit = 10; // Use constant directly to avoid closure issues
-    return {
+    const params = {
       page,
-      limit,
-      ...(filters.status && { status: filters.status }),
-      ...(filters.priority && { priority: filters.priority }),
-      ...(filters.assignedTo && { assignedTo: filters.assignedTo }),
-      ...(filters.search && { search: filters.search }),
+      limit: 10,
     };
+    
+    // Add filters explicitly to avoid spread operator issues in minified code
+    if (filters.status) {
+      params.status = filters.status;
+    }
+    if (filters.priority) {
+      params.priority = filters.priority;
+    }
+    if (filters.assignedTo) {
+      params.assignedTo = filters.assignedTo;
+    }
+    if (filters.search) {
+      params.search = filters.search;
+    }
+    
+    return params;
   }, [currentPage, filters.status, filters.priority, filters.assignedTo, filters.search]);
 
   // Function to fetch cases - wrapped in useCallback
