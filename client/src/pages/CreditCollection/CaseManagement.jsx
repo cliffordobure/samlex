@@ -334,13 +334,14 @@ const CaseManagement = () => {
     dispatch(getUsers({ role: "debt_collector" }));
   }, [dispatch, user, fetchCases]);
 
+  // Refetch function for socket listeners - wrapped in useCallback
+  const refetchCases = useCallback(() => {
+    fetchCases();
+  }, [fetchCases]);
+
   // Socket listeners for real-time updates
   useEffect(() => {
     if (!user) return;
-
-    const refetchCases = () => {
-      fetchCases();
-    };
 
     socket.on("caseAssigned", refetchCases);
     socket.on("caseMoved", refetchCases);
@@ -351,7 +352,7 @@ const CaseManagement = () => {
       socket.off("caseMoved", refetchCases);
       socket.off("caseCreated", refetchCases);
     };
-  }, [user, fetchCases]);
+  }, [user, refetchCases]);
 
   const handleStatusChange = async (caseId, newStatus) => {
     try {
