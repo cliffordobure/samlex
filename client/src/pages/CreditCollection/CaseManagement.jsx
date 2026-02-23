@@ -327,10 +327,11 @@ const CaseManagement = () => {
     
     const params = buildQueryParams();
 
+    // Use Object.assign instead of spread to avoid minification issues
     if (user.role === "credit_head" && user.lawFirm?._id) {
-      dispatch(getCreditCases({ lawFirm: user.lawFirm._id, ...params }));
+      dispatch(getCreditCases(Object.assign({ lawFirm: user.lawFirm._id }, params)));
     } else if (user.role === "debt_collector") {
-      dispatch(getCreditCases({ assignedTo: user._id, ...params }));
+      dispatch(getCreditCases(Object.assign({ assignedTo: user._id }, params)));
     } else {
       dispatch(getCreditCases(params));
     }
