@@ -266,13 +266,14 @@ const CaseManagement = () => {
   const { users } = useSelector((state) => state.users);
   const { user } = useSelector((state) => state.auth);
 
+  // All state declarations first
   const [filters, setFilters] = useState({
     status: "",
     priority: "",
     assignedTo: "",
     search: "",
   });
-  const [viewMode, setViewMode] = useState("list"); // 'list' or 'kanban'
+  const [viewMode, setViewMode] = useState("list");
   const [error, setError] = useState("");
   const [deleteModal, setDeleteModal] = useState({
     isOpen: false,
@@ -281,17 +282,18 @@ const CaseManagement = () => {
   });
   const [isDeleting, setIsDeleting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 10; // Constant for pagination
+  
+  // Constants
+  const pageSize = 10;
 
-  // Helper function to build query params - wrapped in useCallback to prevent initialization issues
-  // Build object explicitly to avoid minification issues with conditional spreads
-  const buildQueryParams = useCallback((page = currentPage) => {
+  // ALL useCallback functions defined BEFORE any useEffect hooks
+  // Helper function to build query params
+  const buildQueryParams = useCallback((page) => {
     const params = {
       page: page || currentPage,
-      limit: 10,
+      limit: pageSize,
     };
     
-    // Add filters explicitly to avoid spread operator issues in minified code
     if (filters.status) {
       params.status = filters.status;
     }
@@ -306,45 +308,44 @@ const CaseManagement = () => {
     }
     
     return params;
-  }, [currentPage, filters.status, filters.priority, filters.assignedTo, filters.search]);
+  }, [currentPage, filters.status, filters.priority, filters.assignedTo, filters.search, pageSize]);
 
-  // Function to fetch cases - wrapped in useCallback
+  // Function to fetch cases
   const fetchCases = useCallback(() => {
     if (!user) return;
     
-    const params = buildQueryParams();
+    const params = buildQueryParams(currentPage);
 
-    // Use Object.assign instead of spread to avoid minification issues
     if (user.role === "credit_head" && user.lawFirm?._id) {
-      dispatch(getCreditCases(Object.assign({ lawFirm: user.lawFirm._id }, params)));
+      const queryParams = Object.assign({ lawFirm: user.lawFirm._id }, params);
+      dispatch(getCreditCases(queryParams));
     } else if (user.role === "debt_collector") {
-      dispatch(getCreditCases(Object.assign({ assignedTo: user._id }, params)));
+      const queryParams = Object.assign({ assignedTo: user._id }, params);
+      dispatch(getCreditCases(queryParams));
     } else {
       dispatch(getCreditCases(params));
     }
-  }, [user, buildQueryParams, dispatch]);
+  }, [user, buildQueryParams, dispatch, currentPage]);
 
+  // Refetch function for socket listeners
+  const refetchCases = useCallback(() => {
+    if (typeof fetchCases === 'function') {
+      fetchCases();
+    }
+  }, [fetchCases]);
+
+  // ALL useEffect hooks come AFTER all function definitions
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
   }, [filters.status, filters.priority, filters.assignedTo, filters.search]);
 
   // Fetch cases and users with filters
-  // Use a ref to track if this is the initial mount to avoid double-fetching
   useEffect(() => {
     if (!user) return;
-    
-    // Ensure fetchCases is defined before calling
-    if (typeof fetchCases === 'function') {
-      fetchCases();
-      dispatch(getUsers({ role: "debt_collector" }));
-    }
-  }, [dispatch, user, fetchCases]);
-
-  // Refetch function for socket listeners - wrapped in useCallback
-  const refetchCases = useCallback(() => {
     fetchCases();
-  }, [fetchCases]);
+    dispatch(getUsers({ role: "debt_collector" }));
+  }, [dispatch, user, fetchCases]);
 
   // Socket listeners for real-time updates
   useEffect(() => {
