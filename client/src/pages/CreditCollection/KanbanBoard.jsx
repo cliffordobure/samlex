@@ -125,6 +125,11 @@ const KanbanBoard = ({
     dispatch(getCreditCases());
   }, [dispatch]);
 
+  // Sync localCases with prop/Redux changes - moved after useCallback definitions
+  useEffect(() => {
+    setLocalCases(cases);
+  }, [cases]);
+
   // Socket.IO listeners
   useEffect(() => {
     // You may want to refetch or update Redux state on socket events
