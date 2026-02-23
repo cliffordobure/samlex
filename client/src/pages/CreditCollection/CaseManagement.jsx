@@ -300,7 +300,7 @@ const CaseManagement = () => {
   // Build object explicitly to avoid minification issues with conditional spreads
   const buildQueryParams = useCallback((page = currentPage) => {
     const params = {
-      page,
+      page: page || currentPage,
       limit: 10,
     };
     
