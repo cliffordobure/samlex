@@ -85,16 +85,21 @@ try {
     return canvas.toBuffer('image/png');
   }
   
-  // Create both icon sizes
+  // Create both icon sizes - save to assets folder
+  const assetsDir = path.join(publicDir, 'assets');
+  if (!fs.existsSync(assetsDir)) {
+    fs.mkdirSync(assetsDir, { recursive: true });
+  }
+  
   console.log('🖼️  Creating 192x192 icon...');
   const icon192 = createIcon(192, logo);
-  fs.writeFileSync(path.join(publicDir, 'icon-192x192.png'), icon192);
-  console.log('   ✅ Created icon-192x192.png');
+  fs.writeFileSync(path.join(assetsDir, 'icon-192x192.png'), icon192);
+  console.log('   ✅ Created assets/icon-192x192.png');
   
   console.log('🖼️  Creating 512x512 icon...');
   const icon512 = createIcon(512, logo);
-  fs.writeFileSync(path.join(publicDir, 'icon-512x512.png'), icon512);
-  console.log('   ✅ Created icon-512x512.png');
+  fs.writeFileSync(path.join(assetsDir, 'icon-512x512.png'), icon512);
+  console.log('   ✅ Created assets/icon-512x512.png');
   
   console.log('');
   console.log('🎉 Success! Icons created from your logo!');
