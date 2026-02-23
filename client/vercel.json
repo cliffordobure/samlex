@@ -2,9 +2,27 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "installCommand": "npm install",
+  "cleanUrls": true,
+  "trailingSlash": false,
   "rewrites": [
     {
-      "source": "/((?!.*\\.[a-zA-Z0-9]+$).*)",
+      "source": "/icon-192x192.png",
+      "destination": "/icon-192x192.png"
+    },
+    {
+      "source": "/icon-512x512.png",
+      "destination": "/icon-512x512.png"
+    },
+    {
+      "source": "/manifest.json",
+      "destination": "/manifest.json"
+    },
+    {
+      "source": "/sw.js",
+      "destination": "/sw.js"
+    },
+    {
+      "source": "/(.*)",
       "destination": "/index.html"
     }
   ],
