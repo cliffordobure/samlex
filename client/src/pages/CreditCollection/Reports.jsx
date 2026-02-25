@@ -547,19 +547,19 @@ ChartJS.register(
               <table className="w-full">
               <thead>
                   <tr className="border-b border-slate-600/50">
-                    <th className="text-left py-3 px-4 text-slate-300 font-medium">Case</th>
-                    <th className="text-left py-3 px-4 text-slate-300 font-medium">Debtor</th>
-                    <th className="text-left py-3 px-4 text-slate-300 font-medium">Status</th>
-                    <th className="text-left py-3 px-4 text-slate-300 font-medium">Amount</th>
+                    <th className="text-left py-2 px-3 text-xs text-slate-300 font-medium">Case</th>
+                    <th className="text-left py-2 px-3 text-xs text-slate-300 font-medium">Debtor</th>
+                    <th className="text-left py-2 px-3 text-xs text-slate-300 font-medium">Status</th>
+                    <th className="text-left py-2 px-3 text-xs text-slate-300 font-medium">Amount</th>
                 </tr>
               </thead>
               <tbody>
                   {dataSource.recentActivity.slice(0, 5).map((case_, index) => (
                     <tr key={index} className="border-b border-slate-600/30">
-                      <td className="py-3 px-4 text-white">{case_.caseNumber}</td>
-                      <td className="py-3 px-4 text-slate-300">{case_.debtor}</td>
-                      <td className="py-3 px-4 text-slate-300">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      <td className="py-2 px-3 text-xs text-white">{case_.caseNumber}</td>
+                      <td className="py-2 px-3 text-xs text-slate-300">{case_.debtor}</td>
+                      <td className="py-2 px-3 text-slate-300">
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                           case_.status === 'resolved' 
                             ? 'bg-green-500/20 text-green-400 border border-green-500/30'
                             : case_.status === 'in_progress'
@@ -569,7 +569,7 @@ ChartJS.register(
                           {case_.status}
                         </span>
                       </td>
-                      <td className="py-3 px-4 text-slate-300">${case_.debtAmount?.toLocaleString()}</td>
+                      <td className="py-2 px-3 text-xs text-slate-300">${case_.debtAmount?.toLocaleString()}</td>
                     </tr>
                   ))}
               </tbody>
@@ -1031,25 +1031,25 @@ ChartJS.register(
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-slate-600/50">
-                    <th className="text-left py-3 px-4 text-slate-300 font-medium">Case</th>
-                    <th className="text-left py-3 px-4 text-slate-300 font-medium">Debtor</th>
-                    <th className="text-left py-3 px-4 text-slate-300 font-medium">Debt Amount</th>
-                    <th className="text-left py-3 px-4 text-slate-300 font-medium">Last Updated</th>
-                    <th className="text-left py-3 px-4 text-slate-300 font-medium">Status</th>
-                    <th className="text-left py-3 px-4 text-slate-300 font-medium">Assigned To</th>
+                    <th className="text-left py-2 px-3 text-xs text-slate-300 font-medium">Case</th>
+                    <th className="text-left py-2 px-3 text-xs text-slate-300 font-medium">Debtor</th>
+                    <th className="text-left py-2 px-3 text-xs text-slate-300 font-medium">Debt Amount</th>
+                    <th className="text-left py-2 px-3 text-xs text-slate-300 font-medium">Last Updated</th>
+                    <th className="text-left py-2 px-3 text-xs text-slate-300 font-medium">Status</th>
+                    <th className="text-left py-2 px-3 text-xs text-slate-300 font-medium">Assigned To</th>
                   </tr>
                 </thead>
                 <tbody>
                   {dataSource.recentActivity.map((case_, index) => (
                     <tr key={index} className="border-b border-slate-600/30">
-                      <td className="py-3 px-4 text-white">{case_.caseNumber}</td>
-                      <td className="py-3 px-4 text-slate-300">{case_.debtor}</td>
-                      <td className="py-3 px-4 text-slate-300">${case_.debtAmount?.toLocaleString()}</td>
-                      <td className="py-3 px-4 text-slate-300">
+                      <td className="py-2 px-3 text-xs text-white">{case_.caseNumber}</td>
+                      <td className="py-2 px-3 text-xs text-slate-300">{case_.debtor}</td>
+                      <td className="py-2 px-3 text-xs text-slate-300">${case_.debtAmount?.toLocaleString()}</td>
+                      <td className="py-2 px-3 text-xs text-slate-300">
                         {new Date(case_.updatedAt).toLocaleDateString()}
                       </td>
-                      <td className="py-3 px-4">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      <td className="py-2 px-3">
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                           case_.status === 'resolved' 
                             ? 'bg-green-500/20 text-green-400 border border-green-500/30'
                             : case_.status === 'in_progress'
@@ -1059,7 +1059,7 @@ ChartJS.register(
                           {case_.status}
                         </span>
                       </td>
-                      <td className="py-3 px-4 text-slate-300">{case_.assignedTo}</td>
+                      <td className="py-2 px-3 text-xs text-slate-300">{case_.assignedTo}</td>
                     </tr>
                   ))}
                 </tbody>

@@ -1697,13 +1697,13 @@ const LegalReports = () => {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-slate-600/50">
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-white">Case Number</th>
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-white">Client</th>
-                      <th className="text-right py-3 px-4 text-sm font-semibold text-white">Total Fee</th>
-                      <th className="text-right py-3 px-4 text-sm font-semibold text-white">Collected</th>
-                      <th className="text-right py-3 px-4 text-sm font-semibold text-white">Pending</th>
-                      <th className="text-center py-3 px-4 text-sm font-semibold text-white">Payments</th>
-                      <th className="text-right py-3 px-4 text-sm font-semibold text-white">Progress</th>
+                      <th className="text-left py-2 px-3 text-xs font-semibold text-white">Case Number</th>
+                      <th className="text-left py-2 px-3 text-xs font-semibold text-white">Client</th>
+                      <th className="text-right py-2 px-3 text-xs font-semibold text-white">Total Fee</th>
+                      <th className="text-right py-2 px-3 text-xs font-semibold text-white">Collected</th>
+                      <th className="text-right py-2 px-3 text-xs font-semibold text-white">Pending</th>
+                      <th className="text-center py-2 px-3 text-xs font-semibold text-white">Payments</th>
+                      <th className="text-right py-2 px-3 text-xs font-semibold text-white">Progress</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1716,37 +1716,37 @@ const LegalReports = () => {
                       
                       return (
                         <tr key={caseItem._id} className="border-b border-slate-600/30 hover:bg-slate-700/30">
-                          <td className="py-3 px-4 text-sm text-white font-medium">
+                          <td className="py-2 px-3 text-xs text-white font-medium">
                             {caseItem.caseNumber || "N/A"}
                           </td>
-                          <td className="py-3 px-4 text-sm text-slate-300">
+                          <td className="py-2 px-3 text-xs text-slate-300">
                             {caseItem.client?.firstName || ''} {caseItem.client?.lastName || ''}
                           </td>
-                          <td className="py-3 px-4 text-sm text-right font-medium">
+                          <td className="py-2 px-3 text-xs text-right font-medium">
                             {totalFee > 0 ? (
                               <span className="text-white">{formatCurrency(totalFee)}</span>
                             ) : (
                               <span className="text-slate-500 italic">Not set</span>
                             )}
                           </td>
-                          <td className="py-3 px-4 text-sm text-green-400 text-right font-medium">
+                          <td className="py-2 px-3 text-xs text-green-400 text-right font-medium">
                             {formatCurrency(collected)}
                           </td>
-                          <td className="py-3 px-4 text-sm text-right font-medium">
+                          <td className="py-2 px-3 text-xs text-right font-medium">
                             {totalFee > 0 ? (
                               <span className="text-orange-400">{formatCurrency(pending)}</span>
                             ) : (
                               <span className="text-slate-500 italic">-</span>
                             )}
                           </td>
-                          <td className="py-3 px-4 text-sm text-slate-300 text-center">
+                          <td className="py-2 px-3 text-xs text-slate-300 text-center">
                             {paymentCount > 0 ? (
                               <span>{paymentCount} {paymentCount === 1 ? 'payment' : 'payments'}</span>
                             ) : (
                               <span className="text-slate-500">No payments</span>
                             )}
                           </td>
-                          <td className="py-3 px-4 text-right">
+                          <td className="py-2 px-3 text-right">
                             {totalFee > 0 ? (
                               <div className="flex items-center justify-end gap-2">
                                 <div className="w-24 h-2 bg-slate-700 rounded-full overflow-hidden">
