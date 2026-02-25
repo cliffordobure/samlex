@@ -77,18 +77,23 @@ const ClientDetails = () => {
         // Get case IDs we already have
         const existingCaseIds = new Set(creditCasesWithClient.map(c => c._id.toString()));
         
-        // Match cases by debtor information
+        // Match cases by debtor information - use same logic as backend
         const clientEmail = currentClient.email?.toLowerCase()?.trim();
-        const clientName = `${currentClient.firstName || ''} ${currentClient.lastName || ''}`.trim();
+        const clientFirstName = currentClient.firstName?.trim();
+        const clientLastName = currentClient.lastName?.trim();
+        const clientName = `${clientFirstName || ''} ${clientLastName || ''}`.trim();
         const clientPhone = currentClient.phoneNumber?.trim();
         const clientCompanyName = currentClient.companyName?.toLowerCase()?.trim();
         
-        console.log("Matching with client:", {
-          email: clientEmail,
-          name: clientName,
-          phone: clientPhone,
-          company: clientCompanyName
-        });
+        console.log("=== CLIENT MATCHING INFO ===");
+        console.log("Client ID:", id);
+        console.log("Client Email:", clientEmail);
+        console.log("Client Name:", clientName);
+        console.log("Client First Name:", clientFirstName);
+        console.log("Client Last Name:", clientLastName);
+        console.log("Client Phone:", clientPhone);
+        console.log("Client Company:", clientCompanyName);
+        console.log("Total assigned cases to check:", allAssignedCases.length);
         
         const matchedByDebtor = allAssignedCases.filter((case_) => {
           // Skip if already included
@@ -96,7 +101,7 @@ const ClientDetails = () => {
             return false;
           }
           
-          // Skip if case has a different client
+          // Skip if case has a different client (and it's set)
           if (case_.client) {
             const caseClientId = typeof case_.client === 'string' ? case_.client : (case_.client._id || case_.client);
             if (caseClientId.toString() !== id) {
@@ -108,54 +113,61 @@ const ClientDetails = () => {
           const caseDebtorName = case_.debtorName?.trim();
           const caseDebtorContact = case_.debtorContact?.trim();
           
-          // Match by email
+          console.log(`Checking case ${case_._id}:`, {
+            debtorEmail: caseDebtorEmail,
+            debtorName: caseDebtorName,
+            debtorContact: caseDebtorContact
+          });
+          
+          // Match by email (exact match)
           if (caseDebtorEmail && clientEmail && caseDebtorEmail === clientEmail) {
-            console.log("✓ Matched by email:", case_._id, caseDebtorEmail);
+            console.log("✓✓✓ MATCHED by email:", case_._id);
             return true;
           }
           
-          // Match by phone (most reliable)
+          // Match by phone (most reliable) - normalize phone numbers
           if (caseDebtorContact && clientPhone) {
-            const phoneMatch = caseDebtorContact.trim() === clientPhone.trim();
-            if (phoneMatch) {
-              // If phone matches, check if name is similar
-              if (caseDebtorName && clientName) {
+            // Remove spaces, dashes, and other formatting
+            const normalizePhone = (phone) => phone.replace(/[\s\-\(\)]/g, '');
+            const casePhoneNormalized = normalizePhone(caseDebtorContact);
+            const clientPhoneNormalized = normalizePhone(clientPhone);
+            
+            if (casePhoneNormalized === clientPhoneNormalized || 
+                caseDebtorContact.trim() === clientPhone.trim()) {
+              
+              // If phone matches, be more lenient with name matching
+              let nameMatches = false;
+              
+              if (caseDebtorName && (clientName || clientCompanyName)) {
                 const caseNameLower = caseDebtorName.toLowerCase().trim();
-                const clientNameLower = clientName.toLowerCase().trim();
+                const clientNameLower = (clientName || '').toLowerCase().trim();
+                const clientCompanyLower = (clientCompanyName || '').toLowerCase().trim();
                 
                 // Exact match
-                if (caseNameLower === clientNameLower) {
-                  console.log("✓ Matched by exact name+phone:", case_._id);
-                  return true;
+                if (caseNameLower === clientNameLower || caseNameLower === clientCompanyLower) {
+                  nameMatches = true;
                 }
-                
                 // Partial match (one contains the other)
-                if (caseNameLower.includes(clientNameLower) || clientNameLower.includes(caseNameLower)) {
-                  console.log("✓ Matched by partial name+phone:", case_._id, caseDebtorName);
-                  return true;
+                else if (caseNameLower.includes(clientNameLower) || clientNameLower.includes(caseNameLower) ||
+                         caseNameLower.includes(clientCompanyLower) || clientCompanyLower.includes(caseNameLower)) {
+                  nameMatches = true;
                 }
-                
-                // Match by name parts
-                const caseParts = caseNameLower.split(/\s+/).filter(p => p.length > 0);
-                const clientParts = clientNameLower.split(/\s+/).filter(p => p.length > 0);
-                
-                if (caseParts.length > 0 && clientParts.length > 0) {
-                  // Check if any significant part matches (ignore single letters)
-                  const significantCaseParts = caseParts.filter(p => p.length > 1);
-                  const significantClientParts = clientParts.filter(p => p.length > 1);
+                // Match by name parts (like backend does)
+                else if (clientFirstName && clientLastName) {
+                  const nameParts = caseNameLower.split(/\s+/).filter(p => p.length > 0);
+                  const firstName = nameParts[0] || "";
+                  const lastName = nameParts.slice(1).join(" ") || "Client";
                   
-                  const matchingParts = significantCaseParts.filter(cp => 
-                    significantClientParts.some(clp => cp === clp || cp.includes(clp) || clp.includes(cp))
-                  );
-                  
-                  if (matchingParts.length > 0) {
-                    console.log("✓ Matched by name parts+phone:", case_._id, matchingParts);
-                    return true;
+                  if (firstName === clientFirstName.toLowerCase() && 
+                      lastName === clientLastName.toLowerCase()) {
+                    nameMatches = true;
                   }
                 }
-              } else {
-                // Phone matches but no name to compare - still match if phone is unique enough
-                console.log("✓ Matched by phone only:", case_._id);
+              }
+              
+              // If phone matches, include it (name matching is optional for phone matches)
+              if (nameMatches || !caseDebtorName || !clientName) {
+                console.log("✓✓✓ MATCHED by phone:", case_._id, "Name match:", nameMatches);
                 return true;
               }
             }
@@ -165,7 +177,7 @@ const ClientDetails = () => {
           if (clientCompanyName && caseDebtorName) {
             const caseNameLower = caseDebtorName.toLowerCase().trim();
             if (caseNameLower.includes(clientCompanyName) || clientCompanyName.includes(caseNameLower)) {
-              console.log("✓ Matched by company name:", case_._id);
+              console.log("✓✓✓ MATCHED by company name:", case_._id);
               return true;
             }
           }
@@ -173,9 +185,24 @@ const ClientDetails = () => {
           return false;
         });
         
-        // Combine both sets
-        const allCreditCases = [...creditCasesWithClient, ...matchedByDebtor];
-        console.log("Total matched credit cases:", allCreditCases.length);
+        // Combine both sets (remove duplicates)
+        const allCaseIds = new Set();
+        const allCreditCases = [];
+        
+        [...creditCasesWithClient, ...matchedByDebtor].forEach(c => {
+          const caseId = c._id.toString();
+          if (!allCaseIds.has(caseId)) {
+            allCaseIds.add(caseId);
+            allCreditCases.push(c);
+          }
+        });
+        
+        console.log("=== FINAL RESULTS ===");
+        console.log("Cases with client field:", creditCasesWithClient.length);
+        console.log("Cases matched by debtor info:", matchedByDebtor.length);
+        console.log("Total unique credit cases:", allCreditCases.length);
+        console.log("Sample case:", allCreditCases[0]);
+        
         setCreditCases(allCreditCases);
 
         // Fetch legal cases assigned to this debt collector for this client
