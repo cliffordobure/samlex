@@ -32,8 +32,18 @@ const ClientDetails = () => {
   const getUser = (user) => user?.data || user || {};
   const user = getUser(userFromStore);
   
-  // Get user ID - try multiple possible fields and localStorage as fallback
-  let userId = user?._id || user?.id || user?.userId || null;
+  // Get user ID - MongoDB uses _id, but some APIs might return id
+  // Try _id first (MongoDB standard), then id, then check localStorage
+  let userId = null;
+  
+  // First try from Redux user object
+  if (user) {
+    userId = user._id || user.id || null;
+    // If _id is an object (MongoDB ObjectId), convert to string
+    if (userId && typeof userId === 'object' && userId.toString) {
+      userId = userId.toString();
+    }
+  }
   
   // Fallback: try to get from localStorage if not in Redux
   if (!userId) {
@@ -41,11 +51,39 @@ const ClientDetails = () => {
       const storedUser = localStorage.getItem("user");
       if (storedUser) {
         const parsedUser = JSON.parse(storedUser);
-        userId = parsedUser?._id || parsedUser?.id || parsedUser?.userId || null;
-        console.log("Got user ID from localStorage:", userId);
+        userId = parsedUser?._id || parsedUser?.id || null;
+        // Convert to string if it's an object
+        if (userId && typeof userId === 'object' && userId.toString) {
+          userId = userId.toString();
+        }
+        if (userId) {
+          console.log("✅ Got user ID from localStorage:", userId);
+        }
       }
     } catch (e) {
       console.error("Error parsing user from localStorage:", e);
+    }
+  }
+  
+  // Final fallback: try to get from token payload (decode JWT)
+  if (!userId) {
+    try {
+      const token = localStorage.getItem("token");
+      if (token) {
+        // Simple JWT decode (without verification - just for getting user ID)
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+        const decoded = JSON.parse(jsonPayload);
+        userId = decoded.id || decoded._id || null;
+        if (userId) {
+          console.log("✅ Got user ID from JWT token:", userId);
+        }
+      }
+    } catch (e) {
+      console.error("Error decoding token:", e);
     }
   }
 
@@ -53,10 +91,24 @@ const ClientDetails = () => {
   const [legalCases, setLegalCases] = useState([]);
   const [loadingCases, setLoadingCases] = useState(true);
   
-  console.log("ClientDetails - User object from Redux:", userFromStore);
-  console.log("ClientDetails - Processed user:", user);
-  console.log("ClientDetails - User ID:", userId);
-  console.log("ClientDetails - User role:", user?.role);
+  console.log("=== CLIENT DETAILS - USER INFO ===");
+  console.log("User object from Redux:", userFromStore);
+  console.log("Processed user:", user);
+  console.log("User ID extracted:", userId);
+  console.log("User role:", user?.role);
+  console.log("User email:", user?.email);
+  
+  // If userId is still null, log detailed info for debugging
+  if (!userId) {
+    console.error("❌ CRITICAL: User ID is NULL!");
+    console.log("User object keys:", user ? Object.keys(user) : "No user object");
+    console.log("User._id:", user?._id);
+    console.log("User.id:", user?.id);
+    console.log("localStorage user:", localStorage.getItem("user"));
+    console.log("localStorage token exists:", !!localStorage.getItem("token"));
+  } else {
+    console.log("✅ User ID found:", userId);
+  }
 
   useEffect(() => {
     if (id) {
