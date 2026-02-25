@@ -1,4 +1,6 @@
 import Client from "../models/Client.js";
+import CreditCase from "../models/CreditCase.js";
+import LegalCase from "../models/LegalCase.js";
 import mongoose from "mongoose";
 
 /**
@@ -122,9 +124,54 @@ export const getClients = async (req, res) => {
     console.log("User:", req.user);
 
     // Build filter object
-    const filter = {
+    let filter = {
       lawFirm: req.user.lawFirm._id,
     };
+
+    // For debt collectors, only show clients from cases assigned to them
+    if (req.user.role === "debt_collector") {
+      // Find all credit cases assigned to this debt collector
+      const assignedCreditCases = await CreditCase.find({
+        assignedTo: req.user._id,
+        lawFirm: req.user.lawFirm._id,
+      }).select("client");
+
+      // Find all legal cases assigned to this debt collector
+      const assignedLegalCases = await LegalCase.find({
+        assignedTo: req.user._id,
+        lawFirm: req.user.lawFirm._id,
+      }).select("client");
+
+      // Get unique client IDs from both credit and legal cases
+      const clientIds = new Set();
+      assignedCreditCases.forEach((case_) => {
+        if (case_.client) {
+          clientIds.add(case_.client.toString());
+        }
+      });
+      assignedLegalCases.forEach((case_) => {
+        if (case_.client) {
+          clientIds.add(case_.client.toString());
+        }
+      });
+
+      // If no cases assigned, return empty result
+      if (clientIds.size === 0) {
+        return res.json({
+          success: true,
+          data: [],
+          pagination: {
+            page: parseInt(page),
+            limit: parseInt(limit),
+            total: 0,
+            pages: 0,
+          },
+        });
+      }
+
+      // Filter clients to only those with assigned cases
+      filter._id = { $in: Array.from(clientIds) };
+    }
 
     if (status !== "all") {
       filter.status = status;
@@ -163,6 +210,115 @@ export const getClients = async (req, res) => {
       .sort(sort)
       .skip(skip)
       .limit(parseInt(limit));
+
+    // For debt collectors, calculate case counts for each client
+    if (req.user.role === "debt_collector") {
+      const clientIds = clients.map((c) => c._id);
+      
+      // Count credit cases assigned to this debt collector for these clients
+      const creditCaseCounts = await CreditCase.aggregate([
+        {
+          $match: {
+            client: { $in: clientIds },
+            assignedTo: req.user._id,
+            lawFirm: req.user.lawFirm._id,
+          },
+        },
+        {
+          $group: {
+            _id: "$client",
+            count: { $sum: 1 },
+          },
+        },
+      ]);
+
+      // Count legal cases assigned to this debt collector for these clients
+      const legalCaseCounts = await LegalCase.aggregate([
+        {
+          $match: {
+            client: { $in: clientIds },
+            assignedTo: req.user._id,
+            lawFirm: req.user.lawFirm._id,
+          },
+        },
+        {
+          $group: {
+            _id: "$client",
+            count: { $sum: 1 },
+          },
+        },
+      ]);
+
+      // Create maps for quick lookup
+      const creditCountMap = new Map();
+      creditCaseCounts.forEach((item) => {
+        creditCountMap.set(item._id.toString(), item.count);
+      });
+
+      const legalCountMap = new Map();
+      legalCaseCounts.forEach((item) => {
+        legalCountMap.set(item._id.toString(), item.count);
+      });
+
+      // Add case counts to clients
+      clients.forEach((client) => {
+        const clientId = client._id.toString();
+        const creditCount = creditCountMap.get(clientId) || 0;
+        const legalCount = legalCountMap.get(clientId) || 0;
+        client.totalCases = creditCount + legalCount;
+      });
+    } else {
+      // For other roles, use the existing totalCases field or calculate it
+      // Count cases for each client (all cases, not just assigned)
+      const clientIds = clients.map((c) => c._id);
+      
+      const creditCaseCounts = await CreditCase.aggregate([
+        {
+          $match: {
+            client: { $in: clientIds },
+            lawFirm: req.user.lawFirm._id,
+          },
+        },
+        {
+          $group: {
+            _id: "$client",
+            count: { $sum: 1 },
+          },
+        },
+      ]);
+
+      const legalCaseCounts = await LegalCase.aggregate([
+        {
+          $match: {
+            client: { $in: clientIds },
+            lawFirm: req.user.lawFirm._id,
+          },
+        },
+        {
+          $group: {
+            _id: "$client",
+            count: { $sum: 1 },
+          },
+        },
+      ]);
+
+      const creditCountMap = new Map();
+      creditCaseCounts.forEach((item) => {
+        creditCountMap.set(item._id.toString(), item.count);
+      });
+
+      const legalCountMap = new Map();
+      legalCaseCounts.forEach((item) => {
+        legalCountMap.set(item._id.toString(), item.count);
+      });
+
+      clients.forEach((client) => {
+        const clientId = client._id.toString();
+        const creditCount = creditCountMap.get(clientId) || 0;
+        const legalCount = legalCountMap.get(clientId) || 0;
+        client.totalCases = creditCount + legalCount;
+      });
+    }
 
     // Get total count
     const total = await Client.countDocuments(filter);

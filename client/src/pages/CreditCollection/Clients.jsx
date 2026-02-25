@@ -24,8 +24,10 @@ const Clients = () => {
   const [filteredClients, setFilteredClients] = useState([]);
 
   useEffect(() => {
+    // For debt collectors, fetch clients from their assigned cases
+    // The backend will filter clients based on assigned cases
     dispatch(fetchClients({ limit: 100, status: "active" }));
-  }, [dispatch]);
+  }, [dispatch, user]);
 
   useEffect(() => {
     if (searchQuery.trim() === "") {
