@@ -247,7 +247,8 @@ export const getClients = async (req, res) => {
 
     // For debt collectors, calculate case counts for each client
     if (req.user.role === "debt_collector") {
-      const clientIds = clients.map((c) => c._id);
+      const clientIds = clients.map((c) => c._id.toString()); // Convert to strings for comparison
+      const clientIdsObjectId = clients.map((c) => c._id); // Keep ObjectIds for MongoDB queries
       
       // Get all clients with their details for matching
       const clientsMap = new Map();
@@ -301,6 +302,7 @@ export const getClients = async (req, res) => {
           }
         }
         
+        // Check if matched client is in our list of clients
         if (matchedClientId && clientIds.includes(matchedClientId)) {
           const currentCount = creditCountMap.get(matchedClientId) || 0;
           creditCountMap.set(matchedClientId, currentCount + 1);
@@ -311,7 +313,7 @@ export const getClients = async (req, res) => {
       const legalCaseCounts = await LegalCase.aggregate([
         {
           $match: {
-            client: { $in: clientIds },
+            client: { $in: clientIdsObjectId },
             assignedTo: req.user._id,
             lawFirm: req.user.lawFirm._id,
           },
@@ -326,7 +328,9 @@ export const getClients = async (req, res) => {
 
       const legalCountMap = new Map();
       legalCaseCounts.forEach((item) => {
-        legalCountMap.set(item._id.toString(), item.count);
+        if (item._id) {
+          legalCountMap.set(item._id.toString(), item.count);
+        }
       });
 
       // Add case counts to clients
