@@ -19,6 +19,7 @@ import {
   LineElement,
 } from "chart.js";
 import reportsApi from "../../store/api/reportsApi";
+import socket from "../../utils/socket";
 import {
   FaChartBar,
   FaDownload,
@@ -208,6 +209,35 @@ const Reports = () => {
   const handleRefresh = () => {
     setRefreshKey(prev => prev + 1);
   };
+
+  // Socket listeners for real-time updates when payments are updated
+  useEffect(() => {
+    if (!user?.lawFirm?._id) return;
+
+    // Refresh reports when payments are updated
+    const handlePaymentUpdate = () => {
+      console.log("Payment updated - refreshing reports");
+      // Refresh dashboard data
+      loadDashboardData();
+      // Refresh enhanced reports if not on overview tab
+      if (activeTab !== "overview") {
+        loadEnhancedReports();
+      }
+      // Also trigger a refresh key update to force re-render
+      setRefreshKey(prev => prev + 1);
+    };
+
+    // Listen for payment updates
+    socket.on("promisedPaymentUpdated", handlePaymentUpdate);
+    socket.on("promisedPaymentAdded", handlePaymentUpdate);
+    socket.on("caseStatusUpdated", handlePaymentUpdate);
+
+    return () => {
+      socket.off("promisedPaymentUpdated", handlePaymentUpdate);
+      socket.off("promisedPaymentAdded", handlePaymentUpdate);
+      socket.off("caseStatusUpdated", handlePaymentUpdate);
+    };
+  }, [user?.lawFirm?._id, activeTab, loadDashboardData, loadEnhancedReports]);
 
   const handleDebugRevenue = async () => {
     try {

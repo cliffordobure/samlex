@@ -1718,6 +1718,70 @@ export const getLawFirmAdminDashboard = async (req, res) => {
     const allCreditCases = await CreditCase.find({ lawFirm: lawFirmId }).lean();
     const resolvedCreditCases = allCreditCases.filter(c => c.status === 'resolved');
     const totalMoneyRecovered = resolvedCreditCases.reduce((sum, c) => sum + (c.debtAmount || 0), 0);
+    
+    // Calculate paid promised payments (money recovered for clients)
+    const paidPromisedPayments = allCreditCases.reduce((sum, case_) => {
+      if (case_.promisedPayments && case_.promisedPayments.length > 0) {
+        const paidAmount = case_.promisedPayments
+          .filter(p => p.status === "paid")
+          .reduce((paymentSum, p) => paymentSum + (p.amount || 0), 0);
+        return sum + paidAmount;
+      }
+      return sum;
+    }, 0);
+    
+    // Total money recovered includes both resolved cases and paid promised payments
+    const totalMoneyRecoveredIncludingPayments = totalMoneyRecovered + paidPromisedPayments;
+    
+    // Get debt collector performance summary
+    const debtCollectors = await User.find({ 
+      lawFirm: lawFirmId, 
+      role: "debt_collector",
+      isActive: true 
+    }).select("firstName lastName email _id");
+    
+    const debtCollectorStats = await Promise.all(
+      debtCollectors.map(async (collector) => {
+        const collectorCases = await CreditCase.find({ 
+          lawFirm: lawFirmId,
+          assignedTo: collector._id 
+        }).lean();
+        
+        const totalCases = collectorCases.length;
+        const resolvedCases = collectorCases.filter(c => 
+          ["resolved", "closed"].includes(c.status)
+        ).length;
+        
+        const totalDebt = collectorCases.reduce((sum, c) => sum + (c.debtAmount || 0), 0);
+        
+        // Calculate paid promised payments for this collector
+        const collectorPaidPayments = collectorCases.reduce((sum, case_) => {
+          if (case_.promisedPayments && case_.promisedPayments.length > 0) {
+            const paidAmount = case_.promisedPayments
+              .filter(p => p.status === "paid")
+              .reduce((paymentSum, p) => paymentSum + (p.amount || 0), 0);
+            return sum + paidAmount;
+          }
+          return sum;
+        }, 0);
+        
+        const collectedAmount = collectorCases
+          .filter(c => ["resolved", "closed"].includes(c.status))
+          .reduce((sum, c) => sum + (c.debtAmount || 0), 0) + collectorPaidPayments;
+        
+        return {
+          _id: collector._id,
+          name: `${collector.firstName} ${collector.lastName}`,
+          email: collector.email,
+          totalCases,
+          resolvedCases,
+          totalDebt,
+          collectedAmount,
+          collectionRate: totalDebt > 0 ? (collectedAmount / totalDebt) * 100 : 0,
+          resolutionRate: totalCases > 0 ? (resolvedCases / totalCases) * 100 : 0,
+        };
+      })
+    );
 
     // Debug logging
     console.log("=== REVENUE CALCULATION DEBUG ===");
@@ -1741,6 +1805,9 @@ export const getLawFirmAdminDashboard = async (req, res) => {
     console.log("Other Payments (Law Firm Revenue):", totalOtherPayments);
     console.log("Total Law Firm Revenue:", totalRevenue);
     console.log("Money Recovered (Client Money - NOT Law Firm Revenue):", totalMoneyRecovered);
+    console.log("Paid Promised Payments:", paidPromisedPayments);
+    console.log("Total Money Recovered (including payments):", totalMoneyRecoveredIncludingPayments);
+    console.log("Debt Collectors Count:", debtCollectorStats.length);
     console.log("================================");
 
     res.json({
@@ -1754,9 +1821,12 @@ export const getLawFirmAdminDashboard = async (req, res) => {
         escalationRevenue,
         escalationRate: Math.round(escalationRate),
         // Additional metrics (not law firm revenue)
-        totalMoneyRecovered, // Money recovered for clients
+        totalMoneyRecovered: totalMoneyRecoveredIncludingPayments, // Money recovered for clients (including paid promised payments)
         totalFilingFees, // Breakdown of law firm revenue
         totalOtherPayments, // Other law firm payments
+        paidPromisedPayments, // Paid promised payments amount
+        // Debt collector performance data
+        debtCollectorStats, // Array of debt collector performance metrics
       },
     });
   } catch (error) {
@@ -2130,8 +2200,25 @@ export const getDebtCollectionPerformance = async (req, res) => {
       (sum, stat) => sum + (stat.totalAmount || 0),
       0
     );
-    const collectedAmount =
+    
+    // Calculate collected amount from resolved cases
+    let collectedAmount =
       casesByStatus.find((stat) => stat._id === "resolved")?.totalAmount || 0;
+    
+    // Add paid promised payments to collected amount
+    const allCreditCases = await CreditCase.find({ lawFirm: lawFirmId }).lean();
+    const paidPromisedPayments = allCreditCases.reduce((sum, case_) => {
+      if (case_.promisedPayments && case_.promisedPayments.length > 0) {
+        const paidAmount = case_.promisedPayments
+          .filter(p => p.status === "paid")
+          .reduce((paymentSum, p) => paymentSum + (p.amount || 0), 0);
+        return sum + paidAmount;
+      }
+      return sum;
+    }, 0);
+    
+    collectedAmount += paidPromisedPayments;
+    
     const collectionRate =
       totalAmount > 0 ? (collectedAmount / totalAmount) * 100 : 0;
 
@@ -2140,6 +2227,31 @@ export const getDebtCollectionPerformance = async (req, res) => {
         ? (escalationStats[0].escalatedCases / escalationStats[0].totalCases) *
           100
         : 0;
+
+    // Calculate paid promised payments per assignee
+    const assigneesWithPayments = await Promise.all(
+      casesByAssignee.map(async (assignee) => {
+        const assigneeCases = await CreditCase.find({
+          lawFirm: lawFirmId,
+          assignedTo: assignee._id,
+        }).lean();
+        
+        const paidPromisedPayments = assigneeCases.reduce((sum, case_) => {
+          if (case_.promisedPayments && case_.promisedPayments.length > 0) {
+            const paidAmount = case_.promisedPayments
+              .filter(p => p.status === "paid")
+              .reduce((paymentSum, p) => paymentSum + (p.amount || 0), 0);
+            return sum + paidAmount;
+          }
+          return sum;
+        }, 0);
+        
+        return {
+          ...assignee,
+          collectedAmount: (assignee.collectedAmount || 0) + paidPromisedPayments,
+        };
+      })
+    );
 
     res.status(200).json({
       success: true,
@@ -2153,9 +2265,10 @@ export const getDebtCollectionPerformance = async (req, res) => {
           collectionRate: Math.round(collectionRate * 100) / 100,
           escalationRate: Math.round(escalationRate * 100) / 100,
           totalEscalationFees: escalationStats[0]?.totalEscalationFees || 0,
+          paidPromisedPayments, // Include this for transparency
         },
         casesByStatus,
-        casesByAssignee,
+        casesByAssignee: assigneesWithPayments, // Updated with promised payments
         monthlyTrends,
         escalationStats: escalationStats[0] || {},
       },
