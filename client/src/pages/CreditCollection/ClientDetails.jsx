@@ -28,128 +28,26 @@ const ClientDetails = () => {
   const { id } = useParams();
   const dispatch = useDispatch();
   const { currentClient, loading } = useSelector((state) => state.clients);
-  const { user: userFromStore } = useSelector((state) => state.auth);
+  const { user } = useSelector((state) => state.auth);
   
   console.log("🎯 ClientDetails initial state:", {
     id,
     hasCurrentClient: !!currentClient,
     loading,
-    hasUser: !!userFromStore
+    hasUser: !!user,
+    userRole: user?.role,
+    userId: user?._id
   });
-
-  // Handle different user object structures - be very aggressive
-  const getUser = (user) => user?.data || user || {};
-  const user = getUser(userFromStore);
-  
-  // Get user ID - try EVERY possible location and format
-  let userId = null;
-  
-  // Strategy 1: Try from processed user object
-  if (user) {
-    userId = user._id || user.id || user.userId || null;
-    // If _id is an object (MongoDB ObjectId), convert to string
-    if (userId && typeof userId === 'object') {
-      if (userId.toString) {
-        userId = userId.toString();
-      } else if (userId.$oid) {
-        userId = userId.$oid; // MongoDB extended JSON format
-      }
-    }
-  }
-  
-  // Strategy 2: Try from raw userFromStore (before processing)
-  if (!userId && userFromStore) {
-    userId = userFromStore._id || userFromStore.id || 
-             userFromStore.data?._id || userFromStore.data?.id ||
-             null;
-    if (userId && typeof userId === 'object') {
-      userId = userId.toString ? userId.toString() : (userId.$oid || null);
-    }
-  }
-  
-  // Strategy 3: Try from localStorage
-  if (!userId) {
-    try {
-      const storedUser = localStorage.getItem("user");
-      if (storedUser) {
-        const parsedUser = JSON.parse(storedUser);
-        userId = parsedUser?._id || parsedUser?.id || null;
-        if (userId && typeof userId === 'object') {
-          userId = userId.toString ? userId.toString() : (userId.$oid || null);
-        }
-        if (userId) {
-          console.log("✅ Got user ID from localStorage:", userId);
-        }
-      }
-    } catch (e) {
-      console.error("Error parsing user from localStorage:", e);
-    }
-  }
-  
-  // Strategy 4: Decode JWT token (most reliable - always has id field)
-  if (!userId) {
-    try {
-      const token = localStorage.getItem("token");
-      if (token) {
-        console.log("🔍 Attempting to decode JWT token...");
-        // Simple JWT decode (without verification - just for getting user ID)
-        const parts = token.split('.');
-        if (parts.length === 3) {
-          const base64Url = parts[1];
-          if (base64Url) {
-            // Add padding if needed
-            let base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-            while (base64.length % 4) {
-              base64 += '=';
-            }
-            
-            try {
-              const jsonPayload = atob(base64);
-              const decoded = JSON.parse(jsonPayload);
-              console.log("🔍 Decoded JWT payload:", decoded);
-              userId = decoded.id || decoded._id || null;
-              if (userId) {
-                console.log("✅ Got user ID from JWT token:", userId);
-              } else {
-                console.warn("⚠️ JWT decoded but no id field found. Payload keys:", Object.keys(decoded));
-              }
-            } catch (parseError) {
-              console.error("Error parsing JWT payload:", parseError);
-            }
-          }
-        } else {
-          console.error("Invalid JWT token format - expected 3 parts, got:", parts.length);
-        }
-      } else {
-        console.warn("⚠️ No token found in localStorage");
-      }
-    } catch (e) {
-      console.error("Error decoding token:", e);
-    }
-  }
 
   const [creditCases, setCreditCases] = useState([]);
   const [legalCases, setLegalCases] = useState([]);
   const [loadingCases, setLoadingCases] = useState(true);
   
   console.log("=== CLIENT DETAILS - USER INFO ===");
-  console.log("User object from Redux:", userFromStore);
-  console.log("Processed user:", user);
-  console.log("User ID extracted:", userId);
+  console.log("User object from Redux:", user);
   console.log("User role:", user?.role);
+  console.log("User ID:", user?._id);
   console.log("User email:", user?.email);
-  
-  // If userId is still null, log detailed info for debugging
-  if (!userId) {
-    console.error("❌ CRITICAL: User ID is NULL!");
-    console.log("User object keys:", user ? Object.keys(user) : "No user object");
-    console.log("User._id:", user?._id);
-    console.log("User.id:", user?.id);
-    console.log("localStorage user:", localStorage.getItem("user"));
-    console.log("localStorage token exists:", !!localStorage.getItem("token"));
-  } else {
-    console.log("✅ User ID found:", userId);
-  }
 
   useEffect(() => {
     if (id) {
@@ -160,18 +58,18 @@ const ClientDetails = () => {
 
   // Refresh user data if missing
   useEffect(() => {
-    if (!userFromStore && !loading) {
+    if (!user && !loading) {
       console.log("🔄 User data missing, refreshing...");
       dispatch(getCurrentUser());
     }
-  }, [userFromStore, loading, dispatch]);
+  }, [user, loading, dispatch]);
 
   useEffect(() => {
     console.log("🔍 ClientDetails useEffect triggered:", { 
       id, 
       hasCurrentClient: !!currentClient, 
       userRole: user?.role,
-      userFromStoreKeys: userFromStore ? Object.keys(userFromStore) : 'no userFromStore',
+      userId: user?._id,
       userKeys: user ? Object.keys(user) : 'no user'
     });
     if (id && currentClient && user?.role) {
@@ -183,11 +81,11 @@ const ClientDetails = () => {
         hasCurrentClient: !!currentClient,
         hasUserRole: !!user?.role,
         currentClientId: currentClient?._id,
-        userFromStoreType: typeof userFromStore,
-        userType: typeof user
+        userType: typeof user,
+        userValue: user
       });
     }
-  }, [id, currentClient, user, userFromStore]);
+  }, [id, currentClient, user]);
 
   const fetchClientCases = async () => {
     console.log("🚀 fetchClientCases called");
@@ -216,7 +114,7 @@ const ClientDetails = () => {
       console.log("👤 User details:", {
         role: user?.role,
         email: user?.email,
-        userId: userId
+        userId: user?._id
       });
       
       // For debt collectors, fetch all assigned cases and match by client or debtor info
