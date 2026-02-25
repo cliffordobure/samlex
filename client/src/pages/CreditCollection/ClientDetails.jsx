@@ -24,10 +24,18 @@ import {
 } from "react-icons/fa";
 
 const ClientDetails = () => {
+  console.log("🎯 ClientDetails component rendering");
   const { id } = useParams();
   const dispatch = useDispatch();
   const { currentClient, loading } = useSelector((state) => state.clients);
   const { user: userFromStore } = useSelector((state) => state.auth);
+  
+  console.log("🎯 ClientDetails initial state:", {
+    id,
+    hasCurrentClient: !!currentClient,
+    loading,
+    hasUser: !!userFromStore
+  });
 
   // Handle different user object structures - be very aggressive
   const getUser = (user) => user?.data || user || {};
@@ -145,35 +153,71 @@ const ClientDetails = () => {
 
   useEffect(() => {
     if (id) {
+      console.log("📥 Fetching client by ID:", id);
       dispatch(fetchClientById(id));
     }
   }, [id, dispatch]);
 
+  // Refresh user data if missing
   useEffect(() => {
-    if (id && currentClient && user?.role) {
-      fetchClientCases();
+    if (!userFromStore && !loading) {
+      console.log("🔄 User data missing, refreshing...");
+      dispatch(getCurrentUser());
     }
-  }, [id, currentClient, user]);
+  }, [userFromStore, loading, dispatch]);
+
+  useEffect(() => {
+    console.log("🔍 ClientDetails useEffect triggered:", { 
+      id, 
+      hasCurrentClient: !!currentClient, 
+      userRole: user?.role,
+      userFromStoreKeys: userFromStore ? Object.keys(userFromStore) : 'no userFromStore',
+      userKeys: user ? Object.keys(user) : 'no user'
+    });
+    if (id && currentClient && user?.role) {
+      console.log("✅ Conditions met, calling fetchClientCases");
+      fetchClientCases();
+    } else {
+      console.log("❌ Conditions not met:", {
+        hasId: !!id,
+        hasCurrentClient: !!currentClient,
+        hasUserRole: !!user?.role,
+        currentClientId: currentClient?._id,
+        userFromStoreType: typeof userFromStore,
+        userType: typeof user
+      });
+    }
+  }, [id, currentClient, user, userFromStore]);
 
   const fetchClientCases = async () => {
+    console.log("🚀 fetchClientCases called");
     try {
       setLoadingCases(true);
       
       if (!currentClient) {
+        console.error("❌ No currentClient, aborting");
         setLoadingCases(false);
         return;
       }
       
       if (!user) {
-        console.error("No user found in store");
+        console.error("❌ No user found in store");
         setLoadingCases(false);
         return;
       }
       
-      console.log("Fetching cases for client:", id, currentClient);
-      console.log("User object from store:", userFromStore);
-      console.log("Processed user:", user);
-      console.log("User ID extracted:", userId);
+      console.log("📋 Fetching cases for client:", id);
+      console.log("👤 Client details:", {
+        id: currentClient._id,
+        name: `${currentClient.firstName} ${currentClient.lastName}`,
+        email: currentClient.email,
+        phone: currentClient.phoneNumber
+      });
+      console.log("👤 User details:", {
+        role: user?.role,
+        email: user?.email,
+        userId: userId
+      });
       
       // For debt collectors, fetch all assigned cases and match by client or debtor info
       if (user?.role === "debt_collector") {
@@ -371,16 +415,53 @@ const ClientDetails = () => {
         }
         
         setCreditCases(allCreditCases);
+        console.log("✅ Credit cases set to state:", allCreditCases.length);
 
         // Fetch legal cases assigned to this debt collector for this client
         // Backend will automatically filter by req.user._id AND client ID for debt collectors
-        const assignedLegalResponse = await legalCaseApi.getLegalCases({ 
-          client: id, // Backend will filter by both client AND assignedTo automatically
-          limit: 1000 
-        });
-        const matchedLegalCases = assignedLegalResponse?.data?.data || [];
-        console.log("✅ Matched legal cases:", matchedLegalCases.length);
-        setLegalCases(matchedLegalCases);
+        console.log("📋 Fetching legal cases for client:", id);
+        try {
+          const assignedLegalResponse = await legalCaseApi.getLegalCases({ 
+            client: id, // Backend will filter by both client AND assignedTo automatically
+            limit: 1000 
+          });
+          console.log("📦 Legal cases API response:", assignedLegalResponse);
+          console.log("📦 Legal cases response.data:", assignedLegalResponse?.data);
+          console.log("📦 Legal cases response.data.data:", assignedLegalResponse?.data?.data);
+          
+          // Handle different response structures
+          let matchedLegalCases = [];
+          if (Array.isArray(assignedLegalResponse?.data?.data)) {
+            matchedLegalCases = assignedLegalResponse.data.data;
+          } else if (Array.isArray(assignedLegalResponse?.data)) {
+            matchedLegalCases = assignedLegalResponse.data;
+          }
+          
+          console.log("✅ Matched legal cases:", matchedLegalCases.length);
+          if (matchedLegalCases.length > 0) {
+            console.log("✅ Sample legal case:", {
+              _id: matchedLegalCases[0]._id,
+              title: matchedLegalCases[0].title,
+              client: matchedLegalCases[0].client
+            });
+          } else {
+            console.warn("⚠️ No legal cases found. Response structure:", {
+              hasData: !!assignedLegalResponse?.data,
+              hasDataData: !!assignedLegalResponse?.data?.data,
+              dataType: typeof assignedLegalResponse?.data,
+              dataDataType: typeof assignedLegalResponse?.data?.data
+            });
+          }
+          setLegalCases(matchedLegalCases);
+        } catch (legalError) {
+          console.error("❌ Error fetching legal cases:", legalError);
+          console.error("Legal error details:", {
+            message: legalError.message,
+            response: legalError.response?.data,
+            status: legalError.response?.status
+          });
+          setLegalCases([]);
+        }
       } else {
         // For other roles, fetch cases with client field AND match by debtor info
         const creditResponseWithClient = await creditCaseApi.getCreditCases({ client: id, limit: 1000 });
@@ -442,8 +523,14 @@ const ClientDetails = () => {
         }
       }
     } catch (error) {
-      console.error("Error fetching client cases:", error);
+      console.error("❌ Error fetching client cases:", error);
+      console.error("Error details:", {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
     } finally {
+      console.log("🏁 fetchClientCases completed, setting loading to false");
       setLoadingCases(false);
     }
   };
@@ -524,6 +611,14 @@ const ClientDetails = () => {
     ...creditCases.map(c => ({ ...c, type: 'credit' })),
     ...legalCases.map(c => ({ ...c, type: 'legal' }))
   ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+  console.log("📊 ClientDetails Render:", {
+    creditCasesCount: creditCases.length,
+    legalCasesCount: legalCases.length,
+    allCasesCount: allCases.length,
+    loadingCases,
+    currentClientId: currentClient?._id
+  });
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900/20 to-indigo-900/20 p-4 sm:p-6 space-y-6">

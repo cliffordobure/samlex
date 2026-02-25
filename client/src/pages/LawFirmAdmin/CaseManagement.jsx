@@ -243,7 +243,7 @@ const AdminCaseManagement = () => {
   const handleAssignEscalatedCase = async () => { 
     if (!assignmentData.assignedTo) {
       toast.error("Please select an advocate");
-      return;
+      return;  
     }
 
     if (!selectedEscalatedCase) {
