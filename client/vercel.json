@@ -2,6 +2,10 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "installCommand": "npm install",
-  "cleanUrls": true,
-  "trailingSlash": false
+  "rewrites": [
+    {
+      "source": "/((?!assets/|.*\\.[a-z0-9]{2,4}$).*)",
+      "destination": "/index.html"
+    }
+  ]
 }
