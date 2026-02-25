@@ -66,13 +66,12 @@ const CaseListView = ({
           <table className="w-full">
             <thead>
               <tr className="border-b border-slate-600/50">
-                <th className="px-4 py-3 text-left text-sm font-semibold text-white bg-slate-700/80">Case Number</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-white bg-slate-700/80">Case Reference Number</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold text-white bg-slate-700/80">Title</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold text-white bg-slate-700/80">Debtor</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold text-white bg-slate-700/80">Amount</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold text-white bg-slate-700/80">Priority</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold text-white bg-slate-700/80">Status</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-white bg-slate-700/80">Case Reference</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold text-white bg-slate-700/80">Actions</th>
               </tr>
             </thead>
@@ -89,7 +88,7 @@ const CaseListView = ({
                       to={`/credit-collection/cases/${case_._id}`}
                       className="inline-flex items-center space-x-2 text-blue-400 hover:text-blue-300 font-medium transition-colors duration-200"
                     >
-                      <span>{case_.caseNumber}</span>
+                      <span>{case_.caseReference || case_.caseNumber || "Not set"}</span>
                       <FaArrowRight className="w-3 h-3" />
                     </Link>
                   </td>
@@ -145,14 +144,6 @@ const CaseListView = ({
                         {case_.status.replace("_", " ").toUpperCase()}
                       </span>
                     )}
-                  </td>
-                  <td className="px-4 py-4">
-                    <div className="flex items-center space-x-2">
-                      <FaCalendarAlt className="w-4 h-4 text-slate-400" />
-                      <span className="text-slate-300">
-                        {case_.caseReference || "Not set"}
-                      </span>
-                    </div>
                   </td>
                   <td className="px-4 py-4">
                     <div className="flex items-center space-x-3">
@@ -343,17 +334,47 @@ const CaseManagement = () => {
   }, [fetchCases]);
 
   // ALL useEffect hooks come AFTER all function definitions
-  // Reset to page 1 when filters change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [filters.status, filters.priority, filters.assignedTo, filters.search]);
-
-  // Fetch cases and users with filters
+  // Reset to page 1 when filters change and trigger fetch
   useEffect(() => {
     if (!user) return;
-    fetchCases();
+    setCurrentPage(1);
+    
+    // Build params with page 1 when filters change
+    const params = buildQueryParams(1);
+    
+    if (user.role === "credit_head" && user.lawFirm?._id) {
+      const queryParams = Object.assign({ lawFirm: user.lawFirm._id }, params);
+      dispatch(getCreditCases(queryParams));
+    } else if (user.role === "debt_collector") {
+      const queryParams = Object.assign({ assignedTo: user._id }, params);
+      dispatch(getCreditCases(queryParams));
+    } else {
+      dispatch(getCreditCases(params));
+    }
+  }, [dispatch, user, filters.status, filters.priority, filters.assignedTo, filters.search, buildQueryParams]);
+
+  // Fetch cases when page changes (but not when filters change, that's handled above)
+  useEffect(() => {
+    if (!user || currentPage === 1) return; // Skip page 1 as it's handled by filter effect
+    
+    const params = buildQueryParams(currentPage);
+    
+    if (user.role === "credit_head" && user.lawFirm?._id) {
+      const queryParams = Object.assign({ lawFirm: user.lawFirm._id }, params);
+      dispatch(getCreditCases(queryParams));
+    } else if (user.role === "debt_collector") {
+      const queryParams = Object.assign({ assignedTo: user._id }, params);
+      dispatch(getCreditCases(queryParams));
+    } else {
+      dispatch(getCreditCases(params));
+    }
+  }, [dispatch, user, currentPage, buildQueryParams]);
+
+  // Initial fetch and fetch users
+  useEffect(() => {
+    if (!user) return;
     dispatch(getUsers({ role: "debt_collector" }));
-  }, [dispatch, user, fetchCases]);
+  }, [dispatch, user]);
 
   // Socket listeners for real-time updates
   useEffect(() => {
@@ -544,7 +565,7 @@ const CaseManagement = () => {
                       <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
                       <input
                         type="text"
-                        placeholder="Search cases..."
+                        placeholder="Search by title, case reference, debtor name, or case number..."
                         className="w-full pl-10 pr-4 py-3 bg-slate-700/80 border border-slate-600/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-200"
                         value={filters.search}
                         onChange={(e) =>
