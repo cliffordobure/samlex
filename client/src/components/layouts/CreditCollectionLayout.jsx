@@ -18,7 +18,8 @@ import {
   FaFileExcel,
   FaSms,
   FaPaperPlane,
-  FaBullseye
+  FaBullseye,
+  FaUsers
 } from "react-icons/fa";
 
 const CreditCollectionLayout = ({ children }) => {
@@ -33,6 +34,12 @@ const CreditCollectionLayout = ({ children }) => {
       href: "/credit-collection",
       icon: <FaHome className="w-5 h-5" />,
       description: "Dashboard overview and statistics"
+    },
+    {
+      name: "Clients",
+      href: "/credit-collection/clients",
+      icon: <FaUsers className="w-5 h-5" />,
+      description: "View and manage clients"
     },
     {
       name: "Cases",

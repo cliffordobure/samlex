@@ -771,7 +771,7 @@ export const getCreditCases = async (req, res) => {
           : "null",
     });
 
-    const { assignedTo, lawFirm, status, priority, search } = req.query;
+    const { assignedTo, lawFirm, status, priority, search, client } = req.query;
 
     // Check if user has law firm association
     if (!req.user.lawFirm) {
@@ -826,6 +826,11 @@ export const getCreditCases = async (req, res) => {
     // Add priority filter
     if (priority) {
       filter.priority = priority;
+    }
+
+    // Add client filter
+    if (client) {
+      filter.client = client;
     }
 
     // Add search filter (search in title, caseNumber, debtorName, caseReference)

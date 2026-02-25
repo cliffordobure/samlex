@@ -7,6 +7,8 @@ import BulkImport from "./BulkImport";
 import BulkSMS from "./BulkSMS";
 import SingleSMS from "./SingleSMS";
 import RevenueTargets from "../LawFirmAdmin/RevenueTargets";
+import Clients from "./Clients";
+import ClientDetails from "./ClientDetails";
 // import CreateCase from "./CreateCase";
 
 const CreditCollectionDashboard = () => {
@@ -16,6 +18,8 @@ const CreditCollectionDashboard = () => {
         <Route path="/" element={<CreditOverview />} />
         <Route path="/cases" element={<CaseManagement />} />
         <Route path="/cases/:id" element={<CaseDetails />} />
+        <Route path="/clients" element={<Clients />} />
+        <Route path="/clients/:id" element={<ClientDetails />} />
         <Route path="/bulk-import" element={<BulkImport />} />
         <Route path="/bulk-sms" element={<BulkSMS />} />
         <Route path="/send-sms" element={<SingleSMS />} />

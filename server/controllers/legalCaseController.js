@@ -604,6 +604,7 @@ export const getLegalCases = async (req, res) => {
       assignedTo,
       search,
       escalatedFrom,
+      client,
     } = req.query;
 
     // Check if user has law firm association
@@ -627,6 +628,7 @@ export const getLegalCases = async (req, res) => {
     if (caseType) filter.caseType = caseType;
     if (priority) filter.priority = priority;
     if (assignedTo) filter.assignedTo = assignedTo;
+    if (client) filter.client = client;
     if (escalatedFrom === "true") {
       filter["escalatedFrom.creditCaseId"] = { $exists: true };
     }

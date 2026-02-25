@@ -1,0 +1,371 @@
+import { useEffect, useState } from "react";
+import { useParams, Link } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchClientById } from "../../store/slices/clientSlice";
+import creditCaseApi from "../../store/api/creditCaseApi";
+import legalCaseApi from "../../store/api/legalCaseApi";
+import { 
+  FaArrowLeft, 
+  FaUser, 
+  FaPhone, 
+  FaEnvelope, 
+  FaBuilding,
+  FaSpinner,
+  FaFileAlt,
+  FaGavel,
+  FaMoneyBillWave,
+  FaCalendarAlt,
+  FaExclamationTriangle,
+  FaCheckCircle,
+  FaClock,
+  FaEye,
+  FaArrowRight
+} from "react-icons/fa";
+
+const ClientDetails = () => {
+  const { id } = useParams();
+  const dispatch = useDispatch();
+  const { currentClient, loading } = useSelector((state) => state.clients);
+  const { user } = useSelector((state) => state.auth);
+
+  const [creditCases, setCreditCases] = useState([]);
+  const [legalCases, setLegalCases] = useState([]);
+  const [loadingCases, setLoadingCases] = useState(true);
+
+  useEffect(() => {
+    if (id) {
+      dispatch(fetchClientById(id));
+      fetchClientCases();
+    }
+  }, [id, dispatch]);
+
+  const fetchClientCases = async () => {
+    try {
+      setLoadingCases(true);
+      
+      // Fetch credit cases for this client
+      const creditResponse = await creditCaseApi.getCreditCases({ client: id });
+      if (creditResponse.data?.success) {
+        setCreditCases(creditResponse.data.data || []);
+      }
+
+      // Fetch legal cases for this client
+      const legalResponse = await legalCaseApi.getLegalCases({ client: id });
+      if (legalResponse.data?.success) {
+        setLegalCases(legalResponse.data.data || []);
+      }
+    } catch (error) {
+      console.error("Error fetching client cases:", error);
+    } finally {
+      setLoadingCases(false);
+    }
+  };
+
+  const getStatusBadgeClass = (status) => {
+    switch (status) {
+      case "new":
+      case "pending_assignment":
+        return "bg-blue-500/20 text-blue-400 border border-blue-500/30";
+      case "assigned":
+      case "in_progress":
+      case "under_review":
+        return "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30";
+      case "follow_up_required":
+        return "bg-orange-500/20 text-orange-400 border border-orange-500/30";
+      case "escalated_to_legal":
+      case "court_proceedings":
+        return "bg-red-500/20 text-red-400 border border-red-500/30";
+      case "resolved":
+      case "closed":
+      case "settlement":
+        return "bg-green-500/20 text-green-400 border border-green-500/30";
+      default:
+        return "bg-slate-500/20 text-slate-400 border border-slate-500/30";
+    }
+  };
+
+  const getPriorityBadgeClass = (priority) => {
+    switch (priority) {
+      case "urgent":
+        return "bg-red-500/20 text-red-400 border border-red-500/30";
+      case "high":
+        return "bg-orange-500/20 text-orange-400 border border-orange-500/30";
+      case "medium":
+        return "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30";
+      case "low":
+        return "bg-blue-500/20 text-blue-400 border border-blue-500/30";
+      default:
+        return "bg-slate-500/20 text-slate-400 border border-slate-500/30";
+    }
+  };
+
+  if (loading || loadingCases) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900/20 to-indigo-900/20 flex justify-center items-center">
+        <div className="text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full mb-4">
+            <FaSpinner className="w-8 h-8 text-white animate-spin" />
+          </div>
+          <p className="text-xs font-semibold text-white">Loading Client Details...</p>
+          <p className="text-xs text-slate-400 mt-2">Please wait while we fetch your data</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!currentClient) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900/20 to-indigo-900/20 flex justify-center items-center">
+        <div className="text-center">
+          <div className="w-16 h-16 mx-auto bg-slate-700/50 rounded-full flex items-center justify-center mb-4">
+            <FaUser className="w-8 h-8 text-slate-500" />
+          </div>
+          <h3 className="text-xs font-medium text-slate-300 mb-2">Client not found</h3>
+          <Link
+            to="/credit-collection/clients"
+            className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-xl font-semibold transition-all duration-200 mt-4"
+          >
+            <FaArrowLeft className="w-4 h-4 mr-2" />
+            Back to Clients
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const allCases = [
+    ...creditCases.map(c => ({ ...c, type: 'credit' })),
+    ...legalCases.map(c => ({ ...c, type: 'legal' }))
+  ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900/20 to-indigo-900/20 p-4 sm:p-6 space-y-6">
+      {/* Back Button */}
+      <Link
+        to="/credit-collection/clients"
+        className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-slate-800/80 to-slate-700/80 hover:from-slate-700/80 hover:to-slate-600/80 text-white rounded-xl font-semibold transition-all duration-200 border border-slate-600/50"
+      >
+        <FaArrowLeft className="w-4 h-4 mr-2" />
+        Back to Clients
+      </Link>
+
+      {/* Client Info Header */}
+      <div className="bg-gradient-to-r from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl p-6 border border-slate-600/50 shadow-2xl">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
+          <div className="flex items-center space-x-4">
+            <div className="w-16 h-16 bg-gradient-to-r from-blue-500/20 to-indigo-500/20 rounded-full flex items-center justify-center">
+              {currentClient.clientType === "corporate" ? (
+                <FaBuilding className="w-8 h-8 text-blue-400" />
+              ) : (
+                <FaUser className="w-8 h-8 text-blue-400" />
+              )}
+            </div>
+            <div>
+              <h1 className="text-xs font-bold text-white">
+                {currentClient.clientType === "corporate" && currentClient.companyName
+                  ? currentClient.companyName
+                  : `${currentClient.firstName} ${currentClient.lastName}`}
+              </h1>
+              {currentClient.clientType === "corporate" && (
+                <p className="text-xs text-slate-300 mt-1">
+                  {currentClient.firstName} {currentClient.lastName}
+                </p>
+              )}
+              <div className="flex items-center space-x-4 mt-2">
+                {currentClient.phoneNumber && (
+                  <div className="flex items-center space-x-2 text-xs text-slate-300">
+                    <FaPhone className="w-3 h-3 text-slate-400" />
+                    <span>{currentClient.phoneNumber}</span>
+                  </div>
+                )}
+                {currentClient.email && (
+                  <div className="flex items-center space-x-2 text-xs text-slate-300">
+                    <FaEnvelope className="w-3 h-3 text-slate-400" />
+                    <span>{currentClient.email}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center space-x-2">
+            <span
+              className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                currentClient.status === "active"
+                  ? "bg-green-500/20 text-green-400 border border-green-500/30"
+                  : currentClient.status === "inactive"
+                  ? "bg-slate-500/20 text-slate-400 border border-slate-500/30"
+                  : "bg-red-500/20 text-red-400 border border-red-500/30"
+              }`}
+            >
+              {currentClient.status?.toUpperCase()}
+            </span>
+          </div>
+        </div>
+
+        {/* Additional Client Info */}
+        {currentClient.address && (
+          <div className="mt-4 pt-4 border-t border-slate-600/50">
+            <div className="flex items-center space-x-2 text-xs text-slate-300">
+              <FaBuilding className="w-3 h-3 text-slate-400" />
+              <span>
+                {[
+                  currentClient.address.street,
+                  currentClient.address.city,
+                  currentClient.address.state,
+                  currentClient.address.zipCode,
+                ]
+                  .filter(Boolean)
+                  .join(", ") || "No address provided"}
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Cases Section */}
+      <div className="bg-gradient-to-r from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl border border-slate-600/50 shadow-2xl">
+        <div className="p-6 border-b border-slate-600/50">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-gradient-to-r from-blue-500/20 to-indigo-500/20 rounded-lg">
+                <FaFileAlt className="w-5 h-5 text-blue-400" />
+              </div>
+              <h3 className="text-xs font-semibold text-white">
+                All Matters ({allCases.length})
+              </h3>
+            </div>
+          </div>
+        </div>
+        <div className="p-6">
+          {allCases.length > 0 ? (
+            <div className="space-y-4">
+              {allCases.map((case_) => (
+                <div
+                  key={`${case_.type}-${case_._id}`}
+                  className="p-4 bg-slate-700/50 rounded-xl border border-slate-600/50 hover:bg-slate-700/70 transition-all duration-200"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-3 mb-2">
+                        {case_.type === "credit" ? (
+                          <FaMoneyBillWave className="w-4 h-4 text-blue-400" />
+                        ) : (
+                          <FaGavel className="w-4 h-4 text-purple-400" />
+                        )}
+                        <h4 className="font-semibold text-white text-xs">
+                          {case_.title}
+                        </h4>
+                        <span
+                          className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                            case_.type === "credit"
+                              ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                              : "bg-purple-500/20 text-purple-400 border border-purple-500/30"
+                          }`}
+                        >
+                          {case_.type === "credit" ? "Credit Case" : "Legal Case"}
+                        </span>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-4 mt-2 text-xs text-slate-300">
+                        {case_.caseNumber && (
+                          <span className="flex items-center space-x-1">
+                            <FaFileAlt className="w-3 h-3 text-slate-400" />
+                            <span>{case_.caseNumber}</span>
+                          </span>
+                        )}
+                        {case_.type === "credit" && case_.debtorName && (
+                          <span className="flex items-center space-x-1">
+                            <FaUser className="w-3 h-3 text-slate-400" />
+                            <span>{case_.debtorName}</span>
+                          </span>
+                        )}
+                        {case_.type === "credit" && case_.debtAmount && (
+                          <span className="flex items-center space-x-1">
+                            <FaMoneyBillWave className="w-3 h-3 text-slate-400" />
+                            <span>KES {case_.debtAmount?.toLocaleString()}</span>
+                          </span>
+                        )}
+                        <span className="flex items-center space-x-1">
+                          <FaCalendarAlt className="w-3 h-3 text-slate-400" />
+                          <span>{new Date(case_.createdAt).toLocaleDateString()}</span>
+                        </span>
+                      </div>
+
+                      {/* Remaining Balance for Credit Cases */}
+                      {case_.type === "credit" && case_.promisedPayments && (
+                        (() => {
+                          const totalPaid = case_.promisedPayments
+                            .filter((p) => p.status === "paid")
+                            .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+                          const remaining = (parseFloat(case_.debtAmount) || 0) - totalPaid;
+                          return remaining > 0 ? (
+                            <div className="mt-2 flex items-center space-x-1">
+                              <span className="text-xs text-orange-400 font-medium">
+                                Remaining: KES {remaining.toLocaleString()}
+                              </span>
+                            </div>
+                          ) : totalPaid > 0 ? (
+                            <div className="mt-2 flex items-center space-x-1">
+                              <FaCheckCircle className="w-3 h-3 text-green-400" />
+                              <span className="text-xs text-green-400 font-medium">
+                                Fully Paid
+                              </span>
+                            </div>
+                          ) : null;
+                        })()
+                      )}
+                    </div>
+                    <div className="text-right ml-4 space-y-2">
+                      <span
+                        className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getStatusBadgeClass(
+                          case_.status
+                        )}`}
+                      >
+                        {case_.status?.replace("_", " ").toUpperCase()}
+                      </span>
+                      {case_.priority && (
+                        <span
+                          className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getPriorityBadgeClass(
+                            case_.priority
+                          )}`}
+                        >
+                          {case_.priority.toUpperCase()}
+                        </span>
+                      )}
+                      <Link
+                        to={
+                          case_.type === "credit"
+                            ? `/credit-collection/cases/${case_._id}`
+                            : `/admin/legal-case/${case_._id}`
+                        }
+                        className="inline-flex items-center px-3 py-2 bg-gradient-to-r from-blue-500/20 to-indigo-500/20 hover:from-blue-500/30 hover:to-indigo-500/30 text-blue-400 rounded-lg transition-all duration-200 border border-blue-500/30 hover:border-blue-500/50 mt-2"
+                      >
+                        <FaEye className="w-3 h-3 mr-1" />
+                        <span className="text-xs">View Details</span>
+                        <FaArrowRight className="w-3 h-3 ml-1" />
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <div className="w-16 h-16 mx-auto bg-slate-700/50 rounded-full flex items-center justify-center mb-4">
+                <FaFileAlt className="w-8 h-8 text-slate-500" />
+              </div>
+              <h3 className="text-xs font-medium text-slate-300 mb-2">
+                No matters found
+              </h3>
+              <p className="text-xs text-slate-400">
+                This client doesn't have any cases yet.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ClientDetails;
