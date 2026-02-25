@@ -64,6 +64,7 @@ const ClientDetails = () => {
     }
   }, [user, loading, dispatch]);
 
+  // Fetch cases when we have client and user info
   useEffect(() => {
     console.log("🔍 ClientDetails useEffect triggered:", { 
       id, 
@@ -72,20 +73,25 @@ const ClientDetails = () => {
       userId: user?._id,
       userKeys: user ? Object.keys(user) : 'no user'
     });
-    if (id && currentClient && user?.role) {
-      console.log("✅ Conditions met, calling fetchClientCases");
-      fetchClientCases();
+    
+    // Try to fetch cases if we have the minimum required info
+    if (id && currentClient) {
+      if (user?.role) {
+        console.log("✅ Conditions met, calling fetchClientCases");
+        fetchClientCases();
+      } else {
+        console.log("⚠️ User role missing, will fetch after user data loads");
+      }
     } else {
       console.log("❌ Conditions not met:", {
         hasId: !!id,
         hasCurrentClient: !!currentClient,
         hasUserRole: !!user?.role,
         currentClientId: currentClient?._id,
-        userType: typeof user,
-        userValue: user
+        userType: typeof user
       });
     }
-  }, [id, currentClient, user]);
+  }, [id, currentClient, user?.role]);
 
   const fetchClientCases = async () => {
     console.log("🚀 fetchClientCases called");
@@ -515,8 +521,23 @@ const ClientDetails = () => {
     legalCasesCount: legalCases.length,
     allCasesCount: allCases.length,
     loadingCases,
-    currentClientId: currentClient?._id
+    currentClientId: currentClient?._id,
+    hasUser: !!user,
+    userRole: user?.role
   });
+  
+  // Debug info - remove this after fixing
+  const debugInfo = {
+    hasId: !!id,
+    hasCurrentClient: !!currentClient,
+    hasUser: !!user,
+    userRole: user?.role,
+    creditCasesCount: creditCases.length,
+    legalCasesCount: legalCases.length,
+    allCasesCount: allCases.length,
+    loadingCases,
+    currentClientName: currentClient ? `${currentClient.firstName} ${currentClient.lastName}` : 'N/A'
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900/20 to-indigo-900/20 p-4 sm:p-6 space-y-6">
@@ -601,6 +622,23 @@ const ClientDetails = () => {
           </div>
         )}
       </div>
+
+      {/* Debug Info - Remove after fixing */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-xl p-4 text-xs">
+          <div className="text-yellow-400 font-semibold mb-2">🔍 Debug Info:</div>
+          <div className="text-yellow-300 space-y-1">
+            <div>Has ID: {debugInfo.hasId ? '✅' : '❌'} {id}</div>
+            <div>Has Client: {debugInfo.hasCurrentClient ? '✅' : '❌'} {debugInfo.currentClientName}</div>
+            <div>Has User: {debugInfo.hasUser ? '✅' : '❌'}</div>
+            <div>User Role: {debugInfo.userRole || 'N/A'}</div>
+            <div>Credit Cases: {debugInfo.creditCasesCount}</div>
+            <div>Legal Cases: {debugInfo.legalCasesCount}</div>
+            <div>All Cases: {debugInfo.allCasesCount}</div>
+            <div>Loading: {debugInfo.loadingCases ? 'Yes' : 'No'}</div>
+          </div>
+        </div>
+      )}
 
       {/* Cases Section */}
       <div className="bg-gradient-to-r from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl border border-slate-600/50 shadow-2xl">
