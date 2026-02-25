@@ -169,15 +169,21 @@ const ClientDetails = () => {
           
           // Match by phone (most reliable) - normalize phone numbers
           if (caseDebtorContact && clientPhone) {
-            // Remove spaces, dashes, and other formatting
-            const normalizePhone = (phone) => phone.replace(/[\s\-\(\)]/g, '');
+            // Remove spaces, dashes, and other formatting - be very lenient
+            const normalizePhone = (phone) => {
+              if (!phone) return '';
+              return phone.toString().replace(/[\s\-\(\)\+]/g, '').replace(/^0/, '').replace(/^254/, '');
+            };
             const casePhoneNormalized = normalizePhone(caseDebtorContact);
             const clientPhoneNormalized = normalizePhone(clientPhone);
             
-            if (casePhoneNormalized === clientPhoneNormalized || 
-                caseDebtorContact.trim() === clientPhone.trim()) {
-              
-              // If phone matches, be more lenient with name matching
+            // Also try direct comparison
+            const directMatch = caseDebtorContact.trim() === clientPhone.trim();
+            const normalizedMatch = casePhoneNormalized && clientPhoneNormalized && 
+                                   casePhoneNormalized === clientPhoneNormalized;
+            
+            if (directMatch || normalizedMatch) {
+              // If phone matches, be VERY lenient with name matching
               let nameMatches = false;
               
               if (caseDebtorName && (clientName || clientCompanyName)) {
@@ -189,9 +195,16 @@ const ClientDetails = () => {
                 if (caseNameLower === clientNameLower || caseNameLower === clientCompanyLower) {
                   nameMatches = true;
                 }
-                // Partial match (one contains the other)
+                // Partial match (one contains the other) - be more lenient
                 else if (caseNameLower.includes(clientNameLower) || clientNameLower.includes(caseNameLower) ||
-                         caseNameLower.includes(clientCompanyLower) || clientCompanyLower.includes(caseNameLower)) {
+                         caseNameLower.includes(clientCompanyLower) || clientCompanyLower.includes(caseNameLower) ||
+                         // Also check if any significant word matches
+                         caseNameLower.split(/\s+/).some(word => 
+                           word.length > 3 && (clientNameLower.includes(word) || clientCompanyLower.includes(word))
+                         ) ||
+                         (clientNameLower.split(/\s+/).some(word => 
+                           word.length > 3 && caseNameLower.includes(word)
+                         ))) {
                   nameMatches = true;
                 }
                 // Match by name parts (like backend does)
@@ -204,14 +217,28 @@ const ClientDetails = () => {
                       lastName === clientLastName.toLowerCase()) {
                     nameMatches = true;
                   }
+                  // Also try reverse (last name first)
+                  else if (nameParts.length >= 2) {
+                    const lastPart = nameParts[nameParts.length - 1];
+                    const firstParts = nameParts.slice(0, -1).join(" ");
+                    if (lastPart === clientLastName.toLowerCase() && 
+                        firstParts === clientFirstName.toLowerCase()) {
+                      nameMatches = true;
+                    }
+                  }
                 }
               }
               
-              // If phone matches, include it (name matching is optional for phone matches)
-              if (nameMatches || !caseDebtorName || !clientName) {
-                console.log("✓✓✓ MATCHED by phone:", case_._id, "Name match:", nameMatches);
-                return true;
-              }
+              // If phone matches, ALWAYS include it (phone is the most reliable identifier)
+              // Name matching is optional - if phone matches, it's the same person/company
+              console.log("✓✓✓ MATCHED by phone:", case_._id, {
+                casePhone: caseDebtorContact,
+                clientPhone: clientPhone,
+                caseName: caseDebtorName,
+                clientName: clientName,
+                nameMatch: nameMatches
+              });
+              return true;
             }
           }
           
@@ -243,7 +270,23 @@ const ClientDetails = () => {
         console.log("Cases with client field:", creditCasesWithClient.length);
         console.log("Cases matched by debtor info:", matchedByDebtor.length);
         console.log("Total unique credit cases:", allCreditCases.length);
-        console.log("Sample case:", allCreditCases[0]);
+        if (allCreditCases.length > 0) {
+          console.log("✅ Sample matched case:", {
+            _id: allCreditCases[0]._id,
+            title: allCreditCases[0].title,
+            debtorName: allCreditCases[0].debtorName,
+            debtorContact: allCreditCases[0].debtorContact
+          });
+        } else {
+          console.error("❌ NO CASES FOUND! Check the matching logic above.");
+          console.log("Client info used for matching:", {
+            id,
+            email: clientEmail,
+            name: clientName,
+            phone: clientPhone,
+            company: clientCompanyName
+          });
+        }
         
         setCreditCases(allCreditCases);
 
