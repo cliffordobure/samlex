@@ -621,6 +621,12 @@ export const getLegalCases = async (req, res) => {
     // Role-based filtering
     if (req.user.role === "advocate") {
       filter.assignedTo = req.user._id;
+    } else if (req.user.role === "debt_collector") {
+      // For debt collectors, if no assignedTo is specified, default to their own cases
+      if (!assignedTo) {
+        filter.assignedTo = req.user._id;
+        console.log("Debt collector - defaulting to own legal cases:", req.user._id);
+      }
     }
 
     // Apply filters

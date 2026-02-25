@@ -806,8 +806,13 @@ export const getCreditCases = async (req, res) => {
     // Always filter by the authenticated user's law firm
     let filter = { lawFirm: userLawFirmId };
 
+    // Handle assignedTo filter - if debt_collector and no assignedTo specified, use their own ID
     if (assignedTo) {
       filter.assignedTo = assignedTo;
+    } else if (req.user.role === "debt_collector") {
+      // For debt collectors, if no assignedTo is specified, default to their own cases
+      filter.assignedTo = req.user._id;
+      console.log("Debt collector - defaulting to own cases:", req.user._id);
     }
 
     // If a specific law firm is requested and user has permission, allow it

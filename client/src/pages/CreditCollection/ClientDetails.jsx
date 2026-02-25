@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchClientById } from "../../store/slices/clientSlice";
+import { getCurrentUser } from "../../store/slices/authSlice";
 import creditCaseApi from "../../store/api/creditCaseApi";
 import legalCaseApi from "../../store/api/legalCaseApi";
 import { 
@@ -28,33 +29,45 @@ const ClientDetails = () => {
   const { currentClient, loading } = useSelector((state) => state.clients);
   const { user: userFromStore } = useSelector((state) => state.auth);
 
-  // Handle different user object structures
+  // Handle different user object structures - be very aggressive
   const getUser = (user) => user?.data || user || {};
   const user = getUser(userFromStore);
   
-  // Get user ID - MongoDB uses _id, but some APIs might return id
-  // Try _id first (MongoDB standard), then id, then check localStorage
+  // Get user ID - try EVERY possible location and format
   let userId = null;
   
-  // First try from Redux user object
+  // Strategy 1: Try from processed user object
   if (user) {
-    userId = user._id || user.id || null;
+    userId = user._id || user.id || user.userId || null;
     // If _id is an object (MongoDB ObjectId), convert to string
-    if (userId && typeof userId === 'object' && userId.toString) {
-      userId = userId.toString();
+    if (userId && typeof userId === 'object') {
+      if (userId.toString) {
+        userId = userId.toString();
+      } else if (userId.$oid) {
+        userId = userId.$oid; // MongoDB extended JSON format
+      }
     }
   }
   
-  // Fallback: try to get from localStorage if not in Redux
+  // Strategy 2: Try from raw userFromStore (before processing)
+  if (!userId && userFromStore) {
+    userId = userFromStore._id || userFromStore.id || 
+             userFromStore.data?._id || userFromStore.data?.id ||
+             null;
+    if (userId && typeof userId === 'object') {
+      userId = userId.toString ? userId.toString() : (userId.$oid || null);
+    }
+  }
+  
+  // Strategy 3: Try from localStorage
   if (!userId) {
     try {
       const storedUser = localStorage.getItem("user");
       if (storedUser) {
         const parsedUser = JSON.parse(storedUser);
         userId = parsedUser?._id || parsedUser?.id || null;
-        // Convert to string if it's an object
-        if (userId && typeof userId === 'object' && userId.toString) {
-          userId = userId.toString();
+        if (userId && typeof userId === 'object') {
+          userId = userId.toString ? userId.toString() : (userId.$oid || null);
         }
         if (userId) {
           console.log("✅ Got user ID from localStorage:", userId);
@@ -65,22 +78,42 @@ const ClientDetails = () => {
     }
   }
   
-  // Final fallback: try to get from token payload (decode JWT)
+  // Strategy 4: Decode JWT token (most reliable - always has id field)
   if (!userId) {
     try {
       const token = localStorage.getItem("token");
       if (token) {
+        console.log("🔍 Attempting to decode JWT token...");
         // Simple JWT decode (without verification - just for getting user ID)
-        const base64Url = token.split('.')[1];
-        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-        const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-        }).join(''));
-        const decoded = JSON.parse(jsonPayload);
-        userId = decoded.id || decoded._id || null;
-        if (userId) {
-          console.log("✅ Got user ID from JWT token:", userId);
+        const parts = token.split('.');
+        if (parts.length === 3) {
+          const base64Url = parts[1];
+          if (base64Url) {
+            // Add padding if needed
+            let base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            while (base64.length % 4) {
+              base64 += '=';
+            }
+            
+            try {
+              const jsonPayload = atob(base64);
+              const decoded = JSON.parse(jsonPayload);
+              console.log("🔍 Decoded JWT payload:", decoded);
+              userId = decoded.id || decoded._id || null;
+              if (userId) {
+                console.log("✅ Got user ID from JWT token:", userId);
+              } else {
+                console.warn("⚠️ JWT decoded but no id field found. Payload keys:", Object.keys(decoded));
+              }
+            } catch (parseError) {
+              console.error("Error parsing JWT payload:", parseError);
+            }
+          }
+        } else {
+          console.error("Invalid JWT token format - expected 3 parts, got:", parts.length);
         }
+      } else {
+        console.warn("⚠️ No token found in localStorage");
       }
     } catch (e) {
       console.error("Error decoding token:", e);
@@ -117,7 +150,7 @@ const ClientDetails = () => {
   }, [id, dispatch]);
 
   useEffect(() => {
-    if (id && currentClient) {
+    if (id && currentClient && user?.role) {
       fetchClientCases();
     }
   }, [id, currentClient, user]);
@@ -144,25 +177,22 @@ const ClientDetails = () => {
       
       // For debt collectors, fetch all assigned cases and match by client or debtor info
       if (user?.role === "debt_collector") {
-        if (!userId) {
-          console.error("❌ User ID is missing! Cannot fetch cases. User object:", user);
-          setLoadingCases(false);
-          return;
-        }
-        console.log("Fetching cases for debt collector with userId:", userId);
+        // Backend automatically uses req.user._id from JWT token for debt collectors
+        // No need to extract userId from frontend - backend handles it!
+        console.log("✅ Fetching cases for debt collector (backend uses authenticated user ID automatically)");
         
         // First, try to fetch cases with client field set
+        // Backend will automatically filter by req.user._id for debt collectors
         const creditResponseWithClient = await creditCaseApi.getCreditCases({ 
           client: id,
-          assignedTo: userId,
           limit: 1000 
         });
         let creditCasesWithClient = creditResponseWithClient?.data?.data || [];
-        console.log("Cases with client field:", creditCasesWithClient.length);
+        console.log("✅ Cases with client field:", creditCasesWithClient.length);
         
         // Also fetch all assigned cases to match by debtor info
+        // Backend will automatically filter by req.user._id for debt collectors
         const assignedCreditResponse = await creditCaseApi.getCreditCases({ 
-          assignedTo: userId, 
           limit: 1000 
         });
         const allAssignedCases = assignedCreditResponse?.data?.data || [];
@@ -343,17 +373,13 @@ const ClientDetails = () => {
         setCreditCases(allCreditCases);
 
         // Fetch legal cases assigned to this debt collector for this client
+        // Backend will automatically filter by req.user._id AND client ID for debt collectors
         const assignedLegalResponse = await legalCaseApi.getLegalCases({ 
-          assignedTo: userId,
+          client: id, // Backend will filter by both client AND assignedTo automatically
           limit: 1000 
         });
-        const allAssignedLegalCases = assignedLegalResponse.data?.data || assignedLegalResponse.data || [];
-        const matchedLegalCases = allAssignedLegalCases.filter((case_) => {
-          if (!case_.client) return false;
-          const clientId = typeof case_.client === 'string' ? case_.client : (case_.client._id || case_.client);
-          return clientId.toString() === id;
-        });
-        console.log("Matched legal cases:", matchedLegalCases.length);
+        const matchedLegalCases = assignedLegalResponse?.data?.data || [];
+        console.log("✅ Matched legal cases:", matchedLegalCases.length);
         setLegalCases(matchedLegalCases);
       } else {
         // For other roles, fetch cases with client field AND match by debtor info
