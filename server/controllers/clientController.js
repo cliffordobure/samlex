@@ -134,7 +134,7 @@ export const getClients = async (req, res) => {
       const assignedCreditCases = await CreditCase.find({
         assignedTo: req.user._id,
         lawFirm: req.user.lawFirm._id,
-      }).select("client");
+      }).select("client debtorName debtorEmail debtorContact");
 
       // Find all legal cases assigned to this debt collector
       const assignedLegalCases = await LegalCase.find({
@@ -142,7 +142,7 @@ export const getClients = async (req, res) => {
         lawFirm: req.user.lawFirm._id,
       }).select("client");
 
-      // Get unique client IDs from both credit and legal cases
+      // Get unique client IDs from cases that have client field set
       const clientIds = new Set();
       assignedCreditCases.forEach((case_) => {
         if (case_.client) {
@@ -155,7 +155,41 @@ export const getClients = async (req, res) => {
         }
       });
 
-      // If no cases assigned, return empty result
+      // For credit cases without client field, try to match by debtor information
+      const debtorMatches = [];
+      for (const case_ of assignedCreditCases) {
+        if (!case_.client && case_.debtorName && case_.debtorContact) {
+          // Try to find client by name and phone
+          const nameParts = case_.debtorName.trim().split(" ");
+          const firstName = nameParts[0] || "";
+          const lastName = nameParts.slice(1).join(" ") || "Client";
+          
+          // Try to find by email first if available
+          if (case_.debtorEmail) {
+            const clientByEmail = await Client.findOne({
+              email: case_.debtorEmail.toLowerCase(),
+              lawFirm: req.user.lawFirm._id,
+            }).select("_id");
+            if (clientByEmail) {
+              clientIds.add(clientByEmail._id.toString());
+              continue;
+            }
+          }
+          
+          // Try to find by name and phone
+          const clientByNamePhone = await Client.findOne({
+            firstName: firstName,
+            lastName: lastName,
+            phoneNumber: case_.debtorContact,
+            lawFirm: req.user.lawFirm._id,
+          }).select("_id");
+          if (clientByNamePhone) {
+            clientIds.add(clientByNamePhone._id.toString());
+          }
+        }
+      }
+
+      // If no clients found, return empty result
       if (clientIds.size === 0) {
         return res.json({
           success: true,
@@ -215,22 +249,63 @@ export const getClients = async (req, res) => {
     if (req.user.role === "debt_collector") {
       const clientIds = clients.map((c) => c._id);
       
+      // Get all clients with their details for matching
+      const clientsMap = new Map();
+      clients.forEach((client) => {
+        clientsMap.set(client._id.toString(), {
+          email: client.email?.toLowerCase(),
+          firstName: client.firstName,
+          lastName: client.lastName,
+          phoneNumber: client.phoneNumber,
+        });
+      });
+
       // Count credit cases assigned to this debt collector for these clients
-      const creditCaseCounts = await CreditCase.aggregate([
-        {
-          $match: {
-            client: { $in: clientIds },
-            assignedTo: req.user._id,
-            lawFirm: req.user.lawFirm._id,
-          },
-        },
-        {
-          $group: {
-            _id: "$client",
-            count: { $sum: 1 },
-          },
-        },
-      ]);
+      // Include both cases with client field and cases matched by debtor info
+      const allAssignedCreditCases = await CreditCase.find({
+        assignedTo: req.user._id,
+        lawFirm: req.user.lawFirm._id,
+      }).select("client debtorName debtorEmail debtorContact");
+
+      // Count cases per client
+      const creditCountMap = new Map();
+      allAssignedCreditCases.forEach((case_) => {
+        let matchedClientId = null;
+        
+        // First check if case has direct client reference
+        if (case_.client) {
+          matchedClientId = case_.client.toString();
+        } else {
+          // Try to match by debtor information
+          for (const [clientId, clientInfo] of clientsMap.entries()) {
+            // Match by email
+            if (case_.debtorEmail && clientInfo.email && 
+                case_.debtorEmail.toLowerCase() === clientInfo.email) {
+              matchedClientId = clientId;
+              break;
+            }
+            // Match by name and phone
+            if (case_.debtorName && case_.debtorContact && 
+                clientInfo.firstName && clientInfo.lastName && clientInfo.phoneNumber) {
+              const nameParts = case_.debtorName.trim().split(" ");
+              const firstName = nameParts[0] || "";
+              const lastName = nameParts.slice(1).join(" ") || "Client";
+              
+              if (firstName === clientInfo.firstName && 
+                  lastName === clientInfo.lastName &&
+                  case_.debtorContact === clientInfo.phoneNumber) {
+                matchedClientId = clientId;
+                break;
+              }
+            }
+          }
+        }
+        
+        if (matchedClientId && clientIds.includes(matchedClientId)) {
+          const currentCount = creditCountMap.get(matchedClientId) || 0;
+          creditCountMap.set(matchedClientId, currentCount + 1);
+        }
+      });
 
       // Count legal cases assigned to this debt collector for these clients
       const legalCaseCounts = await LegalCase.aggregate([
@@ -248,12 +323,6 @@ export const getClients = async (req, res) => {
           },
         },
       ]);
-
-      // Create maps for quick lookup
-      const creditCountMap = new Map();
-      creditCaseCounts.forEach((item) => {
-        creditCountMap.set(item._id.toString(), item.count);
-      });
 
       const legalCountMap = new Map();
       legalCaseCounts.forEach((item) => {
