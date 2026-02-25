@@ -88,7 +88,7 @@ const CaseListView = ({
                       to={`/credit-collection/cases/${case_._id}`}
                       className="inline-flex items-center space-x-2 text-blue-400 hover:text-blue-300 font-medium transition-colors duration-200"
                     >
-                      <span>{case_.caseReference || case_.caseNumber || "Not set"}</span>
+                      <span>{case_.caseReference || "Not set"}</span>
                       <FaArrowRight className="w-3 h-3" />
                     </Link>
                   </td>
@@ -167,7 +167,7 @@ const CaseListView = ({
                       )}
                       {user?.role === "law_firm_admin" && onDeleteCase && (
                         <button
-                          onClick={() => onDeleteCase(case_._id, case_.caseNumber)}
+                          onClick={() => onDeleteCase(case_._id, case_.caseReference)}
                           className="inline-flex items-center space-x-2 px-3 py-2 bg-gradient-to-r from-red-500/20 to-pink-500/20 hover:from-red-500/30 hover:to-pink-500/30 text-red-400 rounded-lg transition-all duration-200 border border-red-500/30 hover:border-red-500/50"
                           title="Delete case"
                         >
@@ -270,7 +270,7 @@ const CaseManagement = () => {
   const [deleteModal, setDeleteModal] = useState({
     isOpen: false,
     caseId: null,
-    caseNumber: null,
+    caseReference: null,
   });
   const [isDeleting, setIsDeleting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -428,7 +428,7 @@ const CaseManagement = () => {
   };
 
   // Handle delete case
-  const handleDeleteCase = (caseId, caseNumber) => {
+  const handleDeleteCase = (caseId, caseReference) => {
     if (user?.role !== "law_firm_admin") {
       toast.error("Only administrators can delete cases");
       return;
@@ -436,7 +436,7 @@ const CaseManagement = () => {
     setDeleteModal({
       isOpen: true,
       caseId,
-      caseNumber,
+      caseReference,
     });
   };
 
@@ -449,7 +449,7 @@ const CaseManagement = () => {
       toast.success("Credit case deleted successfully");
       // Refresh cases with current filters and pagination
       fetchCases();
-      setDeleteModal({ isOpen: false, caseId: null, caseNumber: null });
+      setDeleteModal({ isOpen: false, caseId: null, caseReference: null });
     } catch (error) {
       toast.error(error.message || "Failed to delete case");
     } finally {
@@ -459,7 +459,7 @@ const CaseManagement = () => {
 
   const cancelDeleteCase = () => {
     if (!isDeleting) {
-      setDeleteModal({ isOpen: false, caseId: null, caseNumber: null });
+      setDeleteModal({ isOpen: false, caseId: null, caseReference: null });
     }
   };
 
@@ -732,7 +732,7 @@ const CaseManagement = () => {
                         Are you sure you want to permanently delete this credit case?
                       </p>
                       <p className="text-slate-300 text-sm">
-                        <strong>Case Number:</strong> {deleteModal.caseNumber}
+                        <strong>Reference Number:</strong> {deleteModal.caseReference || "N/A"}
                       </p>
                       <p className="text-red-400 text-sm mt-2 font-semibold">
                         ⚠️ This will permanently delete the case and all associated data from the database.

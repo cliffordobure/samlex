@@ -20,7 +20,8 @@ import {
   FaCheckCircle,
   FaClock,
   FaEye,
-  FaArrowRight
+  FaArrowRight,
+  FaSearch
 } from "react-icons/fa";
 
 const ClientDetails = () => {
@@ -42,6 +43,7 @@ const ClientDetails = () => {
   const [creditCases, setCreditCases] = useState([]);
   const [legalCases, setLegalCases] = useState([]);
   const [loadingCases, setLoadingCases] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
   
   console.log("=== CLIENT DETAILS - USER INFO ===");
   console.log("User object from Redux:", user);
@@ -516,6 +518,19 @@ const ClientDetails = () => {
     ...legalCases.map(c => ({ ...c, type: 'legal' }))
   ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
+  // Filter cases based on search term
+  const filteredCases = allCases.filter((case_) => {
+    if (!searchTerm) return true;
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      case_.title?.toLowerCase().includes(searchLower) ||
+      case_.caseReference?.toLowerCase().includes(searchLower) ||
+      case_.debtorName?.toLowerCase().includes(searchLower) ||
+      (case_.type === "credit" && case_.debtorEmail?.toLowerCase().includes(searchLower)) ||
+      (case_.type === "credit" && case_.debtorContact?.toLowerCase().includes(searchLower))
+    );
+  });
+
   console.log("📊 ClientDetails Render:", {
     creditCasesCount: creditCases.length,
     legalCasesCount: legalCases.length,
@@ -643,21 +658,34 @@ const ClientDetails = () => {
       {/* Cases Section */}
       <div className="bg-gradient-to-r from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl border border-slate-600/50 shadow-2xl">
         <div className="p-6 border-b border-slate-600/50">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
             <div className="flex items-center space-x-3">
               <div className="p-2 bg-gradient-to-r from-blue-500/20 to-indigo-500/20 rounded-lg">
                 <FaFileAlt className="w-5 h-5 text-blue-400" />
               </div>
               <h3 className="text-xs font-semibold text-white">
-                All Matters ({allCases.length})
+                All Matters ({filteredCases.length})
               </h3>
+            </div>
+            {/* Search Input */}
+            <div className="relative w-full sm:w-64">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <FaSearch className="w-4 h-4 text-slate-400" />
+              </div>
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search cases..."
+                className="w-full pl-10 pr-4 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 text-sm"
+              />
             </div>
           </div>
         </div>
         <div className="p-6">
-          {allCases.length > 0 ? (
+          {filteredCases.length > 0 ? (
             <div className="space-y-4">
-              {allCases.map((case_) => (
+              {filteredCases.map((case_) => (
                 <div
                   key={`${case_.type}-${case_._id}`}
                   className="p-4 bg-slate-700/50 rounded-xl border border-slate-600/50 hover:bg-slate-700/70 transition-all duration-200"
@@ -685,10 +713,10 @@ const ClientDetails = () => {
                       </div>
 
                       <div className="flex flex-wrap items-center gap-4 mt-2 text-xs text-slate-300">
-                        {case_.caseNumber && (
+                        {case_.caseReference && (
                           <span className="flex items-center space-x-1">
                             <FaFileAlt className="w-3 h-3 text-slate-400" />
-                            <span>{case_.caseNumber}</span>
+                            <span>{case_.caseReference}</span>
                           </span>
                         )}
                         {case_.type === "credit" && case_.debtorName && (
@@ -766,6 +794,18 @@ const ClientDetails = () => {
                   </div>
                 </div>
               ))}
+            </div>
+          ) : searchTerm ? (
+            <div className="text-center py-12">
+              <div className="w-16 h-16 mx-auto bg-slate-700/50 rounded-full flex items-center justify-center mb-4">
+                <FaSearch className="w-8 h-8 text-slate-500" />
+              </div>
+              <h3 className="text-xs font-medium text-slate-300 mb-2">
+                No cases found
+              </h3>
+              <p className="text-xs text-slate-400">
+                No cases match your search term "{searchTerm}".
+              </p>
             </div>
           ) : (
             <div className="text-center py-12">
