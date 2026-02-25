@@ -35,24 +35,140 @@ const ClientDetails = () => {
   useEffect(() => {
     if (id) {
       dispatch(fetchClientById(id));
-      fetchClientCases();
     }
   }, [id, dispatch]);
+
+  useEffect(() => {
+    if (id && currentClient) {
+      fetchClientCases();
+    }
+  }, [id, currentClient, user]);
 
   const fetchClientCases = async () => {
     try {
       setLoadingCases(true);
       
-      // Fetch credit cases for this client
-      const creditResponse = await creditCaseApi.getCreditCases({ client: id });
-      if (creditResponse.data?.success) {
-        setCreditCases(creditResponse.data.data || []);
+      if (!currentClient) {
+        setLoadingCases(false);
+        return;
       }
+      
+      // For debt collectors, fetch all assigned cases and match by client or debtor info
+      if (user?.role === "debt_collector") {
+        // Fetch all credit cases assigned to this debt collector
+        const assignedCreditResponse = await creditCaseApi.getCreditCases({ 
+          assignedTo: user._id, 
+          limit: 1000 
+        });
+        const allAssignedCases = assignedCreditResponse.data?.data || [];
+        
+        // Match cases by client field OR debtor information
+        const matchedCreditCases = allAssignedCases.filter((case_) => {
+          // If case has client field, check if it matches
+          if (case_.client) {
+            const clientId = typeof case_.client === 'string' ? case_.client : case_.client._id;
+            return clientId.toString() === id;
+          }
+          
+          // Otherwise, match by debtor information
+          const caseDebtorEmail = case_.debtorEmail?.toLowerCase();
+          const caseDebtorName = case_.debtorName?.trim();
+          const caseDebtorContact = case_.debtorContact;
+          
+          const clientEmail = currentClient.email?.toLowerCase();
+          const clientName = `${currentClient.firstName} ${currentClient.lastName}`.trim();
+          const clientPhone = currentClient.phoneNumber;
+          
+          // Match by email
+          if (caseDebtorEmail && clientEmail && caseDebtorEmail === clientEmail) {
+            return true;
+          }
+          
+          // Match by name and phone
+          if (caseDebtorName && caseDebtorContact && clientName && clientPhone) {
+            const nameMatch = caseDebtorName.toLowerCase() === clientName.toLowerCase();
+            const phoneMatch = caseDebtorContact === clientPhone;
+            if (nameMatch && phoneMatch) {
+              return true;
+            }
+          }
+          
+          return false;
+        });
+        
+        setCreditCases(matchedCreditCases);
 
-      // Fetch legal cases for this client
-      const legalResponse = await legalCaseApi.getLegalCases({ client: id });
-      if (legalResponse.data?.success) {
-        setLegalCases(legalResponse.data.data || []);
+        // Fetch legal cases assigned to this debt collector for this client
+        const assignedLegalResponse = await legalCaseApi.getLegalCases({ 
+          assignedTo: user._id,
+          limit: 1000 
+        });
+        const allAssignedLegalCases = assignedLegalResponse.data?.data || [];
+        const matchedLegalCases = allAssignedLegalCases.filter((case_) => {
+          if (!case_.client) return false;
+          const clientId = typeof case_.client === 'string' ? case_.client : case_.client._id;
+          return clientId.toString() === id;
+        });
+        setLegalCases(matchedLegalCases);
+      } else {
+        // For other roles, fetch cases with client field AND match by debtor info
+        const creditResponseWithClient = await creditCaseApi.getCreditCases({ client: id, limit: 1000 });
+        let creditCasesWithClient = creditResponseWithClient.data?.data || [];
+        
+        // Also fetch all credit cases and match by debtor information
+        const allCreditResponse = await creditCaseApi.getCreditCases({ limit: 1000 });
+        const allCreditCases = allCreditResponse.data?.data || [];
+        
+        // Match cases by debtor information
+        const matchedByDebtor = allCreditCases.filter((case_) => {
+          // Skip if already in creditCasesWithClient
+          if (case_.client) {
+            const clientId = typeof case_.client === 'string' ? case_.client : case_.client._id;
+            if (clientId.toString() === id) {
+              return false; // Already included
+            }
+          }
+          
+          // Match by debtor information
+          const caseDebtorEmail = case_.debtorEmail?.toLowerCase();
+          const caseDebtorName = case_.debtorName?.trim();
+          const caseDebtorContact = case_.debtorContact;
+          
+          const clientEmail = currentClient.email?.toLowerCase();
+          const clientName = `${currentClient.firstName} ${currentClient.lastName}`.trim();
+          const clientPhone = currentClient.phoneNumber;
+          
+          // Match by email
+          if (caseDebtorEmail && clientEmail && caseDebtorEmail === clientEmail) {
+            return true;
+          }
+          
+          // Match by name and phone
+          if (caseDebtorName && caseDebtorContact && clientName && clientPhone) {
+            const nameMatch = caseDebtorName.toLowerCase() === clientName.toLowerCase();
+            const phoneMatch = caseDebtorContact === clientPhone;
+            if (nameMatch && phoneMatch) {
+              return true;
+            }
+          }
+          
+          return false;
+        });
+        
+        // Combine cases with client field and matched cases
+        const caseIds = new Set(creditCasesWithClient.map(c => c._id.toString()));
+        matchedByDebtor.forEach(c => {
+          if (!caseIds.has(c._id.toString())) {
+            creditCasesWithClient.push(c);
+          }
+        });
+        
+        setCreditCases(creditCasesWithClient);
+
+        const legalResponse = await legalCaseApi.getLegalCases({ client: id, limit: 1000 });
+        if (legalResponse.data?.success) {
+          setLegalCases(legalResponse.data.data || []);
+        }
       }
     } catch (error) {
       console.error("Error fetching client cases:", error);

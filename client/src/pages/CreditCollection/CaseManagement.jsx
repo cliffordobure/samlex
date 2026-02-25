@@ -264,6 +264,7 @@ const CaseManagement = () => {
     assignedTo: "",
     search: "",
   });
+  const [searchInput, setSearchInput] = useState(""); // Separate state for search input
   const [viewMode, setViewMode] = useState("list");
   const [error, setError] = useState("");
   const [deleteModal, setDeleteModal] = useState({
@@ -332,6 +333,15 @@ const CaseManagement = () => {
       fetchCases();
     }
   }, [fetchCases]);
+
+  // Debounce search input - update filters.search after user stops typing
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setFilters(prev => ({ ...prev, search: searchInput }));
+    }, 500); // 500ms debounce delay
+
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
   // ALL useEffect hooks come AFTER all function definitions
   // Reset to page 1 when filters change and trigger fetch
@@ -567,10 +577,12 @@ const CaseManagement = () => {
                         type="text"
                         placeholder="Search by title, case reference, debtor name, or case number..."
                         className="w-full pl-10 pr-4 py-3 bg-slate-700/80 border border-slate-600/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-200"
-                        value={filters.search}
-                        onChange={(e) =>
-                          setFilters({ ...filters, search: e.target.value })
-                        }
+                        value={searchInput}
+                        onChange={(e) => {
+                          setSearchInput(e.target.value);
+                          // Immediately reset to page 1 when user starts typing
+                          setCurrentPage(1);
+                        }}
                       />
                     </div>
                     <div>
@@ -651,6 +663,8 @@ const CaseManagement = () => {
                             assignedTo: "",
                             search: "",
                           });
+                          setSearchInput(""); // Also clear search input
+                          setCurrentPage(1); // Reset to page 1
                         }}
                         className="w-full px-4 py-3 bg-slate-700/80 hover:bg-slate-600/80 border border-slate-600/50 rounded-xl text-slate-300 transition-all duration-200 flex items-center justify-center space-x-2"
                       >
