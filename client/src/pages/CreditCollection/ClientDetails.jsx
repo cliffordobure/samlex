@@ -26,11 +26,37 @@ const ClientDetails = () => {
   const { id } = useParams();
   const dispatch = useDispatch();
   const { currentClient, loading } = useSelector((state) => state.clients);
-  const { user } = useSelector((state) => state.auth);
+  const { user: userFromStore } = useSelector((state) => state.auth);
+
+  // Handle different user object structures
+  const getUser = (user) => user?.data || user || {};
+  const user = getUser(userFromStore);
+  
+  // Get user ID - try multiple possible fields and localStorage as fallback
+  let userId = user?._id || user?.id || user?.userId || null;
+  
+  // Fallback: try to get from localStorage if not in Redux
+  if (!userId) {
+    try {
+      const storedUser = localStorage.getItem("user");
+      if (storedUser) {
+        const parsedUser = JSON.parse(storedUser);
+        userId = parsedUser?._id || parsedUser?.id || parsedUser?.userId || null;
+        console.log("Got user ID from localStorage:", userId);
+      }
+    } catch (e) {
+      console.error("Error parsing user from localStorage:", e);
+    }
+  }
 
   const [creditCases, setCreditCases] = useState([]);
   const [legalCases, setLegalCases] = useState([]);
   const [loadingCases, setLoadingCases] = useState(true);
+  
+  console.log("ClientDetails - User object from Redux:", userFromStore);
+  console.log("ClientDetails - Processed user:", user);
+  console.log("ClientDetails - User ID:", userId);
+  console.log("ClientDetails - User role:", user?.role);
 
   useEffect(() => {
     if (id) {
@@ -53,14 +79,30 @@ const ClientDetails = () => {
         return;
       }
       
+      if (!user) {
+        console.error("No user found in store");
+        setLoadingCases(false);
+        return;
+      }
+      
       console.log("Fetching cases for client:", id, currentClient);
+      console.log("User object from store:", userFromStore);
+      console.log("Processed user:", user);
+      console.log("User ID extracted:", userId);
       
       // For debt collectors, fetch all assigned cases and match by client or debtor info
       if (user?.role === "debt_collector") {
+        if (!userId) {
+          console.error("❌ User ID is missing! Cannot fetch cases. User object:", user);
+          setLoadingCases(false);
+          return;
+        }
+        console.log("Fetching cases for debt collector with userId:", userId);
+        
         // First, try to fetch cases with client field set
         const creditResponseWithClient = await creditCaseApi.getCreditCases({ 
           client: id,
-          assignedTo: user._id,
+          assignedTo: userId,
           limit: 1000 
         });
         let creditCasesWithClient = creditResponseWithClient?.data?.data || [];
@@ -68,7 +110,7 @@ const ClientDetails = () => {
         
         // Also fetch all assigned cases to match by debtor info
         const assignedCreditResponse = await creditCaseApi.getCreditCases({ 
-          assignedTo: user._id, 
+          assignedTo: userId, 
           limit: 1000 
         });
         const allAssignedCases = assignedCreditResponse?.data?.data || [];
@@ -207,7 +249,7 @@ const ClientDetails = () => {
 
         // Fetch legal cases assigned to this debt collector for this client
         const assignedLegalResponse = await legalCaseApi.getLegalCases({ 
-          assignedTo: user._id,
+          assignedTo: userId,
           limit: 1000 
         });
         const allAssignedLegalCases = assignedLegalResponse.data?.data || assignedLegalResponse.data || [];
