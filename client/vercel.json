@@ -4,8 +4,19 @@
   "installCommand": "npm install",
   "rewrites": [
     {
-      "source": "/((?!.*\\.[a-z0-9]{2,4}$|assets/).*)",
+      "source": "/((?!assets|_next|favicon.ico|manifest.json|sw.js|vite.svg|.*\\.[a-z0-9]{2,4}$).*)",
       "destination": "/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/assets/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
     }
   ]
 }
