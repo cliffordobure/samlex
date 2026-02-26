@@ -41,6 +41,10 @@ const creditCaseApi = {
     api.post(`/credit-cases/${id}/promised-payment`, data),
   updatePromisedPaymentStatus: (id, paymentId, data) =>
     api.patch(`/credit-cases/${id}/promised-payment/${paymentId}`, data),
+  updatePromisedPayment: (id, paymentId, data) =>
+    api.put(`/credit-cases/${id}/promised-payment/${paymentId}`, data),
+  deletePromisedPayment: (id, paymentId) =>
+    api.delete(`/credit-cases/${id}/promised-payment/${paymentId}`),
   // Escalation endpoints
   getEscalationFee: (id) => api.get(`/credit-cases/${id}/escalation-fee`),
   initiateEscalation: (id) =>

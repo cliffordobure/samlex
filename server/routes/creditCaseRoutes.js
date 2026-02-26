@@ -10,6 +10,8 @@ import {
   addFollowUpToCreditCase,
   addPromisedPaymentToCreditCase,
   updatePromisedPaymentStatus,
+  updatePromisedPayment,
+  deletePromisedPayment,
   escalateCreditCase,
   getCreditCases,
   getCreditCaseById,
@@ -104,6 +106,20 @@ router.patch(
   "/:id/promised-payment/:paymentId",
   protect,
   updatePromisedPaymentStatus
+);
+
+// Update promised payment details
+router.put(
+  "/:id/promised-payment/:paymentId",
+  protect,
+  updatePromisedPayment
+);
+
+// Delete a promised payment
+router.delete(
+  "/:id/promised-payment/:paymentId",
+  protect,
+  deletePromisedPayment
 );
 
 // Escalate a case

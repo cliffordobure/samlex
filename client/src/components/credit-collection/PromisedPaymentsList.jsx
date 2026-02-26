@@ -14,8 +14,17 @@ import toast from "react-hot-toast";
 const PromisedPaymentsList = ({ case_, onUpdate }) => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState(null);
+  const [paymentToDelete, setPaymentToDelete] = useState(null);
   const [newPayment, setNewPayment] = useState({
+    amount: "",
+    currency: "KES",
+    promisedDate: new Date(),
+    notes: "",
+    paymentMethod: "",
+  });
+  const [editPayment, setEditPayment] = useState({
     amount: "",
     currency: "KES",
     promisedDate: new Date(),
@@ -87,6 +96,75 @@ const PromisedPaymentsList = ({ case_, onUpdate }) => {
       toast.error(
         error.response?.data?.message || "Failed to update payment status"
       );
+    }
+  };
+
+  const handleEditPayment = (payment) => {
+    setSelectedPayment(payment);
+    setEditPayment({
+      amount: payment.amount.toString(),
+      currency: payment.currency || "KES",
+      promisedDate: new Date(payment.promisedDate),
+      notes: payment.notes || "",
+      paymentMethod: payment.paymentMethod || "",
+    });
+    setShowEditModal(true);
+  };
+
+  const handleUpdatePayment = async () => {
+    try {
+      if (!editPayment.amount || parseFloat(editPayment.amount) <= 0) {
+        toast.error("Please enter a valid amount");
+        return;
+      }
+
+      const paymentData = {
+        amount: parseFloat(editPayment.amount),
+        currency: editPayment.currency,
+        promisedDate: editPayment.promisedDate.toISOString(),
+        notes: editPayment.notes,
+        paymentMethod: editPayment.paymentMethod,
+      };
+
+      const response = await creditCaseApi.updatePromisedPayment(
+        case_._id,
+        selectedPayment._id,
+        paymentData
+      );
+
+      if (response.data.success) {
+        toast.success("Promised payment updated successfully");
+        setShowEditModal(false);
+        setSelectedPayment(null);
+        onUpdate();
+      }
+    } catch (error) {
+      console.error("Error updating payment:", error);
+      toast.error(error.response?.data?.message || "Failed to update payment");
+    }
+  };
+
+  const handleDeletePayment = (payment) => {
+    setPaymentToDelete(payment);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDeletePayment = async () => {
+    try {
+      const response = await creditCaseApi.deletePromisedPayment(
+        case_._id,
+        paymentToDelete._id
+      );
+
+      if (response.data.success) {
+        toast.success("Promised payment deleted successfully");
+        setShowDeleteConfirm(false);
+        setPaymentToDelete(null);
+        onUpdate();
+      }
+    } catch (error) {
+      console.error("Error deleting payment:", error);
+      toast.error(error.response?.data?.message || "Failed to delete payment");
     }
   };
 
@@ -221,8 +299,26 @@ const PromisedPaymentsList = ({ case_, onUpdate }) => {
                       {status.toUpperCase()}
                     </span>
                   </div>
-                  <div className="text-sm text-dark-300">
-                    Due: {new Date(payment.promisedDate).toLocaleDateString()}
+                  <div className="flex items-center space-x-2">
+                    <div className="text-sm text-dark-300">
+                      Due: {new Date(payment.promisedDate).toLocaleDateString()}
+                    </div>
+                    <div className="flex items-center space-x-1">
+                      <button
+                        onClick={() => handleEditPayment(payment)}
+                        className="text-blue-400 hover:text-blue-300 p-1 rounded"
+                        title="Edit payment"
+                      >
+                        <FaEdit className="text-sm" />
+                      </button>
+                      <button
+                        onClick={() => handleDeletePayment(payment)}
+                        className="text-red-400 hover:text-red-300 p-1 rounded"
+                        title="Delete payment"
+                      >
+                        <FaTrash className="text-sm" />
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -281,7 +377,7 @@ const PromisedPaymentsList = ({ case_, onUpdate }) => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-dark-800 rounded-lg p-6 max-w-md w-full mx-4">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">Add Promised Payment</h3>
+              <h3 className="text-lg font-semibold text-white">Add Promised Payment</h3>
               <button
                 onClick={() => setShowAddModal(false)}
                 className="text-dark-300 hover:text-white"
@@ -392,6 +488,195 @@ const PromisedPaymentsList = ({ case_, onUpdate }) => {
                 </button>
                 <button
                   onClick={() => setShowAddModal(false)}
+                  className="bg-dark-700 hover:bg-dark-600 text-white px-4 py-2 rounded-lg"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Payment Modal */}
+      {showEditModal && selectedPayment && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-dark-800 rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-white">Edit Promised Payment</h3>
+              <button
+                onClick={() => {
+                  setShowEditModal(false);
+                  setSelectedPayment(null);
+                }}
+                className="text-dark-300 hover:text-white"
+              >
+                <FaTimesCircle />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm text-dark-300 mb-2">
+                  Amount
+                </label>
+                <input
+                  type="number"
+                  value={editPayment.amount}
+                  onChange={(e) =>
+                    setEditPayment({
+                      ...editPayment,
+                      amount: e.target.value,
+                    })
+                  }
+                  placeholder="Enter amount"
+                  className="w-full bg-dark-700 border border-dark-600 rounded-lg px-3 py-2 text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-dark-300 mb-2">
+                  Currency
+                </label>
+                <select
+                  value={editPayment.currency}
+                  onChange={(e) =>
+                    setEditPayment({
+                      ...editPayment,
+                      currency: e.target.value,
+                    })
+                  }
+                  className="w-full bg-dark-700 border border-dark-600 rounded-lg px-3 py-2 text-white"
+                >
+                  <option value="KES">KES</option>
+                  <option value="USD">USD</option>
+                  <option value="EUR">EUR</option>
+                  <option value="GBP">GBP</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm text-dark-300 mb-2">
+                  Promised Date
+                </label>
+                <input
+                  type="date"
+                  value={editPayment.promisedDate.toISOString().split("T")[0]}
+                  onChange={(e) =>
+                    setEditPayment({
+                      ...editPayment,
+                      promisedDate: new Date(e.target.value),
+                    })
+                  }
+                  className="w-full bg-dark-700 border border-dark-600 rounded-lg px-3 py-2 text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-dark-300 mb-2">
+                  Payment Method
+                </label>
+                <input
+                  type="text"
+                  value={editPayment.paymentMethod}
+                  onChange={(e) =>
+                    setEditPayment({
+                      ...editPayment,
+                      paymentMethod: e.target.value,
+                    })
+                  }
+                  placeholder="e.g., Cash, Bank Transfer, M-Pesa"
+                  className="w-full bg-dark-700 border border-dark-600 rounded-lg px-3 py-2 text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-dark-300 mb-2">
+                  Notes
+                </label>
+                <textarea
+                  value={editPayment.notes}
+                  onChange={(e) =>
+                    setEditPayment({
+                      ...editPayment,
+                      notes: e.target.value,
+                    })
+                  }
+                  placeholder="Additional notes about the payment"
+                  rows={3}
+                  className="w-full bg-dark-700 border border-dark-600 rounded-lg px-3 py-2 text-white"
+                />
+              </div>
+
+              <div className="flex space-x-2 pt-4">
+                <button
+                  onClick={handleUpdatePayment}
+                  className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex-1"
+                >
+                  Update Payment
+                </button>
+                <button
+                  onClick={() => {
+                    setShowEditModal(false);
+                    setSelectedPayment(null);
+                  }}
+                  className="bg-dark-700 hover:bg-dark-600 text-white px-4 py-2 rounded-lg"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && paymentToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-dark-800 rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-white">Delete Promised Payment</h3>
+              <button
+                onClick={() => {
+                  setShowDeleteConfirm(false);
+                  setPaymentToDelete(null);
+                }}
+                className="text-dark-300 hover:text-white"
+              >
+                <FaTimesCircle />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <p className="text-dark-300">
+                Are you sure you want to delete this promised payment?
+              </p>
+              <div className="bg-dark-700 rounded-lg p-4 border border-dark-600">
+                <p className="text-white font-medium">
+                  {formatCurrency(paymentToDelete.amount, paymentToDelete.currency)}
+                </p>
+                <p className="text-dark-300 text-sm mt-1">
+                  Due: {new Date(paymentToDelete.promisedDate).toLocaleDateString()}
+                </p>
+                {paymentToDelete.status === "paid" && (
+                  <p className="text-orange-400 text-sm mt-2">
+                    ⚠️ This payment is marked as paid. Deleting it will reduce the total paid amount.
+                  </p>
+                )}
+              </div>
+
+              <div className="flex space-x-2 pt-4">
+                <button
+                  onClick={confirmDeletePayment}
+                  className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg flex-1"
+                >
+                  Delete Payment
+                </button>
+                <button
+                  onClick={() => {
+                    setShowDeleteConfirm(false);
+                    setPaymentToDelete(null);
+                  }}
                   className="bg-dark-700 hover:bg-dark-600 text-white px-4 py-2 rounded-lg"
                 >
                   Cancel

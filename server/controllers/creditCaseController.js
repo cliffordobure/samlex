@@ -1757,6 +1757,316 @@ export const updatePromisedPaymentStatus = async (req, res) => {
   }
 };
 
+// Update promised payment details (amount, date, notes, etc.)
+export const updatePromisedPayment = async (req, res) => {
+  try {
+    const { id, paymentId } = req.params;
+    const { amount, currency, promisedDate, notes, paymentMethod } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid case ID" });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(paymentId)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid payment ID" });
+    }
+
+    // First check if the case exists and belongs to the user's law firm
+    const case_ = await CreditCase.findById(id);
+    if (!case_) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Case not found" });
+    }
+
+    // Verify the case belongs to the user's law firm
+    if (case_.lawFirm.toString() !== req.user.lawFirm._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message:
+          "You can only update promised payments for cases in your law firm",
+      });
+    }
+
+    // Verify user has permission to update promised payments
+    if (
+      req.user.role === "debt_collector" &&
+      case_.assignedTo?.toString() !== req.user._id.toString()
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "You can only update promised payments for cases assigned to you",
+      });
+    }
+
+    // Find the payment to get its current status
+    const existingPayment = case_.promisedPayments.find(
+      (p) => p._id.toString() === paymentId
+    );
+
+    if (!existingPayment) {
+      return res.status(404).json({
+        success: false,
+        message: "Promised payment not found",
+      });
+    }
+
+    // Prepare update data
+    const updateData = {};
+    if (amount !== undefined) updateData["promisedPayments.$.amount"] = parseFloat(amount);
+    if (currency !== undefined) updateData["promisedPayments.$.currency"] = currency;
+    if (promisedDate !== undefined) updateData["promisedPayments.$.promisedDate"] = new Date(promisedDate);
+    if (notes !== undefined) updateData["promisedPayments.$.notes"] = notes;
+    if (paymentMethod !== undefined) updateData["promisedPayments.$.paymentMethod"] = paymentMethod;
+
+    // If the payment was paid and amount is being changed, recalculate total paid
+    const newAmount = amount !== undefined ? parseFloat(amount) : existingPayment.amount;
+    const wasPaid = existingPayment.status === "paid";
+
+    // Update the payment
+    const updatedCase = await CreditCase.findOneAndUpdate(
+      {
+        _id: id,
+        "promisedPayments._id": paymentId,
+      },
+      {
+        $set: {
+          ...updateData,
+          lastActivity: new Date(),
+        },
+      },
+      { new: true }
+    );
+
+    if (!updatedCase) {
+      return res.status(404).json({
+        success: false,
+        message: "Promised payment not found",
+      });
+    }
+
+    // Recalculate total paid amount if payment was paid
+    let finalCase = updatedCase;
+    if (wasPaid) {
+      const totalPaidAmount = updatedCase.promisedPayments.reduce((sum, payment) => {
+        return sum + (payment.status === "paid" ? payment.amount : 0);
+      }, 0);
+
+      // Check if case should still be resolved
+      const shouldResolveCase = totalPaidAmount >= updatedCase.debtAmount;
+      
+      // Update case status if needed
+      if (shouldResolveCase && updatedCase.status !== "resolved") {
+        finalCase = await CreditCase.findByIdAndUpdate(
+          id,
+          {
+            status: "resolved",
+            resolvedAt: new Date(),
+          },
+          { new: true }
+        );
+      } else if (!shouldResolveCase && updatedCase.status === "resolved") {
+        // If payment was reduced and case is no longer fully paid, revert status
+        const hasOtherPayments = updatedCase.promisedPayments.length > 0;
+        const newStatus = hasOtherPayments ? "in_progress" : case_.status;
+        
+        finalCase = await CreditCase.findByIdAndUpdate(
+          id,
+          {
+            status: newStatus,
+            $unset: { resolvedAt: "" },
+          },
+          { new: true }
+        );
+      }
+    }
+
+    // Find the updated payment for notification
+    const updatedPayment = finalCase.promisedPayments.find(
+      (p) => p._id.toString() === paymentId
+    );
+
+    // Create notification for payment update
+    await createNotification({
+      user: case_.assignedTo || req.user._id,
+      title: `Promised Payment Updated: ${case_.caseNumber}`,
+      message: `Payment details for ${updatedPayment.currency} ${updatedPayment.amount.toLocaleString()} for case "${
+        case_.title || case_.caseNumber
+      }" have been updated`,
+      type: "payment_updated",
+      priority: "medium",
+      relatedCreditCase: case_._id,
+      actionUrl: `/credit-collection/cases/${case_._id}`,
+      metadata: {
+        caseNumber: case_.caseNumber,
+        caseTitle: case_.title,
+        paymentAmount: updatedPayment.amount,
+        currency: updatedPayment.currency,
+        updatedBy: `${req.user.firstName} ${req.user.lastName}`,
+      },
+    });
+
+    // Emit socket event for real-time updates
+    req.app.get("io").emit("promisedPaymentUpdated", finalCase);
+
+    res.status(200).json({
+      success: true,
+      message: "Promised payment updated successfully",
+      data: finalCase,
+    });
+  } catch (error) {
+    console.error("Error updating promised payment:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to update promised payment",
+      error: error.message,
+    });
+  }
+};
+
+// Delete a promised payment
+export const deletePromisedPayment = async (req, res) => {
+  try {
+    const { id, paymentId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid case ID" });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(paymentId)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid payment ID" });
+    }
+
+    // First check if the case exists and belongs to the user's law firm
+    const case_ = await CreditCase.findById(id);
+    if (!case_) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Case not found" });
+    }
+
+    // Verify the case belongs to the user's law firm
+    if (case_.lawFirm.toString() !== req.user.lawFirm._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message:
+          "You can only delete promised payments for cases in your law firm",
+      });
+    }
+
+    // Verify user has permission to delete promised payments
+    if (
+      req.user.role === "debt_collector" &&
+      case_.assignedTo?.toString() !== req.user._id.toString()
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "You can only delete promised payments for cases assigned to you",
+      });
+    }
+
+    // Find the payment to check its status
+    const paymentToDelete = case_.promisedPayments.find(
+      (p) => p._id.toString() === paymentId
+    );
+
+    if (!paymentToDelete) {
+      return res.status(404).json({
+        success: false,
+        message: "Promised payment not found",
+      });
+    }
+
+    const wasPaid = paymentToDelete.status === "paid";
+    const previousStatus = case_.status;
+
+    // Remove the payment from the array
+    const updatedCase = await CreditCase.findByIdAndUpdate(
+      id,
+      {
+        $pull: { promisedPayments: { _id: paymentId } },
+        lastActivity: new Date(),
+      },
+      { new: true }
+    );
+
+    if (!updatedCase) {
+      return res.status(404).json({
+        success: false,
+        message: "Case not found",
+      });
+    }
+
+    // If the deleted payment was paid, recalculate total paid and update case status
+    let finalCase = updatedCase;
+    if (wasPaid) {
+      const totalPaidAmount = updatedCase.promisedPayments.reduce((sum, payment) => {
+        return sum + (payment.status === "paid" ? payment.amount : 0);
+      }, 0);
+
+      // If case was resolved and is no longer fully paid, revert status
+      if (previousStatus === "resolved" && totalPaidAmount < updatedCase.debtAmount) {
+        // Revert to in_progress if there are still payments, otherwise keep current status
+        const hasOtherPayments = updatedCase.promisedPayments.length > 0;
+        const newStatus = hasOtherPayments ? "in_progress" : case_.status;
+        
+        finalCase = await CreditCase.findByIdAndUpdate(
+          id,
+          {
+            status: newStatus,
+            $unset: { resolvedAt: "" },
+          },
+          { new: true }
+        );
+      }
+    }
+
+    // Create notification for payment deletion
+    await createNotification({
+      user: case_.assignedTo || req.user._id,
+      title: `Promised Payment Deleted: ${case_.caseNumber}`,
+      message: `A payment of ${paymentToDelete.currency} ${paymentToDelete.amount.toLocaleString()} for case "${
+        case_.title || case_.caseNumber
+      }" has been deleted`,
+      type: "payment_deleted",
+      priority: "medium",
+      relatedCreditCase: case_._id,
+      actionUrl: `/credit-collection/cases/${case_._id}`,
+      metadata: {
+        caseNumber: case_.caseNumber,
+        caseTitle: case_.title,
+        paymentAmount: paymentToDelete.amount,
+        currency: paymentToDelete.currency,
+        deletedBy: `${req.user.firstName} ${req.user.lastName}`,
+      },
+    });
+
+    // Emit socket event for real-time updates
+    req.app.get("io").emit("promisedPaymentDeleted", finalCase);
+
+    res.status(200).json({
+      success: true,
+      message: "Promised payment deleted successfully",
+      data: finalCase,
+    });
+  } catch (error) {
+    console.error("Error deleting promised payment:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to delete promised payment",
+      error: error.message,
+    });
+  }
+};
+
 /**
  * @desc    Delete a credit case permanently
  * @route   DELETE /api/credit-cases/:id
