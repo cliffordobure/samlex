@@ -1878,7 +1878,7 @@ export const updatePromisedPayment = async (req, res) => {
           id,
           {
             status: newStatus,
-            $unset: { resolvedAt: "" },
+            resolvedAt: null,
           },
           { new: true }
         );
@@ -1954,7 +1954,10 @@ export const deletePromisedPayment = async (req, res) => {
     }
 
     // Verify the case belongs to the user's law firm
-    if (case_.lawFirm.toString() !== req.user.lawFirm._id.toString()) {
+    const userLawFirmId = req.user.lawFirm?._id?.toString() || req.user.lawFirm?.toString() || req.user.lawFirm;
+    const caseLawFirmId = case_.lawFirm?.toString() || case_.lawFirm;
+    
+    if (caseLawFirmId !== userLawFirmId) {
       return res.status(403).json({
         success: false,
         message:
@@ -1989,10 +1992,15 @@ export const deletePromisedPayment = async (req, res) => {
     const previousStatus = case_.status;
 
     // Remove the payment from the array
+    // Convert paymentId to ObjectId if it's a string
+    const paymentObjectId = mongoose.Types.ObjectId.isValid(paymentId) 
+      ? new mongoose.Types.ObjectId(paymentId) 
+      : paymentId;
+    
     const updatedCase = await CreditCase.findByIdAndUpdate(
       id,
       {
-        $pull: { promisedPayments: { _id: paymentId } },
+        $pull: { promisedPayments: { _id: paymentObjectId } },
         lastActivity: new Date(),
       },
       { new: true }
@@ -2016,41 +2024,54 @@ export const deletePromisedPayment = async (req, res) => {
       if (previousStatus === "resolved" && totalPaidAmount < updatedCase.debtAmount) {
         // Revert to in_progress if there are still payments, otherwise keep current status
         const hasOtherPayments = updatedCase.promisedPayments.length > 0;
-        const newStatus = hasOtherPayments ? "in_progress" : case_.status;
+        const newStatus = hasOtherPayments ? "in_progress" : (case_.status || "in_progress");
         
         finalCase = await CreditCase.findByIdAndUpdate(
           id,
           {
             status: newStatus,
-            $unset: { resolvedAt: "" },
+            resolvedAt: null,
           },
           { new: true }
         );
       }
     }
 
-    // Create notification for payment deletion
-    await createNotification({
-      user: case_.assignedTo || req.user._id,
-      title: `Promised Payment Deleted: ${case_.caseNumber}`,
-      message: `A payment of ${paymentToDelete.currency} ${paymentToDelete.amount.toLocaleString()} for case "${
-        case_.title || case_.caseNumber
-      }" has been deleted`,
-      type: "payment_deleted",
-      priority: "medium",
-      relatedCreditCase: case_._id,
-      actionUrl: `/credit-collection/cases/${case_._id}`,
-      metadata: {
-        caseNumber: case_.caseNumber,
-        caseTitle: case_.title,
-        paymentAmount: paymentToDelete.amount,
-        currency: paymentToDelete.currency,
-        deletedBy: `${req.user.firstName} ${req.user.lastName}`,
-      },
-    });
+    // Create notification for payment deletion (non-blocking)
+    try {
+      await createNotification({
+        user: case_.assignedTo || req.user._id,
+        title: `Promised Payment Deleted: ${case_.caseNumber}`,
+        message: `A payment of ${paymentToDelete.currency} ${paymentToDelete.amount.toLocaleString()} for case "${
+          case_.title || case_.caseNumber
+        }" has been deleted`,
+        type: "payment_deleted",
+        priority: "medium",
+        relatedCreditCase: case_._id,
+        actionUrl: `/credit-collection/cases/${case_._id}`,
+        metadata: {
+          caseNumber: case_.caseNumber,
+          caseTitle: case_.title,
+          paymentAmount: paymentToDelete.amount,
+          currency: paymentToDelete.currency,
+          deletedBy: `${req.user.firstName || ""} ${req.user.lastName || ""}`.trim() || req.user.email || "Unknown",
+        },
+      });
+    } catch (notifError) {
+      console.error("Error creating notification for payment deletion:", notifError);
+      // Continue even if notification fails
+    }
 
-    // Emit socket event for real-time updates
-    req.app.get("io").emit("promisedPaymentDeleted", finalCase);
+    // Emit socket event for real-time updates (non-blocking)
+    try {
+      const io = req.app.get("io");
+      if (io) {
+        io.emit("promisedPaymentDeleted", finalCase);
+      }
+    } catch (socketError) {
+      console.error("Error emitting socket event for payment deletion:", socketError);
+      // Continue even if socket emit fails
+    }
 
     res.status(200).json({
       success: true,
@@ -2059,10 +2080,13 @@ export const deletePromisedPayment = async (req, res) => {
     });
   } catch (error) {
     console.error("Error deleting promised payment:", error);
+    console.error("Error stack:", error.stack);
+    console.error("Request params:", { id: req.params.id, paymentId: req.params.paymentId });
     res.status(500).json({
       success: false,
       message: "Failed to delete promised payment",
       error: error.message,
+      details: process.env.NODE_ENV === "development" ? error.stack : undefined,
     });
   }
 };
