@@ -299,24 +299,26 @@ const PromisedPaymentsList = ({ case_, onUpdate }) => {
                       {status.toUpperCase()}
                     </span>
                   </div>
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-3">
                     <div className="text-sm text-dark-300">
                       Due: {new Date(payment.promisedDate).toLocaleDateString()}
                     </div>
-                    <div className="flex items-center space-x-1">
+                    <div className="flex items-center space-x-2">
                       <button
                         onClick={() => handleEditPayment(payment)}
-                        className="text-blue-400 hover:text-blue-300 p-1 rounded"
+                        className="flex items-center space-x-1 text-blue-400 hover:text-blue-300 hover:bg-blue-500/20 px-2 py-1 rounded-lg transition-colors"
                         title="Edit payment"
                       >
                         <FaEdit className="text-sm" />
+                        <span className="text-xs">Edit</span>
                       </button>
                       <button
                         onClick={() => handleDeletePayment(payment)}
-                        className="text-red-400 hover:text-red-300 p-1 rounded"
+                        className="flex items-center space-x-1 text-red-400 hover:text-red-300 hover:bg-red-500/20 px-2 py-1 rounded-lg transition-colors"
                         title="Delete payment"
                       >
                         <FaTrash className="text-sm" />
+                        <span className="text-xs">Delete</span>
                       </button>
                     </div>
                   </div>
