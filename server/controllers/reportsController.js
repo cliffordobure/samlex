@@ -1667,7 +1667,9 @@ export const getLawFirmAdminDashboard = async (req, res) => {
 
     const { lawFirmId } = req.params;
 
-    // Total credit cases
+    // Total credit cases - count all cases for this law firm
+    // Note: If you need to count ALL cases regardless of law firm, remove the lawFirm filter
+    // But this should only be done for system admins for security reasons
     const totalCreditCases = await CreditCase.countDocuments({
       lawFirm: lawFirmId,
     });

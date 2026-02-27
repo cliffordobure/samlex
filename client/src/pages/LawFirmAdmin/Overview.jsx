@@ -47,6 +47,8 @@ const AdminOverview = () => {
     totalUsers: 0,
     totalDepartments: 0,
     totalCases: 0,
+    totalCreditCases: 0,
+    totalLegalCases: 0,
     activeCases: 0,
     pendingCases: 0,
     resolvedCases: 0,
@@ -78,8 +80,8 @@ const AdminOverview = () => {
           const results = await Promise.allSettled([
             dispatch(getUsers({ lawFirm: user.lawFirm._id, limit: 50 })),
             dispatch(getDepartments({ lawFirm: user.lawFirm._id })),
-            dispatch(getCreditCases({ lawFirm: user.lawFirm._id, limit: 100 })),
-            dispatch(getLegalCases({ lawFirm: user.lawFirm._id, limit: 100 })),
+            dispatch(getCreditCases({ lawFirm: user.lawFirm._id, limit: 1000 })),
+            dispatch(getLegalCases({ lawFirm: user.lawFirm._id, limit: 1000 })),
             // Fetch revenue data from backend
             reportsApi.getLawFirmAdminDashboard(user.lawFirm._id),
           ]);
@@ -90,7 +92,7 @@ const AdminOverview = () => {
             if (result.status === 'fulfilled') {
               console.log(`✅ ${apiNames[index]} API Success:`, result.value);
               
-              // Handle dashboard data (revenue info)
+              // Handle dashboard data (revenue info and total cases count)
               if (index === 4 && result.value?.data?.data) {
                 const dashboardData = result.value.data.data;
                 console.log("💰 Dashboard Revenue Data:", dashboardData);
@@ -99,6 +101,9 @@ const AdminOverview = () => {
                   totalRevenue: dashboardData.totalRevenue || 0,
                   escalationRevenue: dashboardData.escalationRevenue || 0,
                   escalationRate: dashboardData.escalationRate || 0,
+                  // Use backend count for total cases (includes all cases, not just paginated ones)
+                  totalCreditCases: dashboardData.totalCreditCases || 0,
+                  totalLegalCases: dashboardData.totalLegalCases || 0,
                 }));
               }
             } else {
@@ -161,10 +166,12 @@ const AdminOverview = () => {
       ? ((thisMonthCases.length - lastMonthCases.length) / lastMonthCases.length) * 100 
       : 0;
 
-    setStats({
+    setStats((prevStats) => ({
+      ...prevStats,
       totalUsers: users.length,
       totalDepartments: departments.length,
-      totalCases: allCases.length,
+      // Use backend count if available (from dashboard API), otherwise use local count
+      totalCases: (prevStats.totalCreditCases + prevStats.totalLegalCases) || allCases.length,
       activeCases: activeCases.length,
       pendingCases: pendingCases.length,
       resolvedCases: resolvedCases.length,
@@ -172,7 +179,7 @@ const AdminOverview = () => {
       thisMonthCases: thisMonthCases.length,
       lastMonthCases: lastMonthCases.length,
       caseGrowth: Math.round(caseGrowth * 100) / 100,
-    });
+    }));
   };
 
   const generateRecentActivity = () => {
@@ -335,12 +342,12 @@ const AdminOverview = () => {
   const handleRefresh = async () => {
     setRefreshLoading(true);
     try {
-      await Promise.all([
-        dispatch(getUsers({ lawFirm: user.lawFirm._id, limit: 50 })),
-        dispatch(getDepartments({ lawFirm: user.lawFirm._id })),
-        dispatch(getCreditCases({ lawFirm: user.lawFirm._id, limit: 100 })),
-        dispatch(getLegalCases({ lawFirm: user.lawFirm._id, limit: 100 })),
-      ]);
+        await Promise.all([
+          dispatch(getUsers({ lawFirm: user.lawFirm._id, limit: 50 })),
+          dispatch(getDepartments({ lawFirm: user.lawFirm._id })),
+          dispatch(getCreditCases({ lawFirm: user.lawFirm._id, limit: 1000 })),
+          dispatch(getLegalCases({ lawFirm: user.lawFirm._id, limit: 1000 })),
+        ]);
     } finally {
       setRefreshLoading(false);
     }
