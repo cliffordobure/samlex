@@ -12,6 +12,7 @@ import { getCreditCases } from "../../store/slices/creditCaseSlice";
 import { getUsers } from "../../store/slices/userSlice";
 import toast from "react-hot-toast";
 import departmentApi from "../../store/api/departmentApi";
+import reportsApi from "../../store/api/reportsApi";
 import React from "react"; // Added for useMemo
 import {
   FaBuilding,
@@ -34,6 +35,7 @@ import {
   FaSort,
   FaSortUp,
   FaSortDown,
+  FaEnvelope,
 } from "react-icons/fa";
 
 const DepartmentManagement = () => {
@@ -167,6 +169,14 @@ const DepartmentList = () => {
     data: null,
   });
   const [showProgressView, setShowProgressView] = useState(false);
+  const [activeTab, setActiveTab] = useState("overview");
+  const [collectorModal, setCollectorModal] = useState({
+    isOpen: false,
+    loading: false,
+    data: null,
+    user: null,
+    error: null,
+  });
 
   useEffect(() => {
     dispatch(getDepartments());
@@ -218,6 +228,7 @@ const DepartmentList = () => {
       if (res.data.success) {
         console.log("📊 Setting modal data:", res.data.data);
         setDetailsModal({ isOpen: true, data: res.data.data });
+        setActiveTab("overview"); // Reset to overview tab when opening modal
         console.log("🎯 Modal state should now be open");
       } else {
         console.error("❌ API returned error:", res.data.message);
@@ -466,6 +477,169 @@ const DepartmentList = () => {
         </div>
       )}
 
+      {/* Debt Collector Stats Modal */}
+      {collectorModal.isOpen && collectorModal.user && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl w-full max-w-4xl mx-4 overflow-y-auto max-h-[90vh] border border-slate-700 shadow-2xl relative">
+            <button
+              onClick={() =>
+                setCollectorModal({
+                  isOpen: false,
+                  loading: false,
+                  data: null,
+                  user: null,
+                  error: null,
+                })
+              }
+              className="absolute top-4 right-4 text-slate-400 hover:text-white text-2xl font-bold focus:outline-none hover:bg-slate-700/60 p-2 rounded-lg transition-all duration-200"
+              aria-label="Close"
+            >
+              <FaTimes className="w-5 h-5" />
+            </button>
+
+            <div className="p-6 border-b border-slate-700 flex items-center gap-4">
+              <div className="w-12 h-12 bg-indigo-500/20 rounded-full flex items-center justify-center border border-indigo-500/40">
+                <FaUserTie className="text-indigo-400" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-white">
+                  {collectorModal.user.firstName} {collectorModal.user.lastName}
+                </h2>
+                <p className="text-slate-300 text-sm">
+                  {collectorModal.user.role?.replace("_", " ").toUpperCase()}
+                </p>
+              </div>
+            </div>
+
+            {collectorModal.loading ? (
+              <div className="py-10 flex flex-col items-center justify-center text-slate-300">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-500 mb-3"></div>
+                <p>Loading collector statistics...</p>
+              </div>
+            ) : collectorModal.error ? (
+              <div className="p-6 text-center text-red-400 text-sm">
+                {collectorModal.error}
+              </div>
+            ) : collectorModal.data ? (
+              <div className="p-6 space-y-6">
+                {/* Summary cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="bg-slate-800/80 rounded-xl p-4 border border-slate-700">
+                    <div className="text-xs text-slate-400 mb-1">
+                      Total Cases
+                    </div>
+                    <div className="text-2xl font-bold text-white">
+                      {collectorModal.data.basicStats.totalCases}
+                    </div>
+                  </div>
+                  <div className="bg-slate-800/80 rounded-xl p-4 border border-slate-700">
+                    <div className="text-xs text-slate-400 mb-1">
+                      Total Amount to Collect
+                    </div>
+                    <div className="text-lg font-semibold text-emerald-400">
+                      {collectorModal.data.financialStats.totalDebtAmount?.toLocaleString()}
+                    </div>
+                  </div>
+                  <div className="bg-slate-800/80 rounded-xl p-4 border border-slate-700">
+                    <div className="text-xs text-slate-400 mb-1">
+                      Amount Collected
+                    </div>
+                    <div className="text-lg font-semibold text-emerald-400">
+                      {collectorModal.data.financialStats.collectedAmount?.toLocaleString()}
+                    </div>
+                  </div>
+                  <div className="bg-slate-800/80 rounded-xl p-4 border border-slate-700">
+                    <div className="text-xs text-slate-400 mb-1">
+                      Revenue (10% of Collected)
+                    </div>
+                    <div className="text-lg font-semibold text-purple-400">
+                      {(
+                        (collectorModal.data.financialStats.collectedAmount || 0) *
+                        0.1
+                      ).toLocaleString(undefined, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Per-case statistics */}
+                <div>
+                  <h3 className="text-lg font-semibold text-white mb-3">
+                    Case Statistics ({collectorModal.data.assignedCases?.length || 0})
+                  </h3>
+                  {collectorModal.data.assignedCases &&
+                  collectorModal.data.assignedCases.length > 0 ? (
+                    <div className="max-h-80 overflow-y-auto rounded-xl border border-slate-700 bg-slate-900/60">
+                      <table className="w-full text-sm">
+                        <thead className="bg-slate-800/80 text-slate-300">
+                          <tr>
+                            <th className="px-3 py-2 text-left">Case</th>
+                            <th className="px-3 py-2 text-left">Debtor</th>
+                            <th className="px-3 py-2 text-right">Amount</th>
+                            <th className="px-3 py-2 text-center">Status</th>
+                            <th className="px-3 py-2 text-right">Collected</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {collectorModal.data.assignedCases.map((case_) => {
+                            const isCollected = ["resolved", "closed"].includes(
+                              case_.status
+                            );
+                            const amount = case_.debtAmount || 0;
+                            return (
+                              <tr
+                                key={case_._id}
+                                className="border-t border-slate-800 hover:bg-slate-800/60"
+                              >
+                                <td className="px-3 py-2 text-slate-200">
+                                  {case_.caseNumber || case_.caseReference || "N/A"}
+                                </td>
+                                <td className="px-3 py-2 text-slate-300">
+                                  {case_.debtorName || "Unknown"}
+                                </td>
+                                <td className="px-3 py-2 text-right text-slate-200">
+                                  {amount.toLocaleString()}
+                                </td>
+                                <td className="px-3 py-2 text-center">
+                                  <span
+                                    className={`px-2 py-1 rounded-full text-xs ${
+                                      isCollected
+                                        ? "bg-green-500/20 text-green-400"
+                                        : ["assigned", "in_progress"].includes(
+                                            case_.status
+                                          )
+                                        ? "bg-blue-500/20 text-blue-400"
+                                        : "bg-orange-500/20 text-orange-400"
+                                    }`}
+                                  >
+                                    {case_.status
+                                      ?.replace("_", " ")
+                                      .toUpperCase() || "UNKNOWN"}
+                                  </span>
+                                </td>
+                                <td className="px-3 py-2 text-right text-slate-200">
+                                  {isCollected ? amount.toLocaleString() : "0"}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <p className="text-slate-400 text-sm">
+                      This user has no assigned cases.
+                    </p>
+                  )}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      )}
+
       {/* Department Progress Cards */}
       {showProgressView && (
         <div className="bg-gradient-to-r from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl border border-slate-600/50 shadow-2xl">
@@ -707,13 +881,34 @@ const DepartmentList = () => {
             <div className="px-6 mb-6">
               <div className="border-b border-slate-600/50">
                 <nav className="flex space-x-8">
-                  <button className="text-indigo-400 border-b-2 border-indigo-400 py-3 px-1 text-sm font-medium transition-all duration-200">
+                  <button
+                    onClick={() => setActiveTab("overview")}
+                    className={`py-3 px-1 text-sm font-medium transition-all duration-200 ${
+                      activeTab === "overview"
+                        ? "text-indigo-400 border-b-2 border-indigo-400"
+                        : "text-slate-400 hover:text-white"
+                    }`}
+                  >
                     Overview
                   </button>
-                  <button className="text-slate-400 hover:text-white py-3 px-1 text-sm font-medium transition-all duration-200">
+                  <button
+                    onClick={() => setActiveTab("users")}
+                    className={`py-3 px-1 text-sm font-medium transition-all duration-200 ${
+                      activeTab === "users"
+                        ? "text-indigo-400 border-b-2 border-indigo-400"
+                        : "text-slate-400 hover:text-white"
+                    }`}
+                  >
                     Users
                   </button>
-                  <button className="text-slate-400 hover:text-white py-3 px-1 text-sm font-medium transition-all duration-200">
+                  <button
+                    onClick={() => setActiveTab("cases")}
+                    className={`py-3 px-1 text-sm font-medium transition-all duration-200 ${
+                      activeTab === "cases"
+                        ? "text-indigo-400 border-b-2 border-indigo-400"
+                        : "text-slate-400 hover:text-white"
+                    }`}
+                  >
                     Cases
                   </button>
                 </nav>
@@ -721,7 +916,8 @@ const DepartmentList = () => {
             </div>
 
             {/* Content */}
-            <div className="px-6 space-y-8">
+            <div className="px-6 space-y-8 pb-6">
+              {activeTab === "overview" && (
               {/* Stats */}
               <div>
                 <h3 className="font-semibold text-indigo-400 mb-4 flex items-center gap-2">
@@ -897,6 +1093,210 @@ const DepartmentList = () => {
                   </div>
                 </div>
               </div>
+              )}
+
+              {activeTab === "users" && (
+                <div>
+                  <h3 className="font-semibold text-indigo-400 mb-4 flex items-center gap-2">
+                    <FaUsers className="text-indigo-400" />
+                    Department Users ({detailsModal.data.users.length})
+                  </h3>
+                  {detailsModal.data.users.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {detailsModal.data.users.map((user) => (
+                        <div
+                          key={user._id}
+                          onClick={async () => {
+                            try {
+                              setCollectorModal({
+                                isOpen: true,
+                                loading: true,
+                                data: null,
+                                user,
+                                error: null,
+                              });
+                              const res = await reportsApi.getDebtCollectorStatsById(
+                                user._id,
+                                { period: "all" }
+                              );
+                              if (res.data?.success) {
+                                setCollectorModal((prev) => ({
+                                  ...prev,
+                                  loading: false,
+                                  data: res.data.data,
+                                  error: null,
+                                }));
+                              } else {
+                                setCollectorModal((prev) => ({
+                                  ...prev,
+                                  loading: false,
+                                  error:
+                                    res.data?.message ||
+                                    "Failed to load collector statistics",
+                                }));
+                                toast.error(
+                                  res.data?.message ||
+                                    "Failed to load collector statistics"
+                                );
+                              }
+                            } catch (error) {
+                              console.error(
+                                "Error loading collector stats:",
+                                error
+                              );
+                              setCollectorModal((prev) => ({
+                                ...prev,
+                                loading: false,
+                                error:
+                                  error.response?.data?.message ||
+                                  "Failed to load collector statistics",
+                              }));
+                              toast.error(
+                                error.response?.data?.message ||
+                                  "Failed to load collector statistics"
+                              );
+                            }
+                          }}
+                          className="cursor-pointer bg-gradient-to-br from-slate-700/50 to-slate-600/50 rounded-xl p-4 border border-slate-600/50 hover:bg-slate-700/70 transition-all duration-200"
+                        >
+                          <div className="flex items-center gap-3 mb-3">
+                            <div className="w-10 h-10 bg-indigo-500/20 rounded-full flex items-center justify-center border border-indigo-500/30">
+                              <FaUserTie className="text-indigo-400" />
+                            </div>
+                            <div className="flex-1">
+                              <div className="font-medium text-white">
+                                {user.firstName} {user.lastName}
+                              </div>
+                              <div className="text-xs text-slate-400">
+                                {user.role?.replace("_", " ").toUpperCase()}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="space-y-2 text-sm">
+                            <div className="flex items-center gap-2 text-slate-300">
+                              <FaEnvelope className="text-slate-400 text-xs" />
+                              <span className="truncate">{user.email}</span>
+                            </div>
+                            <div className="flex items-center justify-between pt-2 border-t border-slate-600/50">
+                              <span className="text-xs text-slate-400">Status</span>
+                              <span className="text-xs px-2 py-1 rounded-full bg-green-500/20 text-green-400 border border-green-500/30">
+                                Active
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 bg-gradient-to-br from-slate-700/50 to-slate-600/50 rounded-xl border border-slate-600/50">
+                      <FaUsers className="text-slate-400 text-4xl mx-auto mb-3" />
+                      <p className="text-slate-300">No users assigned to this department</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activeTab === "cases" && (
+                <div>
+                  <h3 className="font-semibold text-indigo-400 mb-4 flex items-center gap-2">
+                    <FaFileContract className="text-indigo-400" />
+                    Department Cases
+                  </h3>
+                  <div className="space-y-4">
+                    {/* Credit Cases */}
+                    <div className="bg-gradient-to-br from-slate-700/50 to-slate-600/50 rounded-xl p-6 border border-slate-600/50">
+                      <h4 className="font-medium text-white mb-4 flex items-center gap-2">
+                        <FaFileContract className="text-blue-400" />
+                        Credit Cases ({detailsModal.data.creditCases.length})
+                      </h4>
+                      {detailsModal.data.creditCases.length > 0 ? (
+                        <div className="space-y-2 max-h-96 overflow-y-auto">
+                          {detailsModal.data.creditCases.map((case_) => (
+                            <div
+                              key={case_._id}
+                              className="flex justify-between items-center p-3 bg-slate-600/30 rounded-lg hover:bg-slate-600/50 transition-all duration-200"
+                            >
+                              <div className="flex-1 min-w-0">
+                                <div className="text-sm font-medium text-white truncate">
+                                  {case_.title || case_.caseNumber || "Untitled Case"}
+                                </div>
+                                {case_.caseReference && (
+                                  <div className="text-xs text-slate-400 mt-1">
+                                    Ref: {case_.caseReference}
+                                  </div>
+                                )}
+                              </div>
+                              <span
+                                className={`text-xs px-2 py-1 rounded ml-3 flex-shrink-0 ${
+                                  case_.status === "resolved" ||
+                                  case_.status === "closed"
+                                    ? "bg-green-500/20 text-green-400 border border-green-500/30"
+                                    : case_.status === "in_progress" ||
+                                      case_.status === "assigned"
+                                    ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                                    : "bg-orange-500/20 text-orange-400 border border-orange-500/30"
+                                }`}
+                              >
+                                {case_.status?.replace("_", " ").toUpperCase() || "UNKNOWN"}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-4 text-slate-400 text-sm">
+                          No credit cases in this department
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Legal Cases */}
+                    <div className="bg-gradient-to-br from-slate-700/50 to-slate-600/50 rounded-xl p-6 border border-slate-600/50">
+                      <h4 className="font-medium text-white mb-4 flex items-center gap-2">
+                        <FaGavel className="text-purple-400" />
+                        Legal Cases ({detailsModal.data.legalCases.length})
+                      </h4>
+                      {detailsModal.data.legalCases.length > 0 ? (
+                        <div className="space-y-2 max-h-96 overflow-y-auto">
+                          {detailsModal.data.legalCases.map((case_) => (
+                            <div
+                              key={case_._id}
+                              className="flex justify-between items-center p-3 bg-slate-600/30 rounded-lg hover:bg-slate-600/50 transition-all duration-200"
+                            >
+                              <div className="flex-1 min-w-0">
+                                <div className="text-sm font-medium text-white truncate">
+                                  {case_.title || case_.caseNumber || "Untitled Case"}
+                                </div>
+                                {case_.caseReference && (
+                                  <div className="text-xs text-slate-400 mt-1">
+                                    Ref: {case_.caseReference}
+                                  </div>
+                                )}
+                              </div>
+                              <span
+                                className={`text-xs px-2 py-1 rounded ml-3 flex-shrink-0 ${
+                                  case_.status === "resolved" ||
+                                  case_.status === "closed"
+                                    ? "bg-green-500/20 text-green-400 border border-green-500/30"
+                                    : case_.status === "in_progress" ||
+                                      case_.status === "assigned"
+                                    ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                                    : "bg-orange-500/20 text-orange-400 border border-orange-500/30"
+                                }`}
+                              >
+                                {case_.status?.replace("_", " ").toUpperCase() || "UNKNOWN"}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-4 text-slate-400 text-sm">
+                          No legal cases in this department
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
