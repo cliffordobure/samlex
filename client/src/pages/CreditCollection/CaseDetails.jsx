@@ -561,10 +561,27 @@ const CaseDetails = () => {
         updateData.assignedTo = null;
       }
 
-      // Remove empty strings (except assignedTo and client which we handled above)
+      // Normalize empty strings:
+      // - For contact fields (debtor/creditor email & phone), send null so backend clears them
+      // - For other fields, drop empty strings so we don't overwrite with ""
+      const nullableContactFields = [
+        "debtorEmail",
+        "debtorContact",
+        "creditorEmail",
+        "creditorContact",
+      ];
+
       Object.keys(updateData).forEach((key) => {
-        if (updateData[key] === "" && key !== "assignedTo" && key !== "client") {
-          delete updateData[key];
+        if (key === "assignedTo" || key === "client") return;
+
+        if (updateData[key] === "") {
+          if (nullableContactFields.includes(key)) {
+            // Explicitly clear these fields in the DB
+            updateData[key] = null;
+          } else {
+            // Don't send other empty-string fields
+            delete updateData[key];
+          }
         }
       });
 
