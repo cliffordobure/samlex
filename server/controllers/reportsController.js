@@ -1402,7 +1402,9 @@ export const getDebtCollectorStatsById = async (req, res) => {
       assignedCasesQuery.createdAt = { $gte: daysAgo };
     }
     
-    const assignedCases = await CreditCase.find(assignedCasesQuery).populate("assignedTo", "firstName lastName email");
+    const assignedCases = await CreditCase.find(assignedCasesQuery)
+      .populate("assignedTo", "firstName lastName email")
+      .populate("client", "firstName lastName email phoneNumber clientType companyName");
 
     // Calculate basic statistics
     const totalCases = assignedCases.length;

@@ -523,95 +523,186 @@ const DepartmentList = () => {
             ) : collectorModal.data ? (
               <div className="p-6 space-y-6">
                 {/* Summary cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div className="bg-slate-800/80 rounded-xl p-4 border border-slate-700">
-                    <div className="text-xs text-slate-400 mb-1">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="bg-gradient-to-br from-blue-500/20 to-blue-600/20 rounded-xl p-4 border border-blue-500/30">
+                    <div className="text-xs text-slate-300 mb-1">
                       Total Cases
                     </div>
                     <div className="text-2xl font-bold text-white">
                       {collectorModal.data.basicStats.totalCases}
                     </div>
                   </div>
-                  <div className="bg-slate-800/80 rounded-xl p-4 border border-slate-700">
-                    <div className="text-xs text-slate-400 mb-1">
+                  <div className="bg-gradient-to-br from-emerald-500/20 to-emerald-600/20 rounded-xl p-4 border border-emerald-500/30">
+                    <div className="text-xs text-slate-300 mb-1">
                       Total Amount to Collect
                     </div>
-                    <div className="text-lg font-semibold text-emerald-400">
-                      {collectorModal.data.financialStats.totalDebtAmount?.toLocaleString()}
+                    <div className="text-xl font-bold text-emerald-400">
+                      {collectorModal.data.financialStats.totalDebtAmount?.toLocaleString(undefined, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      }) || "0.00"} {collectorModal.data.assignedCases?.[0]?.currency || "KES"}
                     </div>
                   </div>
-                  <div className="bg-slate-800/80 rounded-xl p-4 border border-slate-700">
-                    <div className="text-xs text-slate-400 mb-1">
+                  <div className="bg-gradient-to-br from-green-500/20 to-green-600/20 rounded-xl p-4 border border-green-500/30">
+                    <div className="text-xs text-slate-300 mb-1">
                       Amount Collected
                     </div>
-                    <div className="text-lg font-semibold text-emerald-400">
-                      {collectorModal.data.financialStats.collectedAmount?.toLocaleString()}
+                    <div className="text-xl font-bold text-green-400">
+                      {collectorModal.data.financialStats.collectedAmount?.toLocaleString(undefined, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      }) || "0.00"} {collectorModal.data.assignedCases?.[0]?.currency || "KES"}
                     </div>
                   </div>
-                  <div className="bg-slate-800/80 rounded-xl p-4 border border-slate-700">
-                    <div className="text-xs text-slate-400 mb-1">
+                </div>
+
+                {/* Financial Summary Row */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="bg-gradient-to-br from-orange-500/20 to-orange-600/20 rounded-xl p-4 border border-orange-500/30">
+                    <div className="text-xs text-slate-300 mb-1">
+                      Amount Pending
+                    </div>
+                    <div className="text-xl font-bold text-orange-400">
+                      {(
+                        (collectorModal.data.financialStats.totalDebtAmount || 0) -
+                        (collectorModal.data.financialStats.collectedAmount || 0)
+                      ).toLocaleString(undefined, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })} {collectorModal.data.assignedCases?.[0]?.currency || "KES"}
+                    </div>
+                  </div>
+                  <div className="bg-gradient-to-br from-purple-500/20 to-purple-600/20 rounded-xl p-4 border border-purple-500/30">
+                    <div className="text-xs text-slate-300 mb-1">
                       Revenue (10% of Collected)
                     </div>
-                    <div className="text-lg font-semibold text-purple-400">
+                    <div className="text-xl font-bold text-purple-400">
                       {(
                         (collectorModal.data.financialStats.collectedAmount || 0) *
                         0.1
                       ).toLocaleString(undefined, {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2,
-                      })}
+                      })} {collectorModal.data.assignedCases?.[0]?.currency || "KES"}
+                    </div>
+                  </div>
+                  <div className="bg-gradient-to-br from-indigo-500/20 to-indigo-600/20 rounded-xl p-4 border border-indigo-500/30">
+                    <div className="text-xs text-slate-300 mb-1">
+                      Performance Rate
+                    </div>
+                    <div className="text-xl font-bold text-indigo-400">
+                      {collectorModal.data.financialStats.collectionRate || 0}%
+                    </div>
+                    <div className="mt-2 w-full bg-slate-700/50 rounded-full h-2">
+                      <div
+                        className="bg-gradient-to-r from-indigo-500 to-indigo-400 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${collectorModal.data.financialStats.collectionRate || 0}%` }}
+                      ></div>
                     </div>
                   </div>
                 </div>
 
                 {/* Per-case statistics */}
                 <div>
-                  <h3 className="text-lg font-semibold text-white mb-3">
-                    Case Statistics ({collectorModal.data.assignedCases?.length || 0})
+                  <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                    <FaFileContract className="text-indigo-400" />
+                    All Cases with Clients ({collectorModal.data.assignedCases?.length || 0})
                   </h3>
                   {collectorModal.data.assignedCases &&
                   collectorModal.data.assignedCases.length > 0 ? (
-                    <div className="max-h-80 overflow-y-auto rounded-xl border border-slate-700 bg-slate-900/60">
+                    <div className="max-h-96 overflow-y-auto rounded-xl border border-slate-700 bg-slate-900/60">
                       <table className="w-full text-sm">
-                        <thead className="bg-slate-800/80 text-slate-300">
+                        <thead className="bg-slate-800/80 text-slate-300 sticky top-0">
                           <tr>
-                            <th className="px-3 py-2 text-left">Case</th>
-                            <th className="px-3 py-2 text-left">Debtor</th>
-                            <th className="px-3 py-2 text-right">Amount</th>
-                            <th className="px-3 py-2 text-center">Status</th>
-                            <th className="px-3 py-2 text-right">Collected</th>
+                            <th className="px-4 py-3 text-left">Case Reference</th>
+                            <th className="px-4 py-3 text-left">Client (Creditor)</th>
+                            <th className="px-4 py-3 text-left">Debtor</th>
+                            <th className="px-4 py-3 text-right">Amount to Collect</th>
+                            <th className="px-4 py-3 text-right">Amount Collected</th>
+                            <th className="px-4 py-3 text-right">Pending</th>
+                            <th className="px-4 py-3 text-center">Status</th>
+                            <th className="px-4 py-3 text-center">Performance</th>
                           </tr>
                         </thead>
                         <tbody>
                           {collectorModal.data.assignedCases.map((case_) => {
-                            const isCollected = ["resolved", "closed"].includes(
-                              case_.status
-                            );
                             const amount = case_.debtAmount || 0;
+                            
+                            // Calculate actual collected amount from promised payments
+                            let collected = 0;
+                            if (case_.promisedPayments && Array.isArray(case_.promisedPayments)) {
+                              collected = case_.promisedPayments
+                                .filter(payment => payment.status === "paid")
+                                .reduce((sum, payment) => sum + (payment.amount || 0), 0);
+                            }
+                            
+                            // If case is resolved/closed and no promised payments, assume full amount collected
+                            if (collected === 0 && ["resolved", "closed"].includes(case_.status)) {
+                              collected = amount;
+                            }
+                            
+                            const pending = amount - collected;
+                            const casePerformance = amount > 0 ? Math.round((collected / amount) * 100) : 0;
+                            
+                            // Get client name from case data
+                            let clientName = "N/A";
+                            if (case_.client) {
+                              if (typeof case_.client === 'object') {
+                                clientName = case_.client.clientType === "corporate" && case_.client.companyName
+                                  ? case_.client.companyName
+                                  : `${case_.client.firstName || ''} ${case_.client.lastName || ''}`.trim() || "N/A";
+                              }
+                            } else if (case_.creditorName) {
+                              clientName = case_.creditorName;
+                            }
+                            
                             return (
                               <tr
                                 key={case_._id}
-                                className="border-t border-slate-800 hover:bg-slate-800/60"
+                                className="border-t border-slate-800 hover:bg-slate-800/60 transition-colors"
                               >
-                                <td className="px-3 py-2 text-slate-200">
-                                  {case_.caseNumber || case_.caseReference || "N/A"}
+                                <td className="px-4 py-3 text-slate-200 font-medium">
+                                  {case_.caseReference || case_.caseNumber || "N/A"}
                                 </td>
-                                <td className="px-3 py-2 text-slate-300">
+                                <td className="px-4 py-3 text-slate-300">
+                                  <div className="flex items-center gap-2">
+                                    <FaUsers className="text-green-400 text-xs" />
+                                    <span className="truncate max-w-[150px]" title={clientName}>
+                                      {clientName}
+                                    </span>
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3 text-slate-300">
                                   {case_.debtorName || "Unknown"}
                                 </td>
-                                <td className="px-3 py-2 text-right text-slate-200">
-                                  {amount.toLocaleString()}
+                                <td className="px-4 py-3 text-right text-slate-200 font-semibold">
+                                  {amount.toLocaleString(undefined, {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                  })} {case_.currency || "KES"}
                                 </td>
-                                <td className="px-3 py-2 text-center">
+                                <td className="px-4 py-3 text-right text-green-400 font-semibold">
+                                  {collected.toLocaleString(undefined, {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                  })} {case_.currency || "KES"}
+                                </td>
+                                <td className="px-4 py-3 text-right text-orange-400 font-semibold">
+                                  {pending.toLocaleString(undefined, {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                  })} {case_.currency || "KES"}
+                                </td>
+                                <td className="px-4 py-3 text-center">
                                   <span
-                                    className={`px-2 py-1 rounded-full text-xs ${
+                                    className={`px-2 py-1 rounded-full text-xs font-medium border ${
                                       isCollected
-                                        ? "bg-green-500/20 text-green-400"
+                                        ? "bg-green-500/20 text-green-400 border-green-500/30"
                                         : ["assigned", "in_progress"].includes(
                                             case_.status
                                           )
-                                        ? "bg-blue-500/20 text-blue-400"
-                                        : "bg-orange-500/20 text-orange-400"
+                                        ? "bg-blue-500/20 text-blue-400 border-blue-500/30"
+                                        : "bg-orange-500/20 text-orange-400 border-orange-500/30"
                                     }`}
                                   >
                                     {case_.status
@@ -619,8 +710,26 @@ const DepartmentList = () => {
                                       .toUpperCase() || "UNKNOWN"}
                                   </span>
                                 </td>
-                                <td className="px-3 py-2 text-right text-slate-200">
-                                  {isCollected ? amount.toLocaleString() : "0"}
+                                <td className="px-4 py-3 text-center">
+                                  <div className="flex flex-col items-center gap-1">
+                                    <span className={`text-xs font-semibold ${
+                                      casePerformance >= 100 ? "text-green-400" :
+                                      casePerformance >= 50 ? "text-yellow-400" :
+                                      "text-red-400"
+                                    }`}>
+                                      {casePerformance}%
+                                    </span>
+                                    <div className="w-16 bg-slate-700/50 rounded-full h-1.5">
+                                      <div
+                                        className={`h-1.5 rounded-full transition-all ${
+                                          casePerformance >= 100 ? "bg-green-500" :
+                                          casePerformance >= 50 ? "bg-yellow-500" :
+                                          "bg-red-500"
+                                        }`}
+                                        style={{ width: `${Math.min(casePerformance, 100)}%` }}
+                                      ></div>
+                                    </div>
+                                  </div>
                                 </td>
                               </tr>
                             );
@@ -629,9 +738,12 @@ const DepartmentList = () => {
                       </table>
                     </div>
                   ) : (
-                    <p className="text-slate-400 text-sm">
-                      This user has no assigned cases.
-                    </p>
+                    <div className="text-center py-8 bg-slate-800/50 rounded-xl border border-slate-700">
+                      <FaFileContract className="text-slate-400 text-4xl mx-auto mb-3" />
+                      <p className="text-slate-400 text-sm">
+                        This user has no assigned cases.
+                      </p>
+                    </div>
                   )}
                 </div>
               </div>
