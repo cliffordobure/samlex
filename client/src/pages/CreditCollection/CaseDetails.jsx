@@ -129,9 +129,29 @@ const CaseDetails = () => {
   useEffect(() => {
     if (showEditModal && caseDetails) {
       // Check if case has a client (creditor)
-      const hasClient = caseDetails.client?._id || caseDetails.client;
-      setSelectedCreditorClientId(hasClient ? (caseDetails.client._id || caseDetails.client) : "");
+      const clientId = caseDetails.client?._id || caseDetails.client;
+      const hasClient = !!clientId;
+      setSelectedCreditorClientId(hasClient ? clientId : "");
       setCreditorSelectionMode(hasClient ? "existing" : "new");
+      
+      // If case has a client, get the latest client information from activeClients
+      let creditorName = caseDetails.creditorName || "";
+      let creditorEmail = caseDetails.creditorEmail || "";
+      let creditorContact = caseDetails.creditorContact || "";
+      
+      if (hasClient && activeClients.length > 0) {
+        const client = activeClients.find(
+          (c) => c._id === clientId || c._id?.toString() === clientId?.toString()
+        );
+        if (client) {
+          // Use current client information instead of case's creditor fields
+          creditorName = client.clientType === "corporate" && client.companyName
+            ? client.companyName
+            : `${client.firstName} ${client.lastName}`;
+          creditorEmail = client.email || "";
+          creditorContact = client.phoneNumber || "";
+        }
+      }
       
       setEditFormData({
         title: caseDetails.title || "",
@@ -139,19 +159,19 @@ const CaseDetails = () => {
         debtorName: caseDetails.debtorName || "",
         debtorEmail: caseDetails.debtorEmail || "",
         debtorContact: caseDetails.debtorContact || "",
-        creditorName: caseDetails.creditorName || "",
-        creditorEmail: caseDetails.creditorEmail || "",
-        creditorContact: caseDetails.creditorContact || "",
+        creditorName: creditorName,
+        creditorEmail: creditorEmail,
+        creditorContact: creditorContact,
         debtAmount: caseDetails.debtAmount || "",
         currency: caseDetails.currency || "KES",
         priority: caseDetails.priority || "medium",
         status: caseDetails.status || "new",
         caseReference: caseDetails.caseReference || "",
         assignedTo: caseDetails.assignedTo?._id || caseDetails.assignedTo || "",
-        client: hasClient ? (caseDetails.client._id || caseDetails.client) : "",
+        client: hasClient ? clientId : "",
       });
     }
-  }, [showEditModal, caseDetails]);
+  }, [showEditModal, caseDetails, activeClients]);
 
   // Fetch comments from backend - wrapped in useCallback
   const fetchComments = useCallback(async () => {
@@ -610,9 +630,9 @@ const CaseDetails = () => {
     debtorName,
     debtorEmail,
     debtorContact,
-    creditorName,
-    creditorEmail,
-    creditorContact,
+    creditorName: caseCreditorName,
+    creditorEmail: caseCreditorEmail,
+    creditorContact: caseCreditorContact,
     debtAmount,
     currency,
     status,
@@ -621,7 +641,28 @@ const CaseDetails = () => {
     documents,
     createdAt,
     updatedAt,
+    client: caseClient,
   } = caseDetails;
+
+  // If case has a client, use the client's current information instead of case's creditor fields
+  let creditorName = caseCreditorName || "";
+  let creditorEmail = caseCreditorEmail || "";
+  let creditorContact = caseCreditorContact || "";
+  
+  const clientId = caseClient?._id || caseClient;
+  if (clientId && activeClients.length > 0) {
+    const client = activeClients.find(
+      (c) => c._id === clientId || c._id?.toString() === clientId?.toString()
+    );
+    if (client) {
+      // Use current client information instead of case's creditor fields
+      creditorName = client.clientType === "corporate" && client.companyName
+        ? client.companyName
+        : `${client.firstName} ${client.lastName}`;
+      creditorEmail = client.email || "";
+      creditorContact = client.phoneNumber || "";
+    }
+  }
 
   // Status badge color
   const statusColor = statusColors[status] || "bg-gray-600";
