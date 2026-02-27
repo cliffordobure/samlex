@@ -918,8 +918,9 @@ const DepartmentList = () => {
             {/* Content */}
             <div className="px-6 space-y-8 pb-6">
               {activeTab === "overview" && (
-              {/* Stats */}
-              <div>
+                <>
+                  {/* Stats */}
+                  <div>
                 <h3 className="font-semibold text-indigo-400 mb-4 flex items-center gap-2">
                   <FaChartBar className="text-indigo-400" />
                   Department Statistics
@@ -1092,7 +1093,8 @@ const DepartmentList = () => {
                     </div>
                   </div>
                 </div>
-              </div>
+                  </div>
+                </>
               )}
 
               {activeTab === "users" && (
