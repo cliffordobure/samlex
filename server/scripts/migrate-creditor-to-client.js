@@ -10,24 +10,54 @@
 import mongoose from "mongoose";
 import CreditCase from "../models/CreditCase.js";
 import Client from "../models/Client.js";
+import LawFirm from "../models/LawFirm.js"; // Import LawFirm model to register schema
+import User from "../models/User.js"; // Import User model to find default createdBy
 import dotenv from "dotenv";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
+import { existsSync } from "fs";
 
 // Get the directory of the current module
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Load environment variables from project root (two levels up from scripts folder)
-dotenv.config({ path: join(__dirname, "../../.env") });
+// Try to load .env from multiple possible locations
+const envPaths = [
+  join(__dirname, "../.env"),        // server/.env (most likely)
+  join(__dirname, "../../.env"),    // root/.env
+  join(__dirname, "../../../.env"),  // parent/.env (just in case)
+];
+
+let envLoaded = false;
+for (const envPath of envPaths) {
+  if (existsSync(envPath)) {
+    dotenv.config({ path: envPath });
+    console.log(`✅ Loaded .env from: ${envPath}`);
+    envLoaded = true;
+    break;
+  }
+}
+
+// If no .env file found, try default dotenv.config() which looks in current working directory
+if (!envLoaded) {
+  dotenv.config();
+  console.log("⚠️  No .env file found in common locations, trying current directory...");
+}
 
 const connectDB = async () => {
   try {
+    // Try to get MONGO_URI from environment
     const mongoUri = process.env.MONGO_URI || process.env.MONGODB_URI;
     
     if (!mongoUri) {
-      console.error("❌ MongoDB connection string not found!");
-      console.error("Please set MONGO_URI or MONGODB_URI in your .env file");
+      console.error("\n❌ MongoDB connection string not found!");
+      console.error("\nPlease set MONGO_URI in your .env file.");
+      console.error("\nExpected .env file locations:");
+      envPaths.forEach(path => console.error(`  - ${path}`));
+      console.error("\nOr set MONGO_URI as an environment variable:");
+      console.error("  Windows PowerShell: $env:MONGO_URI='your_connection_string'");
+      console.error("  Windows CMD: set MONGO_URI=your_connection_string");
+      console.error("  Linux/Mac: export MONGO_URI='your_connection_string'");
       process.exit(1);
     }
     
@@ -35,7 +65,7 @@ const connectDB = async () => {
     await mongoose.connect(mongoUri);
     console.log("✅ MongoDB Connected");
   } catch (error) {
-    console.error("❌ MongoDB connection error:", error);
+    console.error("❌ MongoDB connection error:", error.message);
     process.exit(1);
   }
 };
@@ -44,8 +74,21 @@ const migrateCreditorToClient = async () => {
   try {
     console.log("🔄 Starting migration: Creditor to Client...\n");
 
-    // Find all credit cases
-    const creditCases = await CreditCase.find({}).populate("lawFirm");
+    // Find a default user for createdBy (prefer law_firm_admin, fallback to any admin)
+    let defaultCreatedBy = null;
+    const adminUser = await User.findOne({ 
+      role: { $in: ["law_firm_admin", "admin"] } 
+    }).sort({ createdAt: 1 }); // Get the first admin user
+    
+    if (adminUser) {
+      defaultCreatedBy = adminUser._id;
+      console.log(`✅ Using default createdBy user: ${adminUser.firstName} ${adminUser.lastName} (${adminUser.role})\n`);
+    } else {
+      console.log("⚠️  Warning: No admin user found. Will try to find a user per law firm.\n");
+    }
+
+    // Find all credit cases (don't populate lawFirm, we just need the ID)
+    const creditCases = await CreditCase.find({});
     console.log(`📋 Found ${creditCases.length} credit cases to process\n`);
 
     let updatedCount = 0;
@@ -75,7 +118,8 @@ const migrateCreditorToClient = async () => {
           continue;
         }
 
-        const lawFirmId = creditCase.lawFirm._id || creditCase.lawFirm;
+        // Get lawFirm ID (it's already an ObjectId, not populated)
+        const lawFirmId = creditCase.lawFirm;
 
         // Try to find existing client by email or phone
         let existingClient = null;
@@ -100,19 +144,52 @@ const migrateCreditorToClient = async () => {
           console.log(`✅ Found existing client for case ${creditCase.caseNumber || creditCase._id}: ${existingClient.firstName} ${existingClient.lastName}`);
         } else if (creditCase.creditorName) {
           // Create new client from creditor information
-          const nameParts = (creditCase.creditorName || "").trim().split(" ");
-          const firstName = nameParts[0] || creditCase.creditorName || "Unknown";
-          const lastName = nameParts.slice(1).join(" ") || "";
+          const nameParts = (creditCase.creditorName || "").trim().split(" ").filter(p => p.length > 0);
+          let firstName = nameParts[0] || creditCase.creditorName || "Unknown";
+          let lastName = nameParts.slice(1).join(" ") || "Creditor"; // Default to "Creditor" if no last name
+          
+          // If only one name provided, use it as firstName and set lastName to "Creditor"
+          if (nameParts.length === 1) {
+            firstName = nameParts[0];
+            lastName = "Creditor";
+          }
+
+          // Find a user for createdBy (prefer admin from same law firm, fallback to default)
+          let createdByUserId = defaultCreatedBy;
+          if (!createdByUserId) {
+            const lawFirmAdmin = await User.findOne({
+              lawFirm: lawFirmId,
+              role: { $in: ["law_firm_admin", "admin"] }
+            });
+            if (lawFirmAdmin) {
+              createdByUserId = lawFirmAdmin._id;
+            } else {
+              // Last resort: find any user from this law firm
+              const anyUser = await User.findOne({ lawFirm: lawFirmId });
+              if (anyUser) {
+                createdByUserId = anyUser._id;
+              }
+            }
+          }
+
+          if (!createdByUserId) {
+            console.log(`⚠️  Case ${creditCase.caseNumber || creditCase._id}: No user found for createdBy, skipping client creation...`);
+            skippedCount++;
+            continue;
+          }
+
+          // Provide default phone number if missing
+          const phoneNumber = creditCase.creditorContact || "N/A";
 
           const newClient = new Client({
             firstName,
             lastName,
             email: creditCase.creditorEmail || undefined,
-            phoneNumber: creditCase.creditorContact || undefined,
+            phoneNumber: phoneNumber,
             lawFirm: lawFirmId,
             clientType: "individual", // Default to individual
-            isActive: true,
-            // Note: We don't have createdBy for migration, so it will be null
+            status: "active", // Use status instead of isActive
+            createdBy: createdByUserId,
           });
 
           const savedClient = await newClient.save();

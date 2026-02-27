@@ -2212,8 +2212,29 @@ export const updateCreditCase = async (req, res) => {
     // Handle client field - creditor is the client to the law firm
     let clientId = null;
     if (updateData.client) {
-      // If client ID is provided, use it
+      // If client ID is provided, fetch the client and update creditor fields
       clientId = updateData.client;
+      try {
+        const selectedClient = await Client.findById(clientId);
+        if (selectedClient) {
+          // Update creditor fields from client information
+          if (selectedClient.clientType === "corporate" && selectedClient.companyName) {
+            updateData.creditorName = selectedClient.companyName;
+          } else {
+            updateData.creditorName = `${selectedClient.firstName} ${selectedClient.lastName}`.trim();
+          }
+          updateData.creditorEmail = selectedClient.email || "";
+          updateData.creditorContact = selectedClient.phoneNumber || "";
+          console.log("✅ Updated creditor fields from selected client:", {
+            creditorName: updateData.creditorName,
+            creditorEmail: updateData.creditorEmail,
+            creditorContact: updateData.creditorContact
+          });
+        }
+      } catch (clientError) {
+        console.error("❌ Error fetching client details:", clientError);
+        // Continue without updating creditor fields if there's an error
+      }
     } else if (updateData.creditorName || updateData.creditorEmail || updateData.creditorContact) {
       // If creditor info is provided but no client ID, try to find or create a client
       try {

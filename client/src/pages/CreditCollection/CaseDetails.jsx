@@ -506,8 +506,13 @@ const CaseDetails = () => {
           (c) => c._id === selectedCreditorClientId
         );
         if (selectedClient) {
+          // Handle corporate vs individual clients
+          const creditorName = selectedClient.clientType === "corporate" && selectedClient.companyName
+            ? selectedClient.companyName
+            : `${selectedClient.firstName} ${selectedClient.lastName}`;
+          
           creditorData = {
-            creditorName: `${selectedClient.firstName} ${selectedClient.lastName}`,
+            creditorName: creditorName,
             creditorEmail: selectedClient.email || "",
             creditorContact: selectedClient.phoneNumber || "",
           };
@@ -1832,9 +1837,14 @@ const CaseDetails = () => {
                             (c) => c._id === e.target.value
                           );
                           if (selectedClient) {
+                            // Handle corporate vs individual clients
+                            const creditorName = selectedClient.clientType === "corporate" && selectedClient.companyName
+                              ? selectedClient.companyName
+                              : `${selectedClient.firstName} ${selectedClient.lastName}`;
+                            
                             setEditFormData({
                               ...editFormData,
-                              creditorName: `${selectedClient.firstName} ${selectedClient.lastName}`,
+                              creditorName: creditorName,
                               creditorEmail: selectedClient.email || "",
                               creditorContact: selectedClient.phoneNumber || "",
                             });
