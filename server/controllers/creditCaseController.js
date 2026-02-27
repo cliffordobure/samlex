@@ -24,6 +24,7 @@ export const createCreditCase = async (req, res) => {
       debtAmount,
       caseReference,
       assignedTo, // Add assignment field
+      client, // Client ID if creditor is an existing client
       documents = [],
       // Optional per-case SMS preferences from admin
       sendSmsToAssigned,
@@ -61,6 +62,59 @@ export const createCreditCase = async (req, res) => {
       });
     }
 
+    // Handle client field - creditor is the client to the law firm
+    let clientId = null;
+    if (client) {
+      // If client ID is provided, use it
+      clientId = client;
+    } else if (creditorName || creditorEmail || creditorContact) {
+      // If creditor info is provided but no client ID, try to find or create a client
+      try {
+        // Try to find existing client by email or phone
+        let existingClient = null;
+        if (creditorEmail) {
+          existingClient = await Client.findOne({
+            email: creditorEmail.toLowerCase(),
+            lawFirm: req.user.lawFirm._id,
+          });
+        }
+        if (!existingClient && creditorContact) {
+          existingClient = await Client.findOne({
+            phoneNumber: creditorContact,
+            lawFirm: req.user.lawFirm._id,
+          });
+        }
+        
+        if (existingClient) {
+          clientId = existingClient._id;
+          console.log("✅ Found existing client for creditor:", clientId);
+        } else {
+          // Create new client from creditor information
+          const nameParts = (creditorName || "").trim().split(" ");
+          const firstName = nameParts[0] || creditorName || "Unknown";
+          const lastName = nameParts.slice(1).join(" ") || "";
+          
+          const newClient = new Client({
+            firstName,
+            lastName,
+            email: creditorEmail || undefined,
+            phoneNumber: creditorContact || undefined,
+            lawFirm: req.user.lawFirm._id,
+            clientType: "individual", // Default to individual
+            isActive: true,
+            createdBy: req.user._id,
+          });
+          
+          const savedClient = await newClient.save();
+          clientId = savedClient._id;
+          console.log("✅ Created new client for creditor:", clientId);
+        }
+      } catch (clientError) {
+        console.error("❌ Error handling client for creditor:", clientError);
+        // Continue without client ID if there's an error
+      }
+    }
+
     // Retry logic to handle duplicate case number errors
     let savedCase;
     let retryCount = 0;
@@ -80,6 +134,7 @@ export const createCreditCase = async (req, res) => {
           debtAmount: debtAmount && debtAmount !== '' ? Number(debtAmount) : undefined,
           caseReference,
           assignedTo, // Add assignment
+          client: clientId, // Set client field (creditor is the client)
           department: department._id, // Assign to appropriate department
           documents: Array.isArray(documents) ? documents : [documents],
           status: assignedTo ? "assigned" : "new", // Set status based on assignment
@@ -2154,6 +2209,59 @@ export const updateCreditCase = async (req, res) => {
       });
     }
 
+    // Handle client field - creditor is the client to the law firm
+    let clientId = null;
+    if (updateData.client) {
+      // If client ID is provided, use it
+      clientId = updateData.client;
+    } else if (updateData.creditorName || updateData.creditorEmail || updateData.creditorContact) {
+      // If creditor info is provided but no client ID, try to find or create a client
+      try {
+        // Try to find existing client by email or phone
+        let existingClient = null;
+        if (updateData.creditorEmail) {
+          existingClient = await Client.findOne({
+            email: updateData.creditorEmail.toLowerCase(),
+            lawFirm: req.user.lawFirm._id,
+          });
+        }
+        if (!existingClient && updateData.creditorContact) {
+          existingClient = await Client.findOne({
+            phoneNumber: updateData.creditorContact,
+            lawFirm: req.user.lawFirm._id,
+          });
+        }
+        
+        if (existingClient) {
+          clientId = existingClient._id;
+          console.log("✅ Found existing client for creditor:", clientId);
+        } else if (updateData.creditorName) {
+          // Create new client from creditor information
+          const nameParts = (updateData.creditorName || "").trim().split(" ");
+          const firstName = nameParts[0] || updateData.creditorName || "Unknown";
+          const lastName = nameParts.slice(1).join(" ") || "";
+          
+          const newClient = new Client({
+            firstName,
+            lastName,
+            email: updateData.creditorEmail || undefined,
+            phoneNumber: updateData.creditorContact || undefined,
+            lawFirm: req.user.lawFirm._id,
+            clientType: "individual", // Default to individual
+            isActive: true,
+            createdBy: req.user._id,
+          });
+          
+          const savedClient = await newClient.save();
+          clientId = savedClient._id;
+          console.log("✅ Created new client for creditor:", clientId);
+        }
+      } catch (clientError) {
+        console.error("❌ Error handling client for creditor:", clientError);
+        // Continue without client ID if there's an error
+      }
+    }
+
     // Fields that can be updated
     const allowedFields = [
       "title",
@@ -2168,6 +2276,7 @@ export const updateCreditCase = async (req, res) => {
       "currency",
       "priority",
       "caseReference",
+      "client", // Add client field
     ];
 
     // Filter update data to only include allowed fields
@@ -2177,6 +2286,11 @@ export const updateCreditCase = async (req, res) => {
         filteredUpdateData[key] = updateData[key];
       }
     });
+
+    // Set client field if we found/created one
+    if (clientId) {
+      filteredUpdateData.client = clientId;
+    }
 
     // Update the case
     Object.assign(creditCase, filteredUpdateData);

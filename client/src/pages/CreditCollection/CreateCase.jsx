@@ -37,6 +37,8 @@ const CreateCase = () => {
   const [error, setError] = useState("");
   const [debtorSelectionMode, setDebtorSelectionMode] = useState("new"); // "existing" or "new"
   const [selectedDebtorId, setSelectedDebtorId] = useState("");
+  const [creditorSelectionMode, setCreditorSelectionMode] = useState("existing"); // "existing" or "new" - creditor is the client
+  const [selectedCreditorId, setSelectedCreditorId] = useState("");
   // Per-case SMS preferences (admin can configure who gets SMS on creation)
   const [smsPreferences, setSmsPreferences] = useState({
     sendSmsToAssigned: true,
@@ -174,11 +176,38 @@ const CreateCase = () => {
         };
       }
 
-      // 3. Create the case with Cloudinary URLs
+      // 3. Prepare creditor data - creditor is the client to the law firm
+      let creditorData = {};
+      let clientId = null;
+      if (creditorSelectionMode === "existing" && selectedCreditorId) {
+        // If existing client is selected for creditor, use that client ID
+        clientId = selectedCreditorId;
+        const selectedClient = activeClients.find(
+          (c) => c._id === selectedCreditorId
+        );
+        if (selectedClient) {
+          creditorData = {
+            creditorName: `${selectedClient.firstName} ${selectedClient.lastName}`,
+            creditorEmail: selectedClient.email || "",
+            creditorContact: selectedClient.phoneNumber || "",
+          };
+        }
+      } else {
+        // Use form data for new creditor (will create new client if needed)
+        creditorData = {
+          creditorName: form.creditorName,
+          creditorEmail: form.creditorEmail,
+          creditorContact: form.creditorContact,
+        };
+      }
+
+      // 4. Create the case with Cloudinary URLs
       console.log("📋 Creating case with document URLs:", documentUrls);
       await creditCaseApi.createCreditCase({
         ...form,
         ...debtorData,
+        ...creditorData,
+        client: clientId || undefined, // Pass client ID if creditor is an existing client
         debtAmount: Number(form.debtAmount),
         assignedTo: form.assignedTo || undefined,
         documents: documentUrls, // Send Cloudinary URLs instead of files
@@ -519,54 +548,168 @@ const CreateCase = () => {
                 )}
               </div>
 
-              {/* Creditor Information Section */}
+              {/* Creditor Information Section - Creditor is the Client */}
               <div className="bg-gradient-to-br from-green-700/20 to-green-600/20 rounded-xl p-6 border border-green-600/30">
                 <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
                   <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                   </svg>
-                  Creditor Information
+                  Creditor Information (Our Client)
                 </h3>
+                <p className="text-sm text-slate-300 mb-4">
+                  The creditor is the client who hired your law firm to collect the debt. Select an existing client or create a new one.
+                </p>
                 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">
-                      Creditor Name
+                {/* Creditor Selection Mode Toggle */}
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-slate-300 mb-3">
+                    Creditor Selection <span className="text-green-400">*</span>
+                  </label>
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="creditorMode"
+                        value="existing"
+                        checked={creditorSelectionMode === "existing"}
+                        onChange={(e) => {
+                          setCreditorSelectionMode(e.target.value);
+                          setSelectedCreditorId("");
+                          setForm((prev) => ({
+                            ...prev,
+                            creditorName: "",
+                            creditorEmail: "",
+                            creditorContact: "",
+                          }));
+                        }}
+                        className="w-4 h-4 text-green-500 bg-slate-700 border-slate-600 focus:ring-green-500 focus:ring-2"
+                      />
+                      <span className="text-slate-300">Select Existing Client</span>
                     </label>
-                    <input
-                      name="creditorName"
-                      value={form.creditorName}
-                      onChange={handleChange}
-                      className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
-                      placeholder="Enter creditor name"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">
-                      Creditor Email
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="creditorMode"
+                        value="new"
+                        checked={creditorSelectionMode === "new"}
+                        onChange={(e) => {
+                          setCreditorSelectionMode(e.target.value);
+                          setSelectedCreditorId("");
+                        }}
+                        className="w-4 h-4 text-green-500 bg-slate-700 border-slate-600 focus:ring-green-500 focus:ring-2"
+                      />
+                      <span className="text-slate-300">Create New Client</span>
                     </label>
-                    <input
-                      name="creditorEmail"
-                      type="email"
-                      value={form.creditorEmail}
-                      onChange={handleChange}
-                      className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
-                      placeholder="creditor@example.com"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">
-                      Creditor Contact
-                    </label>
-                    <input
-                      name="creditorContact"
-                      value={form.creditorContact}
-                      onChange={handleChange}
-                      className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
-                      placeholder="+254 700 000 000"
-                    />
                   </div>
                 </div>
+
+                {/* Existing Client Selection */}
+                {creditorSelectionMode === "existing" && (
+                  <div className="mb-6">
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Select Client <span className="text-green-400">*</span>
+                    </label>
+                    <select
+                      className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
+                      value={selectedCreditorId}
+                      onChange={(e) => {
+                        setSelectedCreditorId(e.target.value);
+                        const selectedClient = activeClients.find(
+                          (c) => c._id === e.target.value
+                        );
+                        if (selectedClient) {
+                          setForm((prev) => ({
+                            ...prev,
+                            creditorName: `${selectedClient.firstName} ${selectedClient.lastName}`,
+                            creditorEmail: selectedClient.email || "",
+                            creditorContact: selectedClient.phoneNumber || "",
+                          }));
+                        }
+                      }}
+                    >
+                      <option value="">Choose a client...</option>
+                      {activeClients.map((client) => (
+                        <option key={client._id} value={client._id}>
+                          {client.firstName} {client.lastName}
+                          {client.email ? ` - ${client.email}` : ""}
+                          {client.clientType === "corporate" && client.companyName
+                            ? ` (${client.companyName})`
+                            : ""}
+                        </option>
+                      ))}
+                    </select>
+                    {selectedCreditorId && (
+                      <div className="mt-3 p-3 bg-slate-700/30 border border-slate-600/50 rounded-lg">
+                        {(() => {
+                          const selectedClient = activeClients.find(
+                            (c) => c._id === selectedCreditorId
+                          );
+                          return selectedClient ? (
+                            <div className="text-sm text-slate-300">
+                              <p className="text-white font-medium">
+                                {selectedClient.firstName} {selectedClient.lastName}
+                              </p>
+                              {selectedClient.email && (
+                                <p>Email: {selectedClient.email}</p>
+                              )}
+                              {selectedClient.phoneNumber && (
+                                <p>Phone: {selectedClient.phoneNumber}</p>
+                              )}
+                              {selectedClient.clientType === "corporate" &&
+                                selectedClient.companyName && (
+                                  <p>Company: {selectedClient.companyName}</p>
+                                )}
+                            </div>
+                          ) : null;
+                        })()}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* New Creditor Form Fields */}
+                {creditorSelectionMode === "new" && (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">
+                        Creditor Name <span className="text-green-400">*</span>
+                      </label>
+                      <input
+                        name="creditorName"
+                        value={form.creditorName}
+                        onChange={handleChange}
+                        required={creditorSelectionMode === "new"}
+                        className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
+                        placeholder="Enter creditor name"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">
+                        Creditor Email
+                      </label>
+                      <input
+                        name="creditorEmail"
+                        type="email"
+                        value={form.creditorEmail}
+                        onChange={handleChange}
+                        className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
+                        placeholder="creditor@example.com"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">
+                        Creditor Contact
+                      </label>
+                      <input
+                        name="creditorContact"
+                        value={form.creditorContact}
+                        onChange={handleChange}
+                        className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
+                        placeholder="+254 700 000 000"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Case Details Section */}

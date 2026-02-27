@@ -3,6 +3,7 @@ import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, Link, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { getCreditCaseById, updateCreditCase } from "../../store/slices/creditCaseSlice";
+import { fetchActiveClients } from "../../store/slices/clientSlice";
 import socket from "../../utils/socket";
 import creditCaseApi from "../../store/api/creditCaseApi";
 import userApi from "../../store/api/userApi";
@@ -64,6 +65,7 @@ const CaseDetails = () => {
     (state) => state.creditCases
   );
   const { user } = useSelector((state) => state.auth);
+  const { activeClients } = useSelector((state) => state.clients);
   console.log("Redux user object:", user);
   const getUser = (user) => user?.data || user || {};
   const currentUser = getUser(user);
@@ -112,10 +114,24 @@ const CaseDetails = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editFormData, setEditFormData] = useState({});
   const [editLoading, setEditLoading] = useState(false);
+  const [creditorSelectionMode, setCreditorSelectionMode] = useState("existing"); // "existing" or "new"
+  const [selectedCreditorClientId, setSelectedCreditorClientId] = useState("");
+
+  // Load active clients for creditor selection
+  useEffect(() => {
+    if (user?.lawFirm?._id) {
+      dispatch(fetchActiveClients({ lawFirm: user.lawFirm._id }));
+    }
+  }, [dispatch, user?.lawFirm?._id]);
 
   // Initialize edit form data when modal opens
   useEffect(() => {
     if (showEditModal && caseDetails) {
+      // Check if case has a client (creditor)
+      const hasClient = caseDetails.client?._id || caseDetails.client;
+      setSelectedCreditorClientId(hasClient ? (caseDetails.client._id || caseDetails.client) : "");
+      setCreditorSelectionMode(hasClient ? "existing" : "new");
+      
       setEditFormData({
         title: caseDetails.title || "",
         description: caseDetails.description || "",
@@ -131,6 +147,7 @@ const CaseDetails = () => {
         status: caseDetails.status || "new",
         caseReference: caseDetails.caseReference || "",
         assignedTo: caseDetails.assignedTo?._id || caseDetails.assignedTo || "",
+        client: hasClient ? (caseDetails.client._id || caseDetails.client) : "",
       });
     }
   }, [showEditModal, caseDetails]);
@@ -478,8 +495,34 @@ const CaseDetails = () => {
     setEditLoading(true);
 
     try {
+      // Prepare creditor data - creditor is the client
+      let creditorData = {};
+      let clientId = null;
+      
+      if (creditorSelectionMode === "existing" && selectedCreditorClientId) {
+        clientId = selectedCreditorClientId;
+        const selectedClient = activeClients.find(
+          (c) => c._id === selectedCreditorClientId
+        );
+        if (selectedClient) {
+          creditorData = {
+            creditorName: `${selectedClient.firstName} ${selectedClient.lastName}`,
+            creditorEmail: selectedClient.email || "",
+            creditorContact: selectedClient.phoneNumber || "",
+          };
+        }
+      } else {
+        creditorData = {
+          creditorName: editFormData.creditorName || "",
+          creditorEmail: editFormData.creditorEmail || "",
+          creditorContact: editFormData.creditorContact || "",
+        };
+      }
+
       const updateData = {
         ...editFormData,
+        ...creditorData,
+        client: clientId || undefined, // Set client field if creditor is an existing client
         debtAmount: editFormData.debtAmount
           ? parseFloat(editFormData.debtAmount)
           : undefined,
@@ -490,9 +533,9 @@ const CaseDetails = () => {
         updateData.assignedTo = null;
       }
 
-      // Remove empty strings (except assignedTo which we handled above)
+      // Remove empty strings (except assignedTo and client which we handled above)
       Object.keys(updateData).forEach((key) => {
-        if (updateData[key] === "" && key !== "assignedTo") {
+        if (updateData[key] === "" && key !== "assignedTo" && key !== "client") {
           delete updateData[key];
         }
       });
@@ -1718,15 +1761,82 @@ const CaseDetails = () => {
                   />
                 </div>
 
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Creditor Selection (Our Client) <span className="text-green-400">*</span>
+                  </label>
+                  <div className="flex gap-4 mb-3">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="creditorMode"
+                        value="existing"
+                        checked={creditorSelectionMode === "existing"}
+                        onChange={(e) => {
+                          setCreditorSelectionMode(e.target.value);
+                          setSelectedCreditorClientId("");
+                        }}
+                        className="w-4 h-4 text-green-500 bg-slate-700 border-slate-600 focus:ring-green-500"
+                      />
+                      <span className="text-slate-300">Select Existing Client</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="creditorMode"
+                        value="new"
+                        checked={creditorSelectionMode === "new"}
+                        onChange={(e) => {
+                          setCreditorSelectionMode(e.target.value);
+                          setSelectedCreditorClientId("");
+                        }}
+                        className="w-4 h-4 text-green-500 bg-slate-700 border-slate-600 focus:ring-green-500"
+                      />
+                      <span className="text-slate-300">Create New Client</span>
+                    </label>
+                  </div>
+                  
+                  {creditorSelectionMode === "existing" && (
+                    <select
+                      className="w-full px-4 py-2 bg-slate-700/80 border border-slate-600/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-500/50 mb-3"
+                      value={selectedCreditorClientId}
+                      onChange={(e) => {
+                        setSelectedCreditorClientId(e.target.value);
+                        const selectedClient = activeClients.find(
+                          (c) => c._id === e.target.value
+                        );
+                        if (selectedClient) {
+                          setEditFormData({
+                            ...editFormData,
+                            creditorName: `${selectedClient.firstName} ${selectedClient.lastName}`,
+                            creditorEmail: selectedClient.email || "",
+                            creditorContact: selectedClient.phoneNumber || "",
+                          });
+                        }
+                      }}
+                    >
+                      <option value="">Choose a client...</option>
+                      {activeClients.map((client) => (
+                        <option key={client._id} value={client._id}>
+                          {client.firstName} {client.lastName}
+                          {client.email ? ` - ${client.email}` : ""}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Creditor Name
+                    Creditor Name {creditorSelectionMode === "new" && <span className="text-green-400">*</span>}
                   </label>
                   <input
                     type="text"
                     value={editFormData.creditorName || ""}
                     onChange={(e) => setEditFormData({ ...editFormData, creditorName: e.target.value })}
-                    className="w-full px-4 py-2 bg-slate-700/80 border border-slate-600/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                    required={creditorSelectionMode === "new"}
+                    disabled={creditorSelectionMode === "existing" && selectedCreditorClientId}
+                    className="w-full px-4 py-2 bg-slate-700/80 border border-slate-600/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-500/50 disabled:opacity-50"
                   />
                 </div>
 
@@ -1738,7 +1848,8 @@ const CaseDetails = () => {
                     type="email"
                     value={editFormData.creditorEmail || ""}
                     onChange={(e) => setEditFormData({ ...editFormData, creditorEmail: e.target.value })}
-                    className="w-full px-4 py-2 bg-slate-700/80 border border-slate-600/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                    disabled={creditorSelectionMode === "existing" && selectedCreditorClientId}
+                    className="w-full px-4 py-2 bg-slate-700/80 border border-slate-600/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-500/50 disabled:opacity-50"
                   />
                 </div>
 
@@ -1750,7 +1861,8 @@ const CaseDetails = () => {
                     type="text"
                     value={editFormData.creditorContact || ""}
                     onChange={(e) => setEditFormData({ ...editFormData, creditorContact: e.target.value })}
-                    className="w-full px-4 py-2 bg-slate-700/80 border border-slate-600/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                    disabled={creditorSelectionMode === "existing" && selectedCreditorClientId}
+                    className="w-full px-4 py-2 bg-slate-700/80 border border-slate-600/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-500/50 disabled:opacity-50"
                   />
                 </div>
 
