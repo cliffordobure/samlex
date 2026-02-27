@@ -136,8 +136,9 @@ const CaseDetails = () => {
       
       // If case has a client, get the latest client information from activeClients
       let creditorName = caseDetails.creditorName || "";
-      let creditorEmail = caseDetails.creditorEmail || "";
-      let creditorContact = caseDetails.creditorContact || "";
+      // Start with case's creditor fields, but allow them to be empty
+      let creditorEmail = (caseDetails.creditorEmail && caseDetails.creditorEmail.trim()) ? caseDetails.creditorEmail : "";
+      let creditorContact = (caseDetails.creditorContact && caseDetails.creditorContact.trim()) ? caseDetails.creditorContact : "";
       
       if (hasClient && activeClients.length > 0) {
         const client = activeClients.find(
@@ -148,8 +149,9 @@ const CaseDetails = () => {
           creditorName = client.clientType === "corporate" && client.companyName
             ? client.companyName
             : `${client.firstName} ${client.lastName}`;
-          creditorEmail = client.email || "";
-          creditorContact = client.phoneNumber || "";
+          // Only set email/phone if client has them (not null, undefined, or empty string)
+          creditorEmail = (client.email && client.email.trim()) ? client.email : "";
+          creditorContact = (client.phoneNumber && client.phoneNumber.trim()) ? client.phoneNumber : "";
         }
       }
       
@@ -646,8 +648,9 @@ const CaseDetails = () => {
 
   // If case has a client, use the client's current information instead of case's creditor fields
   let creditorName = caseCreditorName || "";
-  let creditorEmail = caseCreditorEmail || "";
-  let creditorContact = caseCreditorContact || "";
+  // Start with case's creditor fields, but allow them to be empty
+  let creditorEmail = caseCreditorEmail && caseCreditorEmail.trim() ? caseCreditorEmail : "";
+  let creditorContact = caseCreditorContact && caseCreditorContact.trim() ? caseCreditorContact : "";
   
   const clientId = caseClient?._id || caseClient;
   if (clientId && activeClients.length > 0) {
@@ -659,8 +662,9 @@ const CaseDetails = () => {
       creditorName = client.clientType === "corporate" && client.companyName
         ? client.companyName
         : `${client.firstName} ${client.lastName}`;
-      creditorEmail = client.email || "";
-      creditorContact = client.phoneNumber || "";
+      // Only set email/phone if client has them (not null, undefined, or empty string)
+      creditorEmail = (client.email && client.email.trim()) ? client.email : "";
+      creditorContact = (client.phoneNumber && client.phoneNumber.trim()) ? client.phoneNumber : "";
     }
   }
 
