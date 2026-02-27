@@ -116,12 +116,21 @@ const AdminCaseManagement = () => {
     if (user?.lawFirm?._id) {
       console.log("Loading cases for law firm:", user.lawFirm._id);
       console.log("User object:", user);
-      // Load paginated cases for the law firm
+
+      // Build shared filter params for both credit and legal cases
+      const baseFilters = {};
+      if (filters.status) baseFilters.status = filters.status;
+      if (filters.priority) baseFilters.priority = filters.priority;
+      if (filters.assignedTo) baseFilters.assignedTo = filters.assignedTo;
+      if (filters.search) baseFilters.search = filters.search;
+
+      // Load paginated cases for the law firm with filters/search applied
       dispatch(
         getCreditCases({
           lawFirm: user.lawFirm._id,
           page: creditPage,
           limit: pageSize,
+          ...baseFilters,
         })
       );
       dispatch(
@@ -129,6 +138,7 @@ const AdminCaseManagement = () => {
           lawFirm: user.lawFirm._id,
           page: legalPage,
           limit: pageSize,
+          ...baseFilters,
         })
       );
 
@@ -138,7 +148,17 @@ const AdminCaseManagement = () => {
       // Load escalated cases
       fetchEscalatedCases();
     }
-  }, [dispatch, user?.lawFirm?._id, fetchEscalatedCases, creditPage, legalPage]);
+  }, [
+    dispatch,
+    user?.lawFirm?._id,
+    fetchEscalatedCases,
+    creditPage,
+    legalPage,
+    filters.status,
+    filters.priority,
+    filters.assignedTo,
+    filters.search,
+  ]);
 
   // Socket listeners for real-time updates
   useEffect(() => {
@@ -409,6 +429,9 @@ const AdminCaseManagement = () => {
       filtered = filtered.filter(
         (case_) =>
           case_.title?.toLowerCase().includes(filters.search.toLowerCase()) ||
+          case_.caseReference
+            ?.toLowerCase()
+            .includes(filters.search.toLowerCase()) ||
           case_.caseNumber
             ?.toLowerCase()
             .includes(filters.search.toLowerCase()) ||
@@ -647,9 +670,12 @@ const AdminCaseManagement = () => {
                 placeholder="Search cases..."
                 className="w-full pl-10 pr-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50"
                 value={filters.search}
-                onChange={(e) =>
-                  setFilters({ ...filters, search: e.target.value })
-                }
+                onChange={(e) => {
+                  setFilters({ ...filters, search: e.target.value });
+                  // Reset pages so search always starts from first page
+                  setCreditPage(1);
+                  setLegalPage(1);
+                }}
               />
               <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
             </div>
@@ -664,9 +690,12 @@ const AdminCaseManagement = () => {
                 placeholder="Search cases..."
                 className="w-full pl-10 pr-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50"
                 value={filters.search}
-                onChange={(e) =>
-                  setFilters({ ...filters, search: e.target.value })
-                }
+                onChange={(e) => {
+                  setFilters({ ...filters, search: e.target.value });
+                  // Reset pages so search always starts from first page
+                  setCreditPage(1);
+                  setLegalPage(1);
+                }}
               />
               <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
             </div>
@@ -727,14 +756,17 @@ const AdminCaseManagement = () => {
           
           <div className="flex justify-end mt-4 sm:mt-6">
             <button
-              onClick={() =>
+              onClick={() => {
                 setFilters({
                   status: "",
                   priority: "",
                   assignedTo: "",
                   search: "",
-                })
-              }
+                });
+                // Also reset pagination when clearing filters
+                setCreditPage(1);
+                setLegalPage(1);
+              }}
               className="px-4 py-2 bg-slate-700/50 hover:bg-slate-600/50 text-slate-300 rounded-xl border border-slate-600/50 transition-all duration-300 hover:scale-105 flex items-center gap-2"
             >
               <FaTimes className="w-4 h-4" />
@@ -805,31 +837,31 @@ const AdminCaseManagement = () => {
                   <table className="w-full border-collapse">
                     <thead>
                       <tr className="bg-slate-800/80 border-b border-slate-600/50">
-                        <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm font-semibold text-white">
-                          Case Number
+                        <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-[11px] sm:text-xs font-semibold text-white">
+                          Case Reference Number
                         </th>
-                        <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm font-semibold text-white hidden sm:table-cell">
+                        <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-[11px] sm:text-xs font-semibold text-white hidden sm:table-cell">
                           Title
                         </th>
-                        <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm font-semibold text-white hidden md:table-cell">
+                        <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-[11px] sm:text-xs font-semibold text-white hidden md:table-cell">
                           Debtor
                         </th>
-                        <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm font-semibold text-white">
+                        <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-[11px] sm:text-xs font-semibold text-white">
                           Amount
                         </th>
-                        <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm font-semibold text-white hidden sm:table-cell">
+                        <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-[11px] sm:text-xs font-semibold text-white hidden sm:table-cell">
                           Priority
                         </th>
-                        <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm font-semibold text-white">
+                        <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-[11px] sm:text-xs font-semibold text-white">
                           Status
                         </th>
-                        <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm font-semibold text-white hidden lg:table-cell">
+                        <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-[11px] sm:text-xs font-semibold text-white hidden lg:table-cell">
                           Assigned To
                         </th>
-                        <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm font-semibold text-white hidden md:table-cell">
+                        <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-[11px] sm:text-xs font-semibold text-white hidden md:table-cell">
                           Created
                         </th>
-                        <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm font-semibold text-white">
+                        <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-[11px] sm:text-xs font-semibold text-white">
                           Actions
                         </th>
                       </tr>
@@ -844,21 +876,21 @@ const AdminCaseManagement = () => {
                               : "bg-slate-800/30"
                           } hover:bg-slate-700/50 transition-all duration-300`}
                         >
-                          <td className="px-2 sm:px-4 py-2 sm:py-3 font-medium text-white">
+                          <td className="px-2 sm:px-4 py-2 sm:py-3 font-medium text-white text-xs sm:text-[13px]">
                             <Link
                               to={`/admin/credit-case/${case_._id}`}
                               className="text-blue-400 hover:text-blue-300 transition-colors"
                             >
-                              {case_.caseNumber}
+                              {case_.caseReference || case_.caseNumber}
                             </Link>
                           </td>
-                          <td className="px-2 sm:px-4 py-2 sm:py-3 text-slate-300 hidden sm:table-cell">
+                          <td className="px-2 sm:px-4 py-2 sm:py-3 text-slate-300 text-xs sm:text-[13px] hidden sm:table-cell">
                             {case_.title}
                           </td>
-                          <td className="px-2 sm:px-4 py-2 sm:py-3 text-slate-300 hidden md:table-cell">
+                          <td className="px-2 sm:px-4 py-2 sm:py-3 text-slate-300 text-xs sm:text-[13px] hidden md:table-cell">
                             {case_.debtorName}
                           </td>
-                          <td className="px-2 sm:px-4 py-2 sm:py-3 text-white font-medium">
+                          <td className="px-2 sm:px-4 py-2 sm:py-3 text-white font-medium text-xs sm:text-[13px]">
                             <div className="flex items-center gap-1">
                               <FaMoneyBillWave className="w-3 h-3 text-green-400" />
                               <span>KES {case_.debtAmount?.toLocaleString()}</span>
@@ -866,7 +898,7 @@ const AdminCaseManagement = () => {
                           </td>
                           <td className="px-2 sm:px-4 py-2 sm:py-3 hidden sm:table-cell">
                             <span
-                              className={`px-2 py-1 rounded-full text-xs font-bold text-white ${getPriorityBadgeClass(
+                              className={`px-2 py-1 rounded-full text-[10px] font-bold text-white ${getPriorityBadgeClass(
                                 case_.priority
                               )}`}
                             >
@@ -875,20 +907,20 @@ const AdminCaseManagement = () => {
                           </td>
                           <td className="px-2 sm:px-4 py-2 sm:py-3">
                             <span
-                              className={`px-2 py-1 rounded-full text-xs font-bold text-white ${getStatusBadgeClass(
+                              className={`px-2 py-1 rounded-full text-[10px] font-bold text-white ${getStatusBadgeClass(
                                 case_.status
                               )}`}
                             >
                               {case_.status?.replace("_", " ").toUpperCase()}
                             </span>
                           </td>
-                          <td className="px-2 sm:px-4 py-2 sm:py-3 text-slate-300 hidden lg:table-cell">
+                          <td className="px-2 sm:px-4 py-2 sm:py-3 text-slate-300 text-xs sm:text-[13px] hidden lg:table-cell">
                             {case_.assignedTo?.firstName &&
                             case_.assignedTo?.lastName
                               ? `${case_.assignedTo.firstName} ${case_.assignedTo.lastName}`
                               : "Unassigned"}
                           </td>
-                          <td className="px-2 sm:px-4 py-2 sm:py-3 text-slate-300 hidden md:table-cell">
+                          <td className="px-2 sm:px-4 py-2 sm:py-3 text-slate-300 text-xs sm:text-[13px] hidden md:table-cell">
                             <div className="flex items-center gap-1">
                               <FaCalendar className="w-3 h-3 text-slate-400" />
                               <span>{new Date(case_.createdAt).toLocaleDateString()}</span>
@@ -916,15 +948,21 @@ const AdminCaseManagement = () => {
                               </select>
                               <Link
                                 to={`/admin/credit-case/${case_._id}`}
-                                className="w-full sm:w-auto px-3 py-1 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-400 hover:text-blue-300 rounded-lg text-xs transition-all duration-300 flex items-center justify-center gap-1"
+                                className="w-full sm:w-auto px-3 py-1 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-400 hover:text-blue-300 rounded-lg text-[11px] transition-all duration-300 flex items-center justify-center gap-1"
                               >
                                 <FaEye className="w-3 h-3" />
                                 <span>View</span>
                               </Link>
                               {user?.role === "law_firm_admin" && (
                                 <button
-                                  className="w-full sm:w-auto px-3 py-1 bg-red-600/20 hover:bg-red-600/30 border border-red-500/30 text-red-400 hover:text-red-300 rounded-lg text-xs transition-all duration-300 flex items-center justify-center gap-1"
-                                  onClick={() => handleDeleteCase(case_._id, "credit", case_.caseNumber)}
+                                  className="w-full sm:w-auto px-3 py-1 bg-red-600/20 hover:bg-red-600/30 border border-red-500/30 text-red-400 hover:text-red-300 rounded-lg text-[11px] transition-all duration-300 flex items-center justify-center gap-1"
+                                  onClick={() =>
+                                    handleDeleteCase(
+                                      case_._id,
+                                      "credit",
+                                      case_.caseReference || case_.caseNumber
+                                    )
+                                  }
                                   title="Delete case"
                                 >
                                   <FaTrash className="w-3 h-3" />
