@@ -35,10 +35,9 @@ const CreateCase = () => {
   const [uploadingFiles, setUploadingFiles] = useState(false);
   const [uploadProgress, setUploadProgress] = useState({});
   const [error, setError] = useState("");
-  const [debtorSelectionMode, setDebtorSelectionMode] = useState("new"); // "existing" or "new"
-  const [selectedDebtorId, setSelectedDebtorId] = useState("");
   const [creditorSelectionMode, setCreditorSelectionMode] = useState("existing"); // "existing" or "new" - creditor is the client
   const [selectedCreditorId, setSelectedCreditorId] = useState("");
+  const [creditorSearchQuery, setCreditorSearchQuery] = useState(""); // For searching creditors
   // Per-case SMS preferences (admin can configure who gets SMS on creation)
   const [smsPreferences, setSmsPreferences] = useState({
     sendSmsToAssigned: true,
@@ -152,29 +151,12 @@ const CreateCase = () => {
         }
       }
 
-      // 2. Prepare debtor data based on selection mode
-      let debtorData = {};
-      if (debtorSelectionMode === "existing" && selectedDebtorId) {
-        // If existing client is selected, we'll send the client ID
-        // The backend will handle mapping it to debtor fields
-        const selectedClient = activeClients.find(
-          (c) => c._id === selectedDebtorId
-        );
-        if (selectedClient) {
-          debtorData = {
-            debtorName: `${selectedClient.firstName} ${selectedClient.lastName}`,
-            debtorEmail: selectedClient.email || "",
-            debtorContact: selectedClient.phoneNumber || "",
-          };
-        }
-      } else {
-        // Use form data for new debtor
-        debtorData = {
-          debtorName: form.debtorName,
-          debtorEmail: form.debtorEmail,
-          debtorContact: form.debtorContact,
-        };
-      }
+      // 2. Prepare debtor data - debtors are always entered manually (not clients in the system)
+      const debtorData = {
+        debtorName: form.debtorName,
+        debtorEmail: form.debtorEmail,
+        debtorContact: form.debtorContact,
+      };
 
       // 3. Prepare creditor data - creditor is the client to the law firm
       let creditorData = {};
@@ -395,120 +377,14 @@ const CreateCase = () => {
                   </svg>
                   Debtor Information
                 </h3>
+                <p className="text-sm text-slate-300 mb-4">
+                  Enter the debtor's information manually. Debtors are not stored as clients in the system.
+                </p>
                 
-                {/* Debtor Selection Mode Toggle */}
-                <div className="mb-6">
-                  <label className="block text-sm font-medium text-slate-300 mb-3">
-                    Debtor Selection <span className="text-red-400">*</span>
-                  </label>
-                  <div className="flex gap-4">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="debtorMode"
-                        value="existing"
-                        checked={debtorSelectionMode === "existing"}
-                        onChange={(e) => {
-                          setDebtorSelectionMode(e.target.value);
-                          setSelectedDebtorId("");
-                          setForm((prev) => ({
-                            ...prev,
-                            debtorName: "",
-                            debtorEmail: "",
-                            debtorContact: "",
-                          }));
-                        }}
-                        className="w-4 h-4 text-red-500 bg-slate-700 border-slate-600 focus:ring-red-500 focus:ring-2"
-                      />
-                      <span className="text-slate-300">Select Existing Client</span>
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="debtorMode"
-                        value="new"
-                        checked={debtorSelectionMode === "new"}
-                        onChange={(e) => {
-                          setDebtorSelectionMode(e.target.value);
-                          setSelectedDebtorId("");
-                        }}
-                        className="w-4 h-4 text-red-500 bg-slate-700 border-slate-600 focus:ring-red-500 focus:ring-2"
-                      />
-                      <span className="text-slate-300">Create New Debtor</span>
-                    </label>
-                  </div>
-                </div>
-
-                {/* Existing Client Selection */}
-                {debtorSelectionMode === "existing" && (
-                  <div className="mb-6">
-                    <label className="block text-sm font-medium text-slate-300 mb-2">
-                      Select Client <span className="text-red-400">*</span>
-                    </label>
-                    <select
-                      className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-200"
-                      value={selectedDebtorId}
-                      onChange={(e) => {
-                        setSelectedDebtorId(e.target.value);
-                        const selectedClient = activeClients.find(
-                          (c) => c._id === e.target.value
-                        );
-                        if (selectedClient) {
-                          setForm((prev) => ({
-                            ...prev,
-                            debtorName: `${selectedClient.firstName} ${selectedClient.lastName}`,
-                            debtorEmail: selectedClient.email || "",
-                            debtorContact: selectedClient.phoneNumber || "",
-                          }));
-                        }
-                      }}
-                    >
-                      <option value="">Choose a client...</option>
-                      {activeClients.map((client) => (
-                        <option key={client._id} value={client._id}>
-                          {client.firstName} {client.lastName}
-                          {client.email ? ` - ${client.email}` : ""}
-                          {client.clientType === "corporate" && client.companyName
-                            ? ` (${client.companyName})`
-                            : ""}
-                        </option>
-                      ))}
-                    </select>
-                    {selectedDebtorId && (
-                      <div className="mt-3 p-3 bg-slate-700/30 border border-slate-600/50 rounded-lg">
-                        {(() => {
-                          const selectedClient = activeClients.find(
-                            (c) => c._id === selectedDebtorId
-                          );
-                          return selectedClient ? (
-                            <div className="text-sm text-slate-300">
-                              <p className="text-white font-medium">
-                                {selectedClient.firstName} {selectedClient.lastName}
-                              </p>
-                              {selectedClient.email && (
-                                <p>Email: {selectedClient.email}</p>
-                              )}
-                              {selectedClient.phoneNumber && (
-                                <p>Phone: {selectedClient.phoneNumber}</p>
-                              )}
-                              {selectedClient.clientType === "corporate" &&
-                                selectedClient.companyName && (
-                                  <p>Company: {selectedClient.companyName}</p>
-                                )}
-                            </div>
-                          ) : null;
-                        })()}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* New Debtor Form Fields */}
-                {debtorSelectionMode === "new" && (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-2">
-                      Debtor Name
+                      Debtor Name <span className="text-red-400">*</span>
                     </label>
                     <input
                       name="debtorName"
@@ -545,7 +421,6 @@ const CreateCase = () => {
                     />
                   </div>
                 </div>
-                )}
               </div>
 
               {/* Creditor Information Section - Creditor is the Client */}
@@ -603,12 +478,36 @@ const CreateCase = () => {
                   </div>
                 </div>
 
-                {/* Existing Client Selection */}
+                {/* Existing Client Selection with Search */}
                 {creditorSelectionMode === "existing" && (
                   <div className="mb-6">
                     <label className="block text-sm font-medium text-slate-300 mb-2">
                       Select Client <span className="text-green-400">*</span>
                     </label>
+                    {/* Search Input */}
+                    <div className="relative mb-3">
+                      <input
+                        type="text"
+                        className="w-full px-4 py-3 pl-10 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
+                        placeholder="Search clients by name, email, or company..."
+                        value={creditorSearchQuery}
+                        onChange={(e) => setCreditorSearchQuery(e.target.value)}
+                      />
+                      <svg
+                        className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                        />
+                      </svg>
+                    </div>
+                    {/* Filtered Client Dropdown */}
                     <select
                       className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
                       value={selectedCreditorId}
@@ -624,20 +523,50 @@ const CreateCase = () => {
                             creditorEmail: selectedClient.email || "",
                             creditorContact: selectedClient.phoneNumber || "",
                           }));
+                          setCreditorSearchQuery(""); // Clear search after selection
                         }
                       }}
                     >
                       <option value="">Choose a client...</option>
-                      {activeClients.map((client) => (
-                        <option key={client._id} value={client._id}>
-                          {client.firstName} {client.lastName}
-                          {client.email ? ` - ${client.email}` : ""}
-                          {client.clientType === "corporate" && client.companyName
-                            ? ` (${client.companyName})`
-                            : ""}
-                        </option>
-                      ))}
+                      {activeClients
+                        .filter((client) => {
+                          if (!creditorSearchQuery) return true;
+                          const searchLower = creditorSearchQuery.toLowerCase();
+                          const fullName = `${client.firstName} ${client.lastName}`.toLowerCase();
+                          const email = (client.email || "").toLowerCase();
+                          const company = (client.companyName || "").toLowerCase();
+                          return (
+                            fullName.includes(searchLower) ||
+                            email.includes(searchLower) ||
+                            company.includes(searchLower)
+                          );
+                        })
+                        .map((client) => (
+                          <option key={client._id} value={client._id}>
+                            {client.firstName} {client.lastName}
+                            {client.email ? ` - ${client.email}` : ""}
+                            {client.clientType === "corporate" && client.companyName
+                              ? ` (${client.companyName})`
+                              : ""}
+                          </option>
+                        ))}
                     </select>
+                    {activeClients.filter((client) => {
+                      if (!creditorSearchQuery) return false;
+                      const searchLower = creditorSearchQuery.toLowerCase();
+                      const fullName = `${client.firstName} ${client.lastName}`.toLowerCase();
+                      const email = (client.email || "").toLowerCase();
+                      const company = (client.companyName || "").toLowerCase();
+                      return (
+                        fullName.includes(searchLower) ||
+                        email.includes(searchLower) ||
+                        company.includes(searchLower)
+                      );
+                    }).length === 0 && creditorSearchQuery && (
+                      <p className="mt-2 text-sm text-slate-400">
+                        No clients found matching "{creditorSearchQuery}"
+                      </p>
+                    )}
                     {selectedCreditorId && (
                       <div className="mt-3 p-3 bg-slate-700/30 border border-slate-600/50 rounded-lg">
                         {(() => {

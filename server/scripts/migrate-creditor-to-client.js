@@ -11,13 +11,28 @@ import mongoose from "mongoose";
 import CreditCase from "../models/CreditCase.js";
 import Client from "../models/Client.js";
 import dotenv from "dotenv";
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
 
-// Load environment variables
-dotenv.config();
+// Get the directory of the current module
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// Load environment variables from project root (two levels up from scripts folder)
+dotenv.config({ path: join(__dirname, "../../.env") });
 
 const connectDB = async () => {
   try {
-    await mongoose.connect(process.env.MONGODB_URI || process.env.MONGO_URI);
+    const mongoUri = process.env.MONGO_URI || process.env.MONGODB_URI;
+    
+    if (!mongoUri) {
+      console.error("❌ MongoDB connection string not found!");
+      console.error("Please set MONGO_URI or MONGODB_URI in your .env file");
+      process.exit(1);
+    }
+    
+    console.log("🔌 Connecting to MongoDB...");
+    await mongoose.connect(mongoUri);
     console.log("✅ MongoDB Connected");
   } catch (error) {
     console.error("❌ MongoDB connection error:", error);
