@@ -477,11 +477,11 @@ const DepartmentList = () => {
         </div>
       )}
 
-      {/* Debt Collector Stats Modal */}
+      {/* Debt Collector Stats Modal - Must be rendered after detailsModal to appear on top */}
       {collectorModal.isOpen && collectorModal.user && (
         <div 
-          className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[10000] p-4" 
-          style={{ zIndex: 10000 }}
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" 
+          style={{ zIndex: 99999, position: 'fixed' }}
           onClick={(e) => {
             if (e.target === e.currentTarget) {
               setCollectorModal({
@@ -496,7 +496,7 @@ const DepartmentList = () => {
         >
           <div 
             className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl w-full max-w-4xl mx-4 overflow-y-auto max-h-[90vh] border border-slate-700 shadow-2xl relative" 
-            style={{ zIndex: 10001 }}
+            style={{ zIndex: 100000, position: 'relative' }}
             onClick={(e) => e.stopPropagation()}
           >
             <button
@@ -646,26 +646,28 @@ const DepartmentList = () => {
                           </tr>
                         </thead>
                         <tbody>
-                          {collectorModal.data.assignedCases.map((case_) => {
-                            // Initialize all variables at the top
-                            const amount = case_.debtAmount || 0;
+                          {collectorModal.data.assignedCases && Array.isArray(collectorModal.data.assignedCases) && collectorModal.data.assignedCases.map((case_) => {
+                            // Initialize all variables at the top - CRITICAL: Define all variables first
+                            const amount = Number(case_.debtAmount) || 0;
                             let collected = 0;
-                            let isCollected = false;
                             
                             // Calculate actual collected amount from promised payments
                             if (case_.promisedPayments && Array.isArray(case_.promisedPayments)) {
                               collected = case_.promisedPayments
-                                .filter(payment => payment.status === "paid")
-                                .reduce((sum, payment) => sum + (payment.amount || 0), 0);
+                                .filter(payment => payment && payment.status === "paid")
+                                .reduce((sum, payment) => sum + (Number(payment.amount) || 0), 0);
                             }
                             
                             // If case is resolved/closed and no promised payments, assume full amount collected
-                            if (collected === 0 && ["resolved", "closed"].includes(case_.status)) {
+                            if (collected === 0 && case_.status && ["resolved", "closed"].includes(case_.status)) {
                               collected = amount;
                             }
                             
-                            // Determine if case is collected
-                            isCollected = ["resolved", "closed"].includes(case_.status) || (amount > 0 && collected >= amount);
+                            // Determine if case is collected - MUST be defined as const before use
+                            const isCollected = Boolean(
+                              (case_.status && ["resolved", "closed"].includes(case_.status)) || 
+                              (amount > 0 && collected >= amount)
+                            );
                             
                             const pending = amount - collected;
                             const casePerformance = amount > 0 ? Math.round((collected / amount) * 100) : 0;
@@ -958,7 +960,7 @@ const DepartmentList = () => {
         isOpen: detailsModal.isOpen,
         hasData: !!detailsModal.data,
       })}
-      {detailsModal.isOpen && detailsModal.data && (
+      {detailsModal.isOpen && detailsModal.data && !collectorModal.isOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-gradient-to-br from-slate-800 to-slate-700 rounded-2xl w-full max-w-4xl mx-4 overflow-y-auto max-h-[90vh] relative border border-slate-600/50 shadow-2xl">
             <button

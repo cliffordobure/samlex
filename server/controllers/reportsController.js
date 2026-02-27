@@ -1349,7 +1349,7 @@ export const getDebtCollectorStats = async (req, res) => {
 };
 
 /**
- * @desc    Get comprehensive statistics for a specific debt collector by ID
+ * @desc    Get comprehensive statistics for a specific user by ID (debt collector, credit head, etc.)
  * @route   GET /api/reports/debt-collector/:debtCollectorId/stats
  * @access  Private (debt_collector, credit_head, law_firm_admin)
  */
@@ -1358,15 +1358,16 @@ export const getDebtCollectorStatsById = async (req, res) => {
     const { debtCollectorId } = req.params;
     const { period = "30" } = req.query;
 
-    // Validate debt collector ID
+    // Validate user ID
     if (!validateObjectId(debtCollectorId)) {
       return res.status(400).json({
         success: false,
-        message: "Invalid debt collector ID format",
+        message: "Invalid user ID format",
       });
     }
 
-    // Check if user has permission to view this debt collector's stats
+    // Check if user has permission to view this user's stats
+    // Debt collectors can only view their own stats
     if (req.user.role === "debt_collector" && req.user._id.toString() !== debtCollectorId) {
       return res.status(403).json({
         success: false,
@@ -1374,14 +1375,28 @@ export const getDebtCollectorStatsById = async (req, res) => {
       });
     }
 
-    // Verify the debt collector exists and belongs to the same law firm
-    const debtCollector = await User.findById(debtCollectorId);
-    if (!debtCollector || debtCollector.role !== "debt_collector") {
+    // Verify the user exists and belongs to the same law firm
+    // Allow viewing stats for users with collection-related roles
+    const targetUser = await User.findById(debtCollectorId);
+    if (!targetUser) {
       return res.status(404).json({
         success: false,
-        message: "Debt collector not found",
+        message: "User not found",
       });
     }
+    
+    // Allow viewing stats for users with collection-related roles
+    // This includes debt_collector, credit_head, and law_firm_admin
+    const allowedRoles = ["debt_collector", "credit_head", "law_firm_admin"];
+    if (!allowedRoles.includes(targetUser.role)) {
+      return res.status(404).json({
+        success: false,
+        message: "User role not eligible for collection statistics",
+      });
+    }
+    
+    // Use targetUser instead of debtCollector for consistency
+    const debtCollector = targetUser;
 
     if (req.user.lawFirm._id.toString() !== debtCollector.lawFirm._id.toString()) {
       return res.status(403).json({
