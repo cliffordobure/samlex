@@ -479,8 +479,18 @@ const DepartmentList = () => {
 
       {/* Debt Collector Stats Modal */}
       {collectorModal.isOpen && collectorModal.user && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl w-full max-w-4xl mx-4 overflow-y-auto max-h-[90vh] border border-slate-700 shadow-2xl relative">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[9999] p-4" onClick={(e) => {
+          if (e.target === e.currentTarget) {
+            setCollectorModal({
+              isOpen: false,
+              loading: false,
+              data: null,
+              user: null,
+              error: null,
+            });
+          }
+        }}>
+          <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl w-full max-w-4xl mx-4 overflow-y-auto max-h-[90vh] border border-slate-700 shadow-2xl relative" onClick={(e) => e.stopPropagation()}>
             <button
               onClick={() =>
                 setCollectorModal({
@@ -511,16 +521,19 @@ const DepartmentList = () => {
               </div>
             </div>
 
-            {collectorModal.loading ? (
-              <div className="py-10 flex flex-col items-center justify-center text-slate-300">
-                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-500 mb-3"></div>
-                <p>Loading collector statistics...</p>
-              </div>
-            ) : collectorModal.error ? (
-              <div className="p-6 text-center text-red-400 text-sm">
-                {collectorModal.error}
-              </div>
-            ) : collectorModal.data ? (
+            <div className="p-6">
+              {collectorModal.loading ? (
+                <div className="py-20 flex flex-col items-center justify-center text-slate-300">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mb-4"></div>
+                  <p className="text-lg">Loading collector statistics...</p>
+                  <p className="text-sm text-slate-400 mt-2">Please wait...</p>
+                </div>
+              ) : collectorModal.error ? (
+                <div className="py-10 text-center">
+                  <div className="text-red-400 text-lg font-semibold mb-2">Error</div>
+                  <div className="text-red-300 text-sm">{collectorModal.error}</div>
+                </div>
+              ) : collectorModal.data ? (
               <div className="p-6 space-y-6">
                 {/* Summary cards */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -643,6 +656,7 @@ const DepartmentList = () => {
                             
                             const pending = amount - collected;
                             const casePerformance = amount > 0 ? Math.round((collected / amount) * 100) : 0;
+                            const isCollected = ["resolved", "closed"].includes(case_.status) || (amount > 0 && collected >= amount);
                             
                             // Get client name from case data
                             let clientName = "N/A";
@@ -746,8 +760,12 @@ const DepartmentList = () => {
                     </div>
                   )}
                 </div>
-              </div>
-            ) : null}
+              ) : (
+                <div className="py-10 text-center text-slate-400">
+                  <p>No data available</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
