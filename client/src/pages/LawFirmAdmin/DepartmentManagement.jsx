@@ -479,18 +479,26 @@ const DepartmentList = () => {
 
       {/* Debt Collector Stats Modal */}
       {collectorModal.isOpen && collectorModal.user && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[9999] p-4" onClick={(e) => {
-          if (e.target === e.currentTarget) {
-            setCollectorModal({
-              isOpen: false,
-              loading: false,
-              data: null,
-              user: null,
-              error: null,
-            });
-          }
-        }}>
-          <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl w-full max-w-4xl mx-4 overflow-y-auto max-h-[90vh] border border-slate-700 shadow-2xl relative" onClick={(e) => e.stopPropagation()}>
+        <div 
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[10000] p-4" 
+          style={{ zIndex: 10000 }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setCollectorModal({
+                isOpen: false,
+                loading: false,
+                data: null,
+                user: null,
+                error: null,
+              });
+            }
+          }}
+        >
+          <div 
+            className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl w-full max-w-4xl mx-4 overflow-y-auto max-h-[90vh] border border-slate-700 shadow-2xl relative" 
+            style={{ zIndex: 10001 }}
+            onClick={(e) => e.stopPropagation()}
+          >
             <button
               onClick={() =>
                 setCollectorModal({
@@ -534,7 +542,7 @@ const DepartmentList = () => {
                   <div className="text-red-300 text-sm">{collectorModal.error}</div>
                 </div>
               ) : collectorModal.data ? (
-              <div className="p-6 space-y-6">
+                <div className="space-y-6">
                 {/* Summary cards */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   <div className="bg-gradient-to-br from-blue-500/20 to-blue-600/20 rounded-xl p-4 border border-blue-500/30">
@@ -639,10 +647,12 @@ const DepartmentList = () => {
                         </thead>
                         <tbody>
                           {collectorModal.data.assignedCases.map((case_) => {
+                            // Initialize all variables at the top
                             const amount = case_.debtAmount || 0;
+                            let collected = 0;
+                            let isCollected = false;
                             
                             // Calculate actual collected amount from promised payments
-                            let collected = 0;
                             if (case_.promisedPayments && Array.isArray(case_.promisedPayments)) {
                               collected = case_.promisedPayments
                                 .filter(payment => payment.status === "paid")
@@ -654,9 +664,11 @@ const DepartmentList = () => {
                               collected = amount;
                             }
                             
+                            // Determine if case is collected
+                            isCollected = ["resolved", "closed"].includes(case_.status) || (amount > 0 && collected >= amount);
+                            
                             const pending = amount - collected;
                             const casePerformance = amount > 0 ? Math.round((collected / amount) * 100) : 0;
-                            const isCollected = ["resolved", "closed"].includes(case_.status) || (amount > 0 && collected >= amount);
                             
                             // Get client name from case data
                             let clientName = "N/A";
@@ -759,6 +771,7 @@ const DepartmentList = () => {
                       </p>
                     </div>
                   )}
+                </div>
                 </div>
               ) : (
                 <div className="py-10 text-center text-slate-400">
@@ -1240,6 +1253,9 @@ const DepartmentList = () => {
                           key={user._id}
                           onClick={async () => {
                             try {
+                              // Close details modal first to avoid z-index conflicts
+                              setDetailsModal({ isOpen: false, data: null });
+                              
                               setCollectorModal({
                                 isOpen: true,
                                 loading: true,
