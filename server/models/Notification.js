@@ -28,6 +28,7 @@ const notificationSchema = new mongoose.Schema(
         "case_reassigned",
         "case_updated",
         "payment_update",
+        "payment_updated",
         "follow_up_scheduled",
         "task_reminder",
         "daily_summary",
