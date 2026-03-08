@@ -632,9 +632,9 @@ const CaseDetails = () => {
         throw new Error("No files were successfully uploaded");
       }
 
-      // Add documents to case (send path + originalName so UI shows real filename)
+      // Add documents to case (send array of { path, originalName } so API receives documents: [...])
       console.log("Sending to API:", { documents: uploadedUrls });
-      const response = await legalCaseApi.addDocument(id, { documents: uploadedUrls });
+      const response = await legalCaseApi.addDocument(id, uploadedUrls);
       
       if (response.data.success && response.data.data) {
         // Update currentCase immediately with the response

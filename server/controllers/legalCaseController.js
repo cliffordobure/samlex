@@ -1099,10 +1099,27 @@ export const addDocumentToCase = async (req, res) => {
       });
     }
 
-    // Ensure documents is an array
-    const documentsArray = Array.isArray(documents) ? documents : [documents];
+    // Normalize: accept array or { documents: array } (some clients send nested shape)
+    let documentsArray;
+    if (Array.isArray(documents)) {
+      documentsArray = documents;
+    } else if (documents && Array.isArray(documents.documents)) {
+      documentsArray = documents.documents;
+    } else {
+      documentsArray = [documents];
+    }
 
     console.log("Documents array:", documentsArray);
+
+    // Helper so every document has required schema fields (name, originalName, path, size, mimeType, uploadedBy)
+    const toDoc = (d) => ({
+      name: d.name ?? d.originalName ?? "Document",
+      originalName: d.originalName ?? d.name ?? "Document",
+      path: d.path ?? d.url ?? "",
+      size: typeof d.size === "number" ? d.size : 0,
+      mimeType: d.mimeType ?? "application/octet-stream",
+      uploadedBy: req.user._id,
+    });
 
     // Process documents - handle URLs (string), or objects with path/url + optional originalName
     const processedDocuments = documentsArray.map((doc) => {
@@ -1110,49 +1127,37 @@ export const addDocumentToCase = async (req, res) => {
         const pathOrUrl = doc;
         const fromUrl = pathOrUrl.split("/").pop().split("?")[0] || "";
         const filename = fromUrl && !/^[0-9a-f-]{36}\./i.test(fromUrl) ? fromUrl : "Document";
-        return {
+        return toDoc({
           name: filename,
           originalName: filename,
           path: pathOrUrl,
           size: 0,
           mimeType: "application/octet-stream",
-          uploadedBy: req.user._id,
-        };
-      } else if (doc && typeof doc === "object" && doc.documents) {
-        // Handle nested documents structure
+        });
+      }
+      if (doc && typeof doc === "object" && Array.isArray(doc.documents)) {
         return doc.documents.map((nestedDoc) => {
           if (typeof nestedDoc === "string") {
             const fromUrl = nestedDoc.split("/").pop().split("?")[0] || "";
             const filename = fromUrl && !/^[0-9a-f-]{36}\./i.test(fromUrl) ? fromUrl : "Document";
-            return {
-              name: filename,
-              originalName: filename,
-              path: nestedDoc,
-              size: 0,
-              mimeType: "application/octet-stream",
-              uploadedBy: req.user._id,
-            };
-          } else {
-            const name = nestedDoc.originalName ?? nestedDoc.name ?? "Document";
-            return {
-              ...nestedDoc,
-              name: name,
-              originalName: nestedDoc.originalName ?? nestedDoc.name ?? name,
-              uploadedBy: req.user._id,
-            };
+            return toDoc({ name: filename, originalName: filename, path: nestedDoc, size: 0, mimeType: "application/octet-stream" });
           }
+          return toDoc({
+            ...nestedDoc,
+            name: nestedDoc.originalName ?? nestedDoc.name ?? "Document",
+            originalName: nestedDoc.originalName ?? nestedDoc.name ?? "Document",
+            path: nestedDoc.path ?? nestedDoc.url,
+            size: nestedDoc.size ?? 0,
+            mimeType: nestedDoc.mimeType ?? "application/octet-stream",
+          });
         });
-      } else {
-        // If it's already a document object (e.g. { path, originalName } from client)
-        const name = doc.originalName ?? doc.name ?? "Document";
-        return {
-          ...doc,
-          path: doc.path ?? doc.url,
-          name: name,
-          originalName: doc.originalName ?? doc.name ?? name,
-          uploadedBy: req.user._id,
-        };
       }
+      return toDoc({
+        ...doc,
+        name: doc.originalName ?? doc.name ?? "Document",
+        originalName: doc.originalName ?? doc.name ?? "Document",
+        path: doc.path ?? doc.url,
+      });
     });
 
     // Flatten the processed documents array
