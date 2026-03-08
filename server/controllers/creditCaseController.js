@@ -1211,6 +1211,12 @@ export const confirmEscalationPayment = async (req, res) => {
     creditCase.escalationPayment.confirmedAt = new Date();
     creditCase.escalationPayment.confirmedBy = req.user._id;
 
+    // Mark case as escalated so it appears in Escalated Cases (Legal) and moves to legal side
+    creditCase.status = "escalated_to_legal";
+    creditCase.escalatedToLegal = true;
+    creditCase.escalationDate = creditCase.escalationDate || new Date();
+    creditCase.escalatedBy = creditCase.escalatedBy || req.user._id;
+
     // Optional: assign to a lawyer in the firm (debt collector choice)
     if (assignedLawyerId && mongoose.Types.ObjectId.isValid(assignedLawyerId)) {
       const lawyer = await User.findById(assignedLawyerId).select("role lawFirm");
@@ -1225,14 +1231,23 @@ export const confirmEscalationPayment = async (req, res) => {
 
     await creditCase.save();
 
-    // Emit socket event for real-time updates
-    req.app
-      .get("io")
-      .to(creditCase.lawFirm._id.toString())
-      .emit("creditCaseUpdated", {
+    const lawFirmId = creditCase.lawFirm?._id?.toString() || creditCase.lawFirm?.toString();
+
+    // Emit socket events for real-time updates (credit side and legal side)
+    if (req.app.get("io")) {
+      req.app.get("io").to(lawFirmId).emit("creditCaseUpdated", {
         caseId: creditCase._id,
         escalationPayment: creditCase.escalationPayment,
+        escalatedToLegal: true,
+        status: "escalated_to_legal",
       });
+      req.app.get("io").to(lawFirmId).emit("caseEscalated", {
+        caseNumber: creditCase.caseNumber,
+        _id: creditCase._id,
+        escalatedToLegal: true,
+        status: "escalated_to_legal",
+      });
+    }
 
     res.status(200).json({
       success: true,
@@ -1306,12 +1321,12 @@ export const getEscalationFee = async (req, res) => {
  */
 export const getEscalatedCreditCases = async (req, res) => {
   try {
-    // Only legal heads and law firm admins can access escalated cases
-    if (!["legal_head", "law_firm_admin"].includes(req.user.role)) {
+    // Legal heads, law firm admins, and system admins can access escalated cases
+    if (!["legal_head", "law_firm_admin", "admin"].includes(req.user.role)) {
       return res.status(403).json({
         success: false,
         message:
-          "Only legal heads and law firm admins can access escalated cases",
+          "Only legal heads, law firm admins, and admins can access escalated cases",
       });
     }
 
