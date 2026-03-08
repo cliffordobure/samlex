@@ -115,10 +115,14 @@ export const createLegalCase = async (req, res) => {
         const [firstName, ...lastNameParts] = client.name.trim().split(" ");
         const lastName = lastNameParts.join(" ") || "Client";
 
+        const clientEmail =
+          client.email && client.email.trim()
+            ? client.email.toLowerCase()
+            : `no-email-${req.user.lawFirm._id}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}@placeholder.local`;
         const newClient = new Client({
           firstName: firstName || "Client",
           lastName: lastName,
-          email: client.email && client.email.trim() ? client.email.toLowerCase() : null,
+          email: clientEmail,
           phoneNumber: client.phone,
           lawFirm: req.user.lawFirm._id,
           createdBy: req.user._id,
@@ -347,10 +351,14 @@ export const createLegalCase = async (req, res) => {
               const [firstName, ...lastNameParts] = debtorClient.name.trim().split(" ");
               const lastName = lastNameParts.join(" ") || "Client";
               
+              const debtorEmail =
+                debtorClient.email && String(debtorClient.email).trim()
+                  ? String(debtorClient.email).toLowerCase()
+                  : `no-email-${req.user.lawFirm._id}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}@placeholder.local`;
               const newClient = new Client({
                 firstName: firstName || "Client",
                 lastName: lastName,
-                email: debtorClient.email,
+                email: debtorEmail,
                 phoneNumber: debtorClient.phone || "",
                 lawFirm: req.user.lawFirm._id,
                 createdBy: req.user._id,
@@ -1096,16 +1104,17 @@ export const addDocumentToCase = async (req, res) => {
 
     console.log("Documents array:", documentsArray);
 
-    // Process documents - handle both Cloudinary URLs and file objects
+    // Process documents - handle URLs (string), or objects with path/url + optional originalName
     const processedDocuments = documentsArray.map((doc) => {
       if (typeof doc === "string") {
-        // If it's a Cloudinary URL, create a document object
-        const filename = doc.split("/").pop().split("?")[0] || "Document";
+        const pathOrUrl = doc;
+        const fromUrl = pathOrUrl.split("/").pop().split("?")[0] || "";
+        const filename = fromUrl && !/^[0-9a-f-]{36}\./i.test(fromUrl) ? fromUrl : "Document";
         return {
           name: filename,
           originalName: filename,
-          path: doc, // Cloudinary URL
-          size: 0, // Size not available for Cloudinary URLs
+          path: pathOrUrl,
+          size: 0,
           mimeType: "application/octet-stream",
           uploadedBy: req.user._id,
         };
@@ -1113,8 +1122,8 @@ export const addDocumentToCase = async (req, res) => {
         // Handle nested documents structure
         return doc.documents.map((nestedDoc) => {
           if (typeof nestedDoc === "string") {
-            const filename =
-              nestedDoc.split("/").pop().split("?")[0] || "Document";
+            const fromUrl = nestedDoc.split("/").pop().split("?")[0] || "";
+            const filename = fromUrl && !/^[0-9a-f-]{36}\./i.test(fromUrl) ? fromUrl : "Document";
             return {
               name: filename,
               originalName: filename,
@@ -1124,16 +1133,23 @@ export const addDocumentToCase = async (req, res) => {
               uploadedBy: req.user._id,
             };
           } else {
+            const name = nestedDoc.originalName ?? nestedDoc.name ?? "Document";
             return {
               ...nestedDoc,
+              name: name,
+              originalName: nestedDoc.originalName ?? nestedDoc.name ?? name,
               uploadedBy: req.user._id,
             };
           }
         });
       } else {
-        // If it's already a document object
+        // If it's already a document object (e.g. { path, originalName } from client)
+        const name = doc.originalName ?? doc.name ?? "Document";
         return {
           ...doc,
+          path: doc.path ?? doc.url,
+          name: name,
+          originalName: doc.originalName ?? doc.name ?? name,
           uploadedBy: req.user._id,
         };
       }
@@ -1482,20 +1498,23 @@ export const updateLegalCase = async (req, res) => {
     if (updateData.documents && Array.isArray(updateData.documents)) {
       const processedDocuments = updateData.documents.map((doc) => {
         if (typeof doc === "string") {
-          // If it's a Cloudinary URL, create a document object
-          const filename = doc.split("/").pop().split("?")[0] || "Document";
+          const fromUrl = doc.split("/").pop().split("?")[0] || "";
+          const filename = fromUrl && !/^[0-9a-f-]{36}\./i.test(fromUrl) ? fromUrl : "Document";
           return {
             name: filename,
             originalName: filename,
-            path: doc, // Cloudinary URL
-            size: 0, // Size not available for Cloudinary URLs
+            path: doc,
+            size: 0,
             mimeType: "application/octet-stream",
             uploadedBy: req.user._id,
           };
         } else {
-          // If it's already a document object
+          const name = doc.originalName ?? doc.name ?? "Document";
           return {
             ...doc,
+            path: doc.path ?? doc.url,
+            name,
+            originalName: doc.originalName ?? doc.name ?? name,
             uploadedBy: req.user._id,
           };
         }
@@ -1674,10 +1693,14 @@ export const completeCaseInfo = async (req, res) => {
         const [firstName, ...lastNameParts] = client.name.trim().split(" ");
         const lastName = lastNameParts.join(" ") || "Client";
 
+        const clientEmail =
+          client.email && client.email.trim()
+            ? client.email.toLowerCase()
+            : `no-email-${req.user.lawFirm._id}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}@placeholder.local`;
         const newClient = new Client({
           firstName: firstName || "Client",
           lastName: lastName,
-          email: client.email && client.email.trim() ? client.email.toLowerCase() : null,
+          email: clientEmail,
           phoneNumber: client.phone,
           lawFirm: req.user.lawFirm._id,
           createdBy: req.user._id,

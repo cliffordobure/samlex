@@ -620,16 +620,19 @@ const CaseDetails = () => {
 
         const uploadResult = await uploadResponse.json();
         console.log("Upload result:", uploadResult);
-        uploadedUrls.push(uploadResult.url);
+        uploadedUrls.push({
+          path: uploadResult.url,
+          originalName: uploadResult.originalName || file.name || "Document",
+        });
       }
 
-      console.log("All uploaded URLs:", uploadedUrls);
+      console.log("All uploaded documents:", uploadedUrls);
 
       if (uploadedUrls.length === 0) {
         throw new Error("No files were successfully uploaded");
       }
 
-      // Add documents to case
+      // Add documents to case (send path + originalName so UI shows real filename)
       console.log("Sending to API:", { documents: uploadedUrls });
       const response = await legalCaseApi.addDocument(id, { documents: uploadedUrls });
       

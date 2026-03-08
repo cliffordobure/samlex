@@ -163,6 +163,10 @@ router.post(
         errorMessage = "File upload service configuration error. Please contact administrator.";
       } else if (error.message.includes("Failed to upload file to Cloudinary")) {
         errorMessage = "File upload service temporarily unavailable. Please try again later.";
+      } else if (error.Code === "InvalidAccessKeyId" || error.message?.includes("AWS Access Key Id you provided does not exist")) {
+        errorMessage = "AWS credentials are invalid or expired. Please update AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY in the server environment (e.g. Render dashboard).";
+      } else if (error.Code === "SignatureDoesNotMatch" || error.message?.includes("SignatureDoesNotMatch")) {
+        errorMessage = "AWS secret key is incorrect. Please check AWS_SECRET_ACCESS_KEY in the server environment.";
       }
       
       // Set CORS headers for error response
