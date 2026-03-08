@@ -1111,7 +1111,7 @@ export const initiateEscalation = async (req, res) => {
 /**
  * @desc    Confirm escalation payment
  * @route   POST /api/credit-cases/:id/confirm-escalation-payment
- * @access  Private (law_firm_admin, credit_head)
+ * @access  Private (law_firm_admin, admin, credit_head, debt_collector for assigned case)
  */
 export const confirmEscalationPayment = async (req, res) => {
   try {
@@ -1128,14 +1128,6 @@ export const confirmEscalationPayment = async (req, res) => {
       });
     }
 
-    // Check if user has permission to confirm payment
-    if (!["law_firm_admin", "admin", "credit_head"].includes(req.user.role)) {
-      return res.status(403).json({
-        success: false,
-        message: "You don't have permission to confirm payments",
-      });
-    }
-
     const creditCase = await CreditCase.findById(id);
     if (!creditCase) {
       return res.status(404).json({
@@ -1149,6 +1141,22 @@ export const confirmEscalationPayment = async (req, res) => {
       return res.status(403).json({
         success: false,
         message: "You don't have access to this case",
+      });
+    }
+
+    // Check if user has permission to confirm payment: admins/credit_head always; debt_collector only for cases assigned to them
+    const assignedId =
+      creditCase.assignedTo?._id?.toString() ||
+      creditCase.assignedTo?.toString();
+    const isAssignedCollector =
+      !!assignedId && assignedId === req.user._id.toString();
+    const canConfirm =
+      ["law_firm_admin", "admin", "credit_head"].includes(req.user.role) ||
+      (req.user.role === "debt_collector" && isAssignedCollector);
+    if (!canConfirm) {
+      return res.status(403).json({
+        success: false,
+        message: "You don't have permission to confirm payments",
       });
     }
 
