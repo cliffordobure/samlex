@@ -98,8 +98,8 @@ router.post(
           .json({ success: false, message: "No file uploaded" });
       }
 
-      // Determine storage provider
-      const storageProvider = config.STORAGE_PROVIDER || "s3";
+      // Determine storage provider (same default as config: cloudinary)
+      const storageProvider = config.STORAGE_PROVIDER || "cloudinary";
       
       // Check if storage is configured
       let storageConfigured = false;
@@ -214,7 +214,7 @@ router.get("/signed-url", protect, async (req, res) => {
 
 // GET /api/upload/health - health check for upload service
 router.get("/health", (req, res) => {
-  const storageProvider = config.STORAGE_PROVIDER || "s3";
+  const storageProvider = config.STORAGE_PROVIDER || "cloudinary";
   
   let storageConfigured = false;
   let storageInfo = {};
