@@ -1,7 +1,7 @@
 /* eslint-disable no-unused-vars */
 import { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Routes, Route, Link, useNavigate } from "react-router-dom";
+import { Routes, Route, Link, useNavigate, useParams } from "react-router-dom";
 import {
   getDepartments,
   createDepartment,
@@ -1602,14 +1602,207 @@ const CreateDepartment = () => {
 };
 
 const EditDepartment = () => {
-  // Similar to CreateDepartment but for editing
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { departments } = useSelector((state) => state.departments);
+
+  const [formData, setFormData] = useState({
+    name: "",
+    departmentType: "credit_collection",
+    description: "",
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
+
+  // Load department: from Redux cache first, then API if needed
+  useEffect(() => {
+    if (!id) return;
+
+    const cached = departments.find((d) => d._id === id);
+    if (cached) {
+      setFormData({
+        name: cached.name || "",
+        departmentType: cached.departmentType || "credit_collection",
+        description: cached.description || "",
+      });
+      setIsLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    const fetchDepartment = async () => {
+      try {
+        const res = await departmentApi.getDepartment(id);
+        if (cancelled) return;
+        if (res.data.success && res.data.data) {
+          const d = res.data.data;
+          setFormData({
+            name: d.name || "",
+            departmentType: d.departmentType || "credit_collection",
+            description: d.description || "",
+          });
+        } else {
+          setLoadError("Department not found");
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setLoadError(err.response?.data?.message || "Failed to load department");
+        }
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+    fetchDepartment();
+    return () => { cancelled = true; };
+  }, [id, departments]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      const result = await dispatch(updateDepartment({ id, data: formData }));
+      if (updateDepartment.fulfilled.match(result)) {
+        toast.success("Department updated successfully!");
+        navigate("/admin/departments");
+      } else {
+        toast.error(result.payload || "Failed to update department");
+      }
+    } catch (error) {
+      toast.error("An error occurred");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <Link to="/admin/departments" className="text-dark-400 hover:text-white">
+          ← Back to Departments
+        </Link>
+        <div className="flex items-center justify-center py-12">
+          <p className="text-dark-400">Loading department...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="space-y-6">
+        <Link to="/admin/departments" className="text-dark-400 hover:text-white">
+          ← Back to Departments
+        </Link>
+        <div className="card card-body">
+          <p className="text-red-400">{loadError}</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
+      <div className="flex items-center space-x-4">
+        <Link
+          to="/admin/departments"
+          className="text-dark-400 hover:text-white"
+        >
+          ← Back to Departments
+        </Link>
+      </div>
+
       <div>
         <h1 className="text-3xl font-bold text-white">Edit Department</h1>
         <p className="text-dark-400 mt-2">Update department information.</p>
       </div>
-      {/* Edit form would go here */}
+
+      <div className="max-w-2xl">
+        <div className="card">
+          <div className="card-body">
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div>
+                <label
+                  htmlFor="edit-name"
+                  className="block text-sm font-medium text-dark-200 mb-1"
+                >
+                  Department Name
+                </label>
+                <input
+                  type="text"
+                  id="edit-name"
+                  name="name"
+                  required
+                  className="input-field"
+                  placeholder="e.g., Credit Collection"
+                  value={formData.name}
+                  onChange={handleChange}
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="edit-departmentType"
+                  className="block text-sm font-medium text-dark-200 mb-1"
+                >
+                  Department Type
+                </label>
+                <select
+                  id="edit-departmentType"
+                  name="departmentType"
+                  required
+                  className="input-field"
+                  value={formData.departmentType}
+                  onChange={handleChange}
+                >
+                  <option value="credit_collection">Credit Collection</option>
+                  <option value="legal">Legal</option>
+                  <option value="custom">Custom</option>
+                </select>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="edit-description"
+                  className="block text-sm font-medium text-dark-200 mb-1"
+                >
+                  Description
+                </label>
+                <textarea
+                  id="edit-description"
+                  name="description"
+                  rows={3}
+                  className="input-field"
+                  placeholder="Brief description of the department's purpose..."
+                  value={formData.description}
+                  onChange={handleChange}
+                />
+              </div>
+
+              <div className="flex justify-end space-x-4">
+                <Link to="/admin/departments" className="btn-secondary">
+                  Cancel
+                </Link>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="btn-primary"
+                >
+                  {isSubmitting ? "Updating..." : "Update Department"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

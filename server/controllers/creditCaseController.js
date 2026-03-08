@@ -1870,23 +1870,38 @@ export const updatePromisedPayment = async (req, res) => {
       });
     }
 
-    // Prepare update data
+    // Validate amount if provided
+    if (amount !== undefined) {
+      const parsedAmount = parseFloat(amount);
+      if (Number.isNaN(parsedAmount) || parsedAmount < 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Please enter a valid amount (zero or greater)",
+        });
+      }
+    }
+
+    // Prepare update data (only set valid values to avoid schema/validation errors)
     const updateData = {};
-    if (amount !== undefined) updateData["promisedPayments.$.amount"] = parseFloat(amount);
+    const parsedAmount = amount !== undefined ? parseFloat(amount) : NaN;
+    if (amount !== undefined && !Number.isNaN(parsedAmount) && parsedAmount >= 0) {
+      updateData["promisedPayments.$.amount"] = parsedAmount;
+    }
     if (currency !== undefined) updateData["promisedPayments.$.currency"] = currency;
     if (promisedDate !== undefined) updateData["promisedPayments.$.promisedDate"] = new Date(promisedDate);
     if (notes !== undefined) updateData["promisedPayments.$.notes"] = notes;
     if (paymentMethod !== undefined) updateData["promisedPayments.$.paymentMethod"] = paymentMethod;
 
     // If the payment was paid and amount is being changed, recalculate total paid
-    const newAmount = amount !== undefined ? parseFloat(amount) : existingPayment.amount;
+    const newAmount = amount !== undefined && !Number.isNaN(parsedAmount) ? parsedAmount : existingPayment.amount;
     const wasPaid = existingPayment.status === "paid";
 
-    // Update the payment
+    // Update the payment (ensure paymentId is ObjectId for reliable match)
+    const paymentObjectId = new mongoose.Types.ObjectId(paymentId);
     const updatedCase = await CreditCase.findOneAndUpdate(
       {
         _id: id,
-        "promisedPayments._id": paymentId,
+        "promisedPayments._id": paymentObjectId,
       },
       {
         $set: {
@@ -1940,30 +1955,34 @@ export const updatePromisedPayment = async (req, res) => {
       }
     }
 
-    // Find the updated payment for notification
+    // Find the updated payment for notification (compare as strings for reliability)
+    const paymentIdStr = typeof paymentId === "string" ? paymentId : paymentId.toString();
     const updatedPayment = finalCase.promisedPayments.find(
-      (p) => p._id.toString() === paymentId
+      (p) => p._id && p._id.toString() === paymentIdStr
     );
 
-    // Create notification for payment update
-    await createNotification({
-      user: case_.assignedTo || req.user._id,
-      title: `Promised Payment Updated: ${case_.caseNumber}`,
-      message: `Payment details for ${updatedPayment.currency} ${updatedPayment.amount.toLocaleString()} for case "${
-        case_.title || case_.caseNumber
-      }" have been updated`,
-      type: "payment_updated",
-      priority: "medium",
-      relatedCreditCase: case_._id,
-      actionUrl: `/credit-collection/cases/${case_._id}`,
-      metadata: {
-        caseNumber: case_.caseNumber,
-        caseTitle: case_.title,
-        paymentAmount: updatedPayment.amount,
-        currency: updatedPayment.currency,
-        updatedBy: `${req.user.firstName} ${req.user.lastName}`,
-      },
-    });
+    // Create notification for payment update (guard if find missed)
+    const paymentForNotification = updatedPayment || existingPayment;
+    if (paymentForNotification) {
+      await createNotification({
+        user: case_.assignedTo || req.user._id,
+        title: `Promised Payment Updated: ${case_.caseNumber}`,
+        message: `Payment details for ${paymentForNotification.currency || "KES"} ${(paymentForNotification.amount != null ? paymentForNotification.amount : 0).toLocaleString()} for case "${
+          case_.title || case_.caseNumber
+        }" have been updated`,
+        type: "payment_updated",
+        priority: "medium",
+        relatedCreditCase: case_._id,
+        actionUrl: `/credit-collection/cases/${case_._id}`,
+        metadata: {
+          caseNumber: case_.caseNumber,
+          caseTitle: case_.title,
+          paymentAmount: paymentForNotification.amount,
+          currency: paymentForNotification.currency || "KES",
+          updatedBy: `${req.user.firstName} ${req.user.lastName}`,
+        },
+      });
+    }
 
     // Emit socket event for real-time updates
     req.app.get("io").emit("promisedPaymentUpdated", finalCase);

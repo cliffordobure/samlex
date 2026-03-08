@@ -42,6 +42,16 @@ import {
   openGoogleCalendarForIndividualEvents,
 } from "../../utils/calendarExport";
 
+const PAYMENT_METHOD_OPTIONS = [
+  { value: "", label: "Select payment method" },
+  { value: "Cash", label: "Cash" },
+  { value: "Bank Transfer", label: "Bank Transfer" },
+  { value: "M-Pesa", label: "M-Pesa" },
+  { value: "Cheque", label: "Cheque" },
+  { value: "Mobile Money", label: "Mobile Money" },
+  { value: "Other", label: "Other" },
+];
+
 const CreditCollectionCalendar = () => {
   const dispatch = useDispatch();
   const { cases: creditCases, isLoading } = useSelector(
@@ -1126,8 +1136,7 @@ const CreditCollectionCalendar = () => {
                 <label className="block text-sm text-dark-300 mb-2">
                   Payment Method
                 </label>
-                <input
-                  type="text"
+                <select
                   value={newPaymentData.paymentMethod}
                   onChange={(e) =>
                     setNewPaymentData({
@@ -1135,9 +1144,14 @@ const CreditCollectionCalendar = () => {
                       paymentMethod: e.target.value,
                     })
                   }
-                  placeholder="e.g., Cash, Bank Transfer, M-Pesa"
                   className="w-full bg-dark-700 border border-dark-600 rounded-lg px-3 py-2 text-white"
-                />
+                >
+                  {PAYMENT_METHOD_OPTIONS.map((opt) => (
+                    <option key={opt.value || "select"} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>

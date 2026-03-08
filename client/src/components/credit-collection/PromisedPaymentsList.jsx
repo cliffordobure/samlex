@@ -11,6 +11,16 @@ import {
 import creditCaseApi from "../../store/api/creditCaseApi";
 import toast from "react-hot-toast";
 
+const PAYMENT_METHOD_OPTIONS = [
+  { value: "", label: "Select payment method" },
+  { value: "Cash", label: "Cash" },
+  { value: "Bank Transfer", label: "Bank Transfer" },
+  { value: "M-Pesa", label: "M-Pesa" },
+  { value: "Cheque", label: "Cheque" },
+  { value: "Mobile Money", label: "Mobile Money" },
+  { value: "Other", label: "Other" },
+];
+
 const PromisedPaymentsList = ({ case_, onUpdate }) => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -128,7 +138,7 @@ const PromisedPaymentsList = ({ case_, onUpdate }) => {
 
       const response = await creditCaseApi.updatePromisedPayment(
         case_._id,
-        selectedPayment._id,
+        String(selectedPayment._id),
         paymentData
       );
 
@@ -449,8 +459,7 @@ const PromisedPaymentsList = ({ case_, onUpdate }) => {
                 <label className="block text-sm text-dark-300 mb-2">
                   Payment Method
                 </label>
-                <input
-                  type="text"
+                <select
                   value={newPayment.paymentMethod}
                   onChange={(e) =>
                     setNewPayment({
@@ -458,9 +467,14 @@ const PromisedPaymentsList = ({ case_, onUpdate }) => {
                       paymentMethod: e.target.value,
                     })
                   }
-                  placeholder="e.g., Cash, Bank Transfer, M-Pesa"
                   className="w-full bg-dark-700 border border-dark-600 rounded-lg px-3 py-2 text-white"
-                />
+                >
+                  {PAYMENT_METHOD_OPTIONS.map((opt) => (
+                    <option key={opt.value || "select"} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
@@ -578,8 +592,7 @@ const PromisedPaymentsList = ({ case_, onUpdate }) => {
                 <label className="block text-sm text-dark-300 mb-2">
                   Payment Method
                 </label>
-                <input
-                  type="text"
+                <select
                   value={editPayment.paymentMethod}
                   onChange={(e) =>
                     setEditPayment({
@@ -587,9 +600,27 @@ const PromisedPaymentsList = ({ case_, onUpdate }) => {
                       paymentMethod: e.target.value,
                     })
                   }
-                  placeholder="e.g., Cash, Bank Transfer, M-Pesa"
                   className="w-full bg-dark-700 border border-dark-600 rounded-lg px-3 py-2 text-white"
-                />
+                >
+                  {[
+                    ...PAYMENT_METHOD_OPTIONS,
+                    ...(editPayment.paymentMethod &&
+                    !PAYMENT_METHOD_OPTIONS.some(
+                      (o) => o.value === editPayment.paymentMethod
+                    )
+                      ? [
+                          {
+                            value: editPayment.paymentMethod,
+                            label: editPayment.paymentMethod,
+                          },
+                        ]
+                      : []),
+                  ].map((opt) => (
+                    <option key={opt.value || "select"} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
