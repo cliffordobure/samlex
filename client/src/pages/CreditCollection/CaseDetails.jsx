@@ -1315,7 +1315,7 @@ const CaseDetails = () => {
             </div>
           )}
 
-        {/* Escalation Status - Show for escalated cases */}
+        {/* Escalation Status - Show for escalated cases (debt collector can see legal-side progress) */}
         {status === "escalated_to_legal" && (
           <div className="mb-6">
             <div className="font-semibold mb-3 text-primary-400">
@@ -1338,10 +1338,60 @@ const CaseDetails = () => {
                   Case Escalated to Legal Department
                 </span>
               </div>
-              <p className="text-green-200 text-sm">
+              <p className="text-green-200 text-sm mb-4">
                 This case has been successfully escalated to the legal
                 department for further action.
               </p>
+              {/* Legal case status - visible to debt collector as the case moves on legal side */}
+              {caseDetails?.legalCaseId ? (
+                <div className="mt-4 pt-4 border-t border-green-700/50">
+                  <div className="text-green-300 font-medium text-sm mb-2 flex items-center gap-2">
+                    <FaGavel className="w-4 h-4" />
+                    Legal case progress
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <span className="text-green-400/80">Legal case:</span>
+                      <span className="ml-2 text-white font-mono">
+                        {caseDetails.legalCaseId.caseNumber || "—"}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-green-400/80">Status:</span>
+                      <span className="ml-2 text-white capitalize">
+                        {(caseDetails.legalCaseId.status || "").replace(/_/g, " ")}
+                      </span>
+                    </div>
+                    {caseDetails.legalCaseId.assignedTo && (
+                      <div className="sm:col-span-2">
+                        <span className="text-green-400/80">Assigned to:</span>
+                        <span className="ml-2 text-white">
+                          {caseDetails.legalCaseId.assignedTo.firstName}{" "}
+                          {caseDetails.legalCaseId.assignedTo.lastName}
+                          {caseDetails.legalCaseId.assignedAt && (
+                            <span className="text-green-400/70 text-xs ml-2">
+                              (since{" "}
+                              {new Date(caseDetails.legalCaseId.assignedAt).toLocaleDateString()})
+                            </span>
+                          )}
+                        </span>
+                      </div>
+                    )}
+                    {caseDetails.legalCaseId.updatedAt && (
+                      <div>
+                        <span className="text-green-400/80">Last updated:</span>
+                        <span className="ml-2 text-white">
+                          {new Date(caseDetails.legalCaseId.updatedAt).toLocaleString()}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-green-300/90 text-sm mt-2">
+                  Awaiting legal team to create and assign the legal case. You will see status updates here once the case is on the legal side.
+                </p>
+              )}
             </div>
           </div>
         )}

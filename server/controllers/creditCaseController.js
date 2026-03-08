@@ -975,7 +975,13 @@ export const getCreditCaseById = async (req, res) => {
         .json({ success: false, message: "Invalid case ID" });
     }
     console.log("[getCreditCaseById] Valid ObjectId:", id);
-    const creditCase = await CreditCase.findById(id).populate("assignedTo");
+    const creditCase = await CreditCase.findById(id)
+      .populate("assignedTo")
+      .populate({
+        path: "legalCaseId",
+        select: "caseNumber title status assignedTo assignedAt updatedAt courtDetails",
+        populate: { path: "assignedTo", select: "firstName lastName email" },
+      });
     if (!creditCase) {
       console.warn("[getCreditCaseById] Case not found for ID:", id);
       return res

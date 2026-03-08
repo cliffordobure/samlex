@@ -34,7 +34,7 @@ const config = {
   AWS_S3_FOLDER_PREFIX: process.env.AWS_S3_FOLDER_PREFIX || "law-firm-files",
   
   // Storage provider selection (s3 or cloudinary)
-  STORAGE_PROVIDER: process.env.STORAGE_PROVIDER || "s3", // Default to S3
+  STORAGE_PROVIDER: process.env.STORAGE_PROVIDER || "cloudinary", // Default to Cloudinary
 
   // Stripe
   STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
@@ -76,7 +76,7 @@ if (config.NODE_ENV === "production") {
 }
 
 // Require storage provider credentials based on STORAGE_PROVIDER
-const storageProvider = process.env.STORAGE_PROVIDER || "s3";
+const storageProvider = process.env.STORAGE_PROVIDER || "cloudinary";
 if (storageProvider === "s3") {
   requiredEnvVars.push(
     "AWS_ACCESS_KEY_ID",

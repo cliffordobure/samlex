@@ -1693,7 +1693,17 @@ export const completeCaseInfo = async (req, res) => {
     if (clientId) updateData.client = clientId;
     if (courtDetails) updateData.courtDetails = courtDetails;
     if (opposingParty) updateData.opposingParty = opposingParty;
-    if (filingFee) updateData.filingFee = filingFee;
+    if (filingFee && typeof filingFee === "object") {
+      // Merge with existing filing fee so required fields (e.g. amount) are preserved when partial update is sent
+      const existingFee = existingCase.filingFee || {};
+      updateData.filingFee = {
+        amount: filingFee.amount != null ? Number(filingFee.amount) : (existingFee.amount ?? 0),
+        currency: filingFee.currency || existingFee.currency || "KES",
+        paid: filingFee.paid !== undefined ? filingFee.paid : existingFee.paid,
+        paidAt: filingFee.paidAt || existingFee.paidAt,
+        paymentId: filingFee.paymentId || existingFee.paymentId,
+      };
+    }
 
     // Update the case
     const updatedCase = await LegalCase.findByIdAndUpdate(
@@ -1707,24 +1717,32 @@ export const completeCaseInfo = async (req, res) => {
       .populate("createdBy", "firstName lastName email")
       .populate("department", "name code");
 
-    // Create notification for legal head
-    await createNotification({
-      user: existingCase.assignedBy || req.user.lawFirm.owner, // Notify legal head or firm owner
-      title: `Case Information Completed: ${updatedCase.caseNumber}`,
-      message: `Advocate ${req.user.firstName} ${req.user.lastName} has completed the information for case "${updatedCase.title}".`,
-      type: "case_updated",
-      priority: "medium",
-      relatedCase: updatedCase._id,
-      actionUrl: `/legal/cases/${updatedCase._id}`,
-      metadata: {
-        caseNumber: updatedCase.caseNumber,
-        caseTitle: updatedCase.title,
-        completedBy: req.user._id,
-      },
-    });
+    // Create notification for legal head (ensure user is never undefined)
+    const notifyUserId =
+      existingCase.assignedBy ||
+      (req.user.lawFirm && req.user.lawFirm.owner) ||
+      (existingCase.assignedTo && (existingCase.assignedTo._id || existingCase.assignedTo)) ||
+      req.user._id;
+    if (notifyUserId) {
+      await createNotification({
+        user: notifyUserId,
+        title: `Case Information Completed: ${updatedCase.caseNumber}`,
+        message: `Advocate ${req.user.firstName} ${req.user.lastName} has completed the information for case "${updatedCase.title}".`,
+        type: "case_updated",
+        priority: "medium",
+        relatedCase: updatedCase._id,
+        actionUrl: `/legal/cases/${updatedCase._id}`,
+        metadata: {
+          caseNumber: updatedCase.caseNumber,
+          caseTitle: updatedCase.title,
+          completedBy: req.user._id,
+        },
+      });
+    }
 
-    // Emit socket event for real-time updates
-    req.app.get("io").emit("legalCaseUpdated", updatedCase);
+    // Emit socket event for real-time updates (guard if io not attached)
+    const io = req.app.get && req.app.get("io");
+    if (io) io.emit("legalCaseUpdated", updatedCase);
 
     res.json({
       success: true,

@@ -12,7 +12,7 @@ import {
   getPublicIdFromUrl as getPublicIdFromCloudinaryUrl 
 } from "./cloudinary.js";
 
-const STORAGE_PROVIDER = config.STORAGE_PROVIDER || "s3";
+const STORAGE_PROVIDER = config.STORAGE_PROVIDER || "cloudinary";
 
 /**
  * Upload file to storage (S3 or Cloudinary)
