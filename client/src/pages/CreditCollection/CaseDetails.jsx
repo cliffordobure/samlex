@@ -91,6 +91,8 @@ const CaseDetails = () => {
   const [escalationError, setEscalationError] = useState("");
   const [showEscalationModal, setShowEscalationModal] = useState(false);
   const [paymentDetails, setPaymentDetails] = useState(null);
+  const [escalationLawyers, setEscalationLawyers] = useState([]);
+  const [selectedEscalationLawyerId, setSelectedEscalationLawyerId] = useState("");
 
   // Notes state
   const [notes, setNotes] = useState([]);
@@ -264,6 +266,29 @@ const CaseDetails = () => {
     }
   }, [comments]);
 
+  // Fetch lawyers (advocate, legal_head) when escalation modal opens
+  useEffect(() => {
+    if (!showEscalationModal) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await userApi.getUsers();
+        if (cancelled) return;
+        if (res.data?.success && Array.isArray(res.data?.data?.users)) {
+          const lawyers = res.data.data.users.filter((u) =>
+            ["advocate", "legal_head"].includes(u.role)
+          );
+          setEscalationLawyers(lawyers);
+        } else {
+          setEscalationLawyers([]);
+        }
+      } catch {
+        if (!cancelled) setEscalationLawyers([]);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [showEscalationModal]);
+
   // Document viewer functions
   const handleDocumentClick = async (doc, filename) => {
     let documentUrl = doc;
@@ -403,13 +428,14 @@ const CaseDetails = () => {
     setEscalationLoading(true);
     setEscalationError("");
     try {
-      const res = await creditCaseApi.confirmEscalationPayment(
-        id,
-        paymentDetails._id
-      );
+      const res = await creditCaseApi.confirmEscalationPayment(id, {
+        paymentId: paymentDetails._id,
+        ...(selectedEscalationLawyerId && { assignedLawyerId: selectedEscalationLawyerId }),
+      });
       if (res.data.success) {
         setShowEscalationModal(false);
         setPaymentDetails(null);
+        setSelectedEscalationLawyerId("");
         toast.success("Case escalated to legal successfully!");
         dispatch(getCreditCaseById(id)); // Refresh case details
       } else {
@@ -706,13 +732,18 @@ const CaseDetails = () => {
   // Check if user can edit case (must be after assignedTo is defined)
   const assignedToId =
     typeof assignedTo === "string" ? assignedTo : assignedTo?._id;
-  const canEditCase =
+  const canEditCaseBase =
     isAdmin ||
     isHeadOfCredit ||
     (currentUser.role === "debt_collector" &&
       assignedToId &&
       (assignedToId === currentUser._id ||
         assignedToId?.toString() === currentUser._id?.toString()));
+
+  // Debt collectors have read-only access once a case is escalated to legal
+  const isEscalatedReadOnlyForCollector =
+    currentUser.role === "debt_collector" && status === "escalated_to_legal";
+  const canEditCase = canEditCaseBase && !isEscalatedReadOnlyForCollector;
 
   // --- Notes Section ---
   const renderNotesSection = () => (
@@ -738,6 +769,7 @@ const CaseDetails = () => {
         </h3>
       </div>
 
+      {!isEscalatedReadOnlyForCollector && (
       <form
         onSubmit={handleAddNote}
         className="bg-dark-800/50 rounded-xl p-4 sm:p-6 mb-4 sm:mb-6 border border-dark-600"
@@ -833,6 +865,7 @@ const CaseDetails = () => {
           />
         </div>
       </form>
+      )}
 
       <div className="space-y-4">
         {notes.length === 0 ? (
@@ -1158,7 +1191,8 @@ const CaseDetails = () => {
               </div>
               <h3 className="text-base sm:text-lg font-semibold text-white">Documents</h3>
             </div>
-            {/* Add Document Button */}
+            {/* Add Document Button - hidden for debt collectors when case is escalated */}
+            {!isEscalatedReadOnlyForCollector && (
             <div className="flex items-center space-x-2">
               <input
                 type="file"
@@ -1190,6 +1224,7 @@ const CaseDetails = () => {
                 )}
               </label>
             </div>
+            )}
           </div>
           {Array.isArray(documents) &&
           documents.filter((doc) => typeof doc === "string" && doc).length >
@@ -1368,7 +1403,8 @@ const CaseDetails = () => {
             )}
           </div>
 
-          {/* Professional Comment Input */}
+          {/* Professional Comment Input - hidden for debt collectors when case is escalated */}
+          {!isEscalatedReadOnlyForCollector && (
           <form
             onSubmit={handleCommentSubmit}
             className="bg-slate-700/50 rounded-xl p-4 border border-slate-600/50"
@@ -1411,6 +1447,7 @@ const CaseDetails = () => {
               </div>
             </div>
           </form>
+          )}
         </div>
         {renderNotesSection()}
 
@@ -1425,6 +1462,7 @@ const CaseDetails = () => {
                 Promised Payments
               </h3>
             </div>
+            {!isEscalatedReadOnlyForCollector && (
             <button
               onClick={() => setShowPromisedPaymentsModal(true)}
               className="inline-flex items-center space-x-2 px-4 py-3 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white rounded-xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
@@ -1432,12 +1470,14 @@ const CaseDetails = () => {
               <FaPlus className="w-4 h-4" />
               <span>Add Promised Payment</span>
             </button>
+            )}
           </div>
 
           {/* Promised Payments List */}
           <PromisedPaymentsList
             case_={caseDetails}
             onUpdate={handlePromisedPaymentsUpdate}
+            readOnly={isEscalatedReadOnlyForCollector}
           />
         </div>
 
@@ -1521,6 +1561,24 @@ const CaseDetails = () => {
                   </span>
                 </div>
               </div>
+              {/* Assign to lawyer */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Assign to lawyer (optional)
+                </label>
+                <select
+                  value={selectedEscalationLawyerId}
+                  onChange={(e) => setSelectedEscalationLawyerId(e.target.value)}
+                  className="w-full px-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                >
+                  <option value="">Select a lawyer in the firm</option>
+                  {escalationLawyers.map((lawyer) => (
+                    <option key={lawyer._id} value={lawyer._id}>
+                      {lawyer.firstName} {lawyer.lastName} ({lawyer.role?.replace("_", " ")})
+                    </option>
+                  ))}
+                </select>
+              </div>
               {/* Info/Warning */}
               <div className="mb-4 p-3 bg-yellow-900 border border-yellow-700 rounded text-yellow-200 text-sm flex items-center">
                 <svg
@@ -1550,6 +1608,7 @@ const CaseDetails = () => {
                     setShowEscalationModal(false);
                     setPaymentDetails(null);
                     setEscalationError("");
+                    setSelectedEscalationLawyerId("");
                   }}
                   className="flex-1 px-4 py-2 bg-dark-600 text-white rounded-lg hover:bg-dark-500 transition-colors"
                 >
@@ -1673,6 +1732,7 @@ const CaseDetails = () => {
                 <PromisedPaymentsList
                   case_={caseDetails}
                   onUpdate={handlePromisedPaymentsUpdate}
+                  readOnly={isEscalatedReadOnlyForCollector}
                 />
               </div>
             </div>

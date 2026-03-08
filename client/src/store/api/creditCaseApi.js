@@ -49,8 +49,8 @@ const creditCaseApi = {
   getEscalationFee: (id) => api.get(`/credit-cases/${id}/escalation-fee`),
   initiateEscalation: (id) =>
     api.post(`/credit-cases/${id}/initiate-escalation`),
-  confirmEscalationPayment: (id, paymentId) =>
-    api.post(`/credit-cases/${id}/confirm-escalation`, { paymentId }),
+  confirmEscalationPayment: (id, data) =>
+    api.post(`/credit-cases/${id}/confirm-escalation`, data),
   // Legal department endpoints
   getEscalatedCases: (params) => api.get(`/credit-cases/escalated`, { params }),
   updateEscalatedCaseStatus: (id, data) =>

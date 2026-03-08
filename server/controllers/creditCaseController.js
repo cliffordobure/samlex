@@ -349,6 +349,17 @@ export const moveCreditCase = async (req, res) => {
       });
     }
 
+    // Debt collectors cannot change status of escalated cases (read-only)
+    if (
+      req.user.role === "debt_collector" &&
+      case_.status === "escalated_to_legal"
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "This case has been escalated to legal. You have read-only access.",
+      });
+    }
+
     console.log("Updating case status to:", status);
     // Set resolvedAt when status changes to resolved
     const updateData = { status };
@@ -637,6 +648,17 @@ export const addNoteToCreditCase = async (req, res) => {
       return res.status(403).json({
         success: false,
         message: "You can only add notes to cases from your law firm",
+      });
+    }
+
+    // Debt collectors have read-only access once case is escalated to legal
+    if (
+      req.user.role === "debt_collector" &&
+      case_.status === "escalated_to_legal"
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "This case has been escalated to legal. You have read-only access.",
       });
     }
 
@@ -997,6 +1019,16 @@ export const addCaseComment = async (req, res) => {
         .status(400)
         .json({ success: false, message: "Content required" });
     }
+    // Debt collectors cannot add comments to escalated cases (read-only)
+    if (req.user.role === "debt_collector") {
+      const creditCase = await CreditCase.findById(req.params.id).select("status");
+      if (creditCase?.status === "escalated_to_legal") {
+        return res.status(403).json({
+          success: false,
+          message: "This case has been escalated to legal. You have read-only access.",
+        });
+      }
+    }
     const comment = await Comment.create({
       case: req.params.id,
       author: req.user._id,
@@ -1116,7 +1148,7 @@ export const initiateEscalation = async (req, res) => {
 export const confirmEscalationPayment = async (req, res) => {
   try {
     const { id } = req.params;
-    const { paymentId } = req.body;
+    const { paymentId, assignedLawyerId } = req.body;
 
     if (
       !mongoose.Types.ObjectId.isValid(id) ||
@@ -1178,6 +1210,19 @@ export const confirmEscalationPayment = async (req, res) => {
     creditCase.escalationPayment.status = "confirmed";
     creditCase.escalationPayment.confirmedAt = new Date();
     creditCase.escalationPayment.confirmedBy = req.user._id;
+
+    // Optional: assign to a lawyer in the firm (debt collector choice)
+    if (assignedLawyerId && mongoose.Types.ObjectId.isValid(assignedLawyerId)) {
+      const lawyer = await User.findById(assignedLawyerId).select("role lawFirm");
+      if (
+        lawyer &&
+        lawyer.lawFirm?.toString() === creditCase.lawFirm._id?.toString() &&
+        ["advocate", "legal_head"].includes(lawyer.role)
+      ) {
+        creditCase.escalationAssignedTo = lawyer._id;
+      }
+    }
+
     await creditCase.save();
 
     // Emit socket event for real-time updates
@@ -1440,6 +1485,17 @@ export const addDocumentToCreditCase = async (req, res) => {
       });
     }
 
+    // Debt collectors have read-only access once case is escalated to legal
+    if (
+      req.user.role === "debt_collector" &&
+      creditCase.status === "escalated_to_legal"
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "This case has been escalated to legal. You have read-only access.",
+      });
+    }
+
     // Validate documents parameter
     if (!documents) {
       return res.status(400).json({
@@ -1628,6 +1684,17 @@ export const addPromisedPaymentToCreditCase = async (req, res) => {
       });
     }
 
+    // Debt collectors have read-only access once case is escalated to legal
+    if (
+      req.user.role === "debt_collector" &&
+      case_.status === "escalated_to_legal"
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "This case has been escalated to legal. You have read-only access.",
+      });
+    }
+
     // Create the promised payment
     const promisedPayment = {
       amount: parseFloat(amount),
@@ -1714,6 +1781,17 @@ export const updatePromisedPaymentStatus = async (req, res) => {
         success: false,
         message:
           "You can only update promised payments for cases in your law firm",
+      });
+    }
+
+    // Debt collectors have read-only access once case is escalated to legal
+    if (
+      req.user.role === "debt_collector" &&
+      case_.status === "escalated_to_legal"
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "This case has been escalated to legal. You have read-only access.",
       });
     }
 
@@ -1863,6 +1941,17 @@ export const updatePromisedPayment = async (req, res) => {
       return res.status(403).json({
         success: false,
         message: "You can only update promised payments for cases assigned to you",
+      });
+    }
+
+    // Debt collectors have read-only access once case is escalated to legal
+    if (
+      req.user.role === "debt_collector" &&
+      case_.status === "escalated_to_legal"
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "This case has been escalated to legal. You have read-only access.",
       });
     }
 
@@ -2058,6 +2147,17 @@ export const deletePromisedPayment = async (req, res) => {
       });
     }
 
+    // Debt collectors have read-only access once case is escalated to legal
+    if (
+      req.user.role === "debt_collector" &&
+      case_.status === "escalated_to_legal"
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "This case has been escalated to legal. You have read-only access.",
+      });
+    }
+
     // Find the payment to check its status
     const paymentToDelete = case_.promisedPayments.find(
       (p) => p._id.toString() === paymentId
@@ -2233,6 +2333,17 @@ export const updateCreditCase = async (req, res) => {
       return res.status(403).json({
         success: false,
         message: "You don't have permission to update credit cases",
+      });
+    }
+
+    // Debt collectors have read-only access once case is escalated to legal
+    if (
+      req.user.role === "debt_collector" &&
+      creditCase.status === "escalated_to_legal"
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "This case has been escalated to legal. You have read-only access.",
       });
     }
 

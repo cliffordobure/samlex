@@ -231,6 +231,13 @@ export const createLegalCase = async (req, res) => {
     if (escalatedFromCreditCase) {
       const creditCase = await CreditCase.findById(escalatedFromCreditCase).populate('documents');
       if (creditCase) {
+        // Use lawyer assigned by debt collector when escalating (if not already set in request)
+        if (creditCase.escalationAssignedTo && !assignedTo) {
+          newCase.assignedTo = creditCase.escalationAssignedTo;
+          newCase.assignedBy = req.user._id;
+          newCase.assignedAt = new Date();
+          newCase.status = "assigned";
+        }
         // Check if case is already escalated - but allow assignment if it's already escalated
         if (
           creditCase.escalatedToLegal ||

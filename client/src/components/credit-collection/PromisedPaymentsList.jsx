@@ -21,7 +21,7 @@ const PAYMENT_METHOD_OPTIONS = [
   { value: "Other", label: "Other" },
 ];
 
-const PromisedPaymentsList = ({ case_, onUpdate }) => {
+const PromisedPaymentsList = ({ case_, onUpdate, readOnly = false }) => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -272,6 +272,7 @@ const PromisedPaymentsList = ({ case_, onUpdate }) => {
           <FaMoneyBillWave className="mr-2 text-green-400" />
           Promised Payments
         </h3>
+        {!readOnly && (
         <button
           onClick={() => setShowAddModal(true)}
           className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-lg text-sm flex items-center"
@@ -279,6 +280,7 @@ const PromisedPaymentsList = ({ case_, onUpdate }) => {
           <FaEdit className="mr-1" />
           Add Payment
         </button>
+        )}
       </div>
 
       {case_.promisedPayments && case_.promisedPayments.length > 0 ? (
@@ -313,6 +315,7 @@ const PromisedPaymentsList = ({ case_, onUpdate }) => {
                     <div className="text-sm text-dark-300">
                       Due: {new Date(payment.promisedDate).toLocaleDateString()}
                     </div>
+                    {!readOnly && (
                     <div className="flex items-center space-x-2">
                       <button
                         onClick={() => handleEditPayment(payment)}
@@ -331,6 +334,7 @@ const PromisedPaymentsList = ({ case_, onUpdate }) => {
                         <span className="text-xs">Delete</span>
                       </button>
                     </div>
+                    )}
                   </div>
                 </div>
 
@@ -344,7 +348,7 @@ const PromisedPaymentsList = ({ case_, onUpdate }) => {
                   </p>
                 )}
 
-                {payment.status === "pending" && (
+                {payment.status === "pending" && !readOnly && (
                   <div className="flex space-x-2 mt-3">
                     <button
                       onClick={() =>

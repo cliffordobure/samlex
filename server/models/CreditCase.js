@@ -251,6 +251,11 @@ const creditCaseSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "LegalCase",
     },
+    /** Lawyer (advocate/legal_head) assigned by debt collector when escalating */
+    escalationAssignedTo: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
     processed: {
       type: Boolean,
       default: false,
