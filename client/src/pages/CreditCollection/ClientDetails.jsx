@@ -21,7 +21,8 @@ import {
   FaClock,
   FaEye,
   FaArrowRight,
-  FaSearch
+  FaSearch,
+  FaFilter
 } from "react-icons/fa";
 
 const ClientDetails = () => {
@@ -44,6 +45,8 @@ const ClientDetails = () => {
   const [legalCases, setLegalCases] = useState([]);
   const [loadingCases, setLoadingCases] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [filterMonth, setFilterMonth] = useState(null); // 1-12 or null for "all"
+  const [filterYear, setFilterYear] = useState(null);   // e.g. 2026 or null for "all"
   
   console.log("=== CLIENT DETAILS - USER INFO ===");
   console.log("User object from Redux:", user);
@@ -518,8 +521,27 @@ const ClientDetails = () => {
     ...legalCases.map(c => ({ ...c, type: 'legal' }))
   ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
+  // Helper: get total to collect, collected, and remaining for a credit case
+  const getCreditCaseAmounts = (case_) => {
+    const total = parseFloat(case_.debtAmount) || 0;
+    const collected = (case_.promisedPayments || [])
+      .filter((p) => p.status === "paid")
+      .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+    const remaining = Math.max(0, total - collected);
+    const currency = case_.currency || "KES";
+    return { total, collected, remaining, currency };
+  };
+
+  // Filter by month/year if set (uses case createdAt)
+  const casesAfterDateFilter = (filterMonth != null && filterYear != null)
+    ? allCases.filter((case_) => {
+        const d = new Date(case_.createdAt);
+        return d.getMonth() + 1 === filterMonth && d.getFullYear() === filterYear;
+      })
+    : allCases;
+
   // Filter cases based on search term
-  const filteredCases = allCases.filter((case_) => {
+  const filteredCases = casesAfterDateFilter.filter((case_) => {
     if (!searchTerm) return true;
     const searchLower = searchTerm.toLowerCase();
     return (
@@ -530,6 +552,47 @@ const ClientDetails = () => {
       (case_.type === "credit" && case_.debtorContact?.toLowerCase().includes(searchLower))
     );
   });
+
+  // Summary for this client (from filtered credit cases only)
+  const summary = filteredCases
+    .filter((c) => c.type === "credit")
+    .reduce(
+      (acc, c) => {
+        const { total, collected, remaining } = getCreditCaseAmounts(c);
+        acc.totalToCollect += total;
+        acc.totalCollected += collected;
+        acc.totalRemaining += remaining;
+        return acc;
+      },
+      { totalToCollect: 0, totalCollected: 0, totalRemaining: 0 }
+    );
+
+  // Build month/year options for filter (last 24 months + All)
+  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const now = new Date();
+  const monthYearOptions = [{ value: "all", label: "All dates" }];
+  for (let i = 0; i < 24; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const m = d.getMonth() + 1;
+    const y = d.getFullYear();
+    monthYearOptions.push({
+      value: `${y}-${m}`,
+      label: `${monthNames[m - 1]} ${y}`,
+      month: m,
+      year: y,
+    });
+  }
+  const handleMonthFilterChange = (value) => {
+    if (value === "all") {
+      setFilterMonth(null);
+      setFilterYear(null);
+    } else {
+      const [y, m] = value.split("-").map(Number);
+      setFilterYear(y);
+      setFilterMonth(m);
+    }
+  };
+  const currentMonthFilterValue = filterMonth != null && filterYear != null ? `${filterYear}-${filterMonth}` : "all";
 
   console.log("📊 ClientDetails Render:", {
     creditCasesCount: creditCases.length,
@@ -638,6 +701,30 @@ const ClientDetails = () => {
         )}
       </div>
 
+      {/* Amounts summary for debt collector (filtered matters) */}
+      {filteredCases.some((c) => c.type === "credit") && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="bg-slate-800/60 border border-slate-600/50 rounded-xl p-4">
+            <p className="text-xs text-slate-400 mb-1">Total to collect</p>
+            <p className="text-lg font-semibold text-white">
+              KES {summary.totalToCollect.toLocaleString()}
+            </p>
+          </div>
+          <div className="bg-slate-800/60 border border-slate-600/50 rounded-xl p-4">
+            <p className="text-xs text-slate-400 mb-1">Collected</p>
+            <p className="text-lg font-semibold text-green-400">
+              KES {summary.totalCollected.toLocaleString()}
+            </p>
+          </div>
+          <div className="bg-slate-800/60 border border-slate-600/50 rounded-xl p-4">
+            <p className="text-xs text-slate-400 mb-1">Remaining</p>
+            <p className="text-lg font-semibold text-orange-400">
+              KES {summary.totalRemaining.toLocaleString()}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Debug Info - Remove after fixing */}
       {process.env.NODE_ENV === 'development' && (
         <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-xl p-4 text-xs">
@@ -658,7 +745,7 @@ const ClientDetails = () => {
       {/* Cases Section */}
       <div className="bg-gradient-to-r from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl border border-slate-600/50 shadow-2xl">
         <div className="p-6 border-b border-slate-600/50">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center space-x-3">
               <div className="p-2 bg-gradient-to-r from-blue-500/20 to-indigo-500/20 rounded-lg">
                 <FaFileAlt className="w-5 h-5 text-blue-400" />
@@ -667,18 +754,35 @@ const ClientDetails = () => {
                 All Matters ({filteredCases.length})
               </h3>
             </div>
-            {/* Search Input */}
-            <div className="relative w-full sm:w-64">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <FaSearch className="w-4 h-4 text-slate-400" />
+            <div className="flex flex-wrap items-center gap-3">
+              {/* Filter by month */}
+              <div className="flex items-center gap-2">
+                <FaFilter className="w-4 h-4 text-slate-400" />
+                <select
+                  value={currentMonthFilterValue}
+                  onChange={(e) => handleMonthFilterChange(e.target.value)}
+                  className="pl-3 pr-8 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                >
+                  {monthYearOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
               </div>
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search cases..."
-                className="w-full pl-10 pr-4 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 text-sm"
-              />
+              {/* Search Input */}
+              <div className="relative w-full sm:w-56">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <FaSearch className="w-4 h-4 text-slate-400" />
+                </div>
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search cases..."
+                  className="w-full pl-10 pr-4 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 text-sm"
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -725,40 +829,43 @@ const ClientDetails = () => {
                             <span>{case_.debtorName}</span>
                           </span>
                         )}
-                        {case_.type === "credit" && case_.debtAmount && (
-                          <span className="flex items-center space-x-1">
-                            <FaMoneyBillWave className="w-3 h-3 text-slate-400" />
-                            <span>KES {case_.debtAmount?.toLocaleString()}</span>
-                          </span>
-                        )}
                         <span className="flex items-center space-x-1">
                           <FaCalendarAlt className="w-3 h-3 text-slate-400" />
                           <span>{new Date(case_.createdAt).toLocaleDateString()}</span>
                         </span>
                       </div>
 
-                      {/* Remaining Balance for Credit Cases */}
-                      {case_.type === "credit" && case_.promisedPayments && (
+                      {/* Amounts for Credit Cases: total to collect, collected, remaining */}
+                      {case_.type === "credit" ? (
                         (() => {
-                          const totalPaid = case_.promisedPayments
-                            .filter((p) => p.status === "paid")
-                            .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
-                          const remaining = (parseFloat(case_.debtAmount) || 0) - totalPaid;
-                          return remaining > 0 ? (
-                            <div className="mt-2 flex items-center space-x-1">
-                              <span className="text-xs text-orange-400 font-medium">
-                                Remaining: KES {remaining.toLocaleString()}
+                          const { total, collected, remaining, currency } = getCreditCaseAmounts(case_);
+                          return (
+                            <div className="mt-3 flex flex-wrap gap-4 text-xs border-t border-slate-600/50 pt-2">
+                              <span className="text-slate-300">
+                                <span className="text-slate-400">Total:</span>{" "}
+                                <span className="font-medium text-white">{currency} {total.toLocaleString()}</span>
+                              </span>
+                              <span className="text-slate-300">
+                                <span className="text-slate-400">Collected:</span>{" "}
+                                <span className="font-medium text-green-400">{currency} {collected.toLocaleString()}</span>
+                              </span>
+                              <span className="text-slate-300">
+                                <span className="text-slate-400">Remaining:</span>{" "}
+                                {remaining > 0 ? (
+                                  <span className="font-medium text-orange-400">{currency} {remaining.toLocaleString()}</span>
+                                ) : (
+                                  <span className="text-green-400 inline-flex items-center gap-1">
+                                    <FaCheckCircle className="w-3 h-3" /> Fully paid
+                                  </span>
+                                )}
                               </span>
                             </div>
-                          ) : totalPaid > 0 ? (
-                            <div className="mt-2 flex items-center space-x-1">
-                              <FaCheckCircle className="w-3 h-3 text-green-400" />
-                              <span className="text-xs text-green-400 font-medium">
-                                Fully Paid
-                              </span>
-                            </div>
-                          ) : null;
+                          );
                         })()
+                      ) : (
+                        <div className="mt-2 pt-2 border-t border-slate-600/50 text-xs text-slate-400">
+                          Legal case — view details for fee information
+                        </div>
                       )}
                     </div>
                     <div className="text-right ml-4 space-y-2">
