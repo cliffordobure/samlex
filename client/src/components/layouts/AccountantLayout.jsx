@@ -100,7 +100,7 @@ const AccountantLayout = ({ children }) => {
   }
 
   const SidebarContent = ({ navigation, currentPath, user }) => (
-    <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
+    <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto min-h-0">
       <div className="flex items-center flex-shrink-0 px-4 mb-8">
         <div className="flex items-center space-x-3">
           <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center shadow-lg">

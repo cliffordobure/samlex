@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { useSelector } from "react-redux";
 import reportsApi from "../../store/api/reportsApi";
 import revenueTargetApi from "../../store/api/revenueTargetApi";
@@ -20,6 +21,10 @@ import {
   FaFileInvoiceDollar,
   FaMoneyBillWave,
   FaPercent,
+  FaBook,
+  FaReceipt,
+  FaBalanceScale,
+  FaArrowRight,
 } from "react-icons/fa";
 
 const Reports = () => {
@@ -207,6 +212,59 @@ const Reports = () => {
               </>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* Accounting book — full ledger, expenses, balance sheet (sidebar + these links) */}
+      <div className="bg-gradient-to-r from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl p-5 border border-emerald-600/30 shadow-2xl">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+          <div>
+            <h2 className="text-xs font-bold text-white">Accounting book</h2>
+            <p className="text-[10px] text-slate-400 mt-1">
+              Chart of accounts, posted expenses, and balance sheet — also in the left sidebar under Accountant
+            </p>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Link
+            to="/accountant/ledger"
+            className="group flex items-center gap-4 bg-slate-700/40 hover:bg-slate-700/60 border border-slate-600/50 hover:border-green-500/40 rounded-xl p-4 transition-all"
+          >
+            <div className="p-3 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-lg shrink-0">
+              <FaBook className="w-5 h-5 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-xs font-bold text-white">General ledger</h3>
+              <p className="text-[10px] text-slate-400 mt-0.5">Accounts & expense totals</p>
+            </div>
+            <FaArrowRight className="w-4 h-4 text-green-400 shrink-0 opacity-70 group-hover:opacity-100" />
+          </Link>
+          <Link
+            to="/accountant/expenses"
+            className="group flex items-center gap-4 bg-slate-700/40 hover:bg-slate-700/60 border border-slate-600/50 hover:border-green-500/40 rounded-xl p-4 transition-all"
+          >
+            <div className="p-3 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg shrink-0">
+              <FaReceipt className="w-5 h-5 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-xs font-bold text-white">Expenses</h3>
+              <p className="text-[10px] text-slate-400 mt-0.5">Record & categorize spending</p>
+            </div>
+            <FaArrowRight className="w-4 h-4 text-green-400 shrink-0 opacity-70 group-hover:opacity-100" />
+          </Link>
+          <Link
+            to="/accountant/balance-sheet"
+            className="group flex items-center gap-4 bg-slate-700/40 hover:bg-slate-700/60 border border-slate-600/50 hover:border-green-500/40 rounded-xl p-4 transition-all"
+          >
+            <div className="p-3 bg-gradient-to-r from-sky-600 to-indigo-600 rounded-lg shrink-0">
+              <FaBalanceScale className="w-5 h-5 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-xs font-bold text-white">Balance sheet</h3>
+              <p className="text-[10px] text-slate-400 mt-0.5">Assets, liabilities, equity</p>
+            </div>
+            <FaArrowRight className="w-4 h-4 text-green-400 shrink-0 opacity-70 group-hover:opacity-100" />
+          </Link>
         </div>
       </div>
 
