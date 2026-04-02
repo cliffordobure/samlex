@@ -8,6 +8,20 @@ import { createNotification } from "../services/notificationService.js";
 import { getDepartmentForCase } from "../utils/departmentAssignment.js";
 import { sendSMS } from "../services/smsService.js";
 
+/** Snapshot creditor fields from Client — creditor is always the law firm's client */
+function creditorFieldsFromClient(cl) {
+  if (!cl) return null;
+  const name =
+    cl.clientType === "corporate" && (cl.companyName || "").trim()
+      ? cl.companyName.trim()
+      : `${cl.firstName || ""} ${cl.lastName || ""}`.trim();
+  return {
+    creditorName: name || "Client",
+    creditorEmail: (cl.email && String(cl.email).trim()) ? String(cl.email).trim().toLowerCase() : "",
+    creditorContact: (cl.phoneNumber && String(cl.phoneNumber).trim()) ? String(cl.phoneNumber).trim() : "",
+  };
+}
+
 // Create a new credit collection case
 export const createCreditCase = async (req, res) => {
   try {
@@ -18,9 +32,9 @@ export const createCreditCase = async (req, res) => {
       debtorName,
       debtorEmail,
       debtorContact,
-      creditorName,
-      creditorEmail,
-      creditorContact,
+      creditorName: bodyCreditorName,
+      creditorEmail: bodyCreditorEmail,
+      creditorContact: bodyCreditorContact,
       debtAmount,
       caseReference,
       assignedTo, // Add assignment field
@@ -31,6 +45,10 @@ export const createCreditCase = async (req, res) => {
       sendSmsToDebtor,
       sendSmsToCreditor,
     } = req.body;
+
+    let creditorName = bodyCreditorName;
+    let creditorEmail = bodyCreditorEmail;
+    let creditorContact = bodyCreditorContact;
 
     // Ensure the user is authenticated and has a lawFirm
     if (!req.user || !req.user.lawFirm) {
@@ -112,6 +130,21 @@ export const createCreditCase = async (req, res) => {
       } catch (clientError) {
         console.error("❌ Error handling client for creditor:", clientError);
         // Continue without client ID if there's an error
+      }
+    }
+
+    // When an existing client is linked, always persist creditor snapshot from that Client
+    // (avoids wrong first/last vs company name from the UI and keeps creditor = our client)
+    if (clientId) {
+      const cl = await Client.findOne({
+        _id: clientId,
+        lawFirm: req.user.lawFirm._id,
+      }).lean();
+      const snap = creditorFieldsFromClient(cl);
+      if (snap) {
+        creditorName = snap.creditorName;
+        creditorEmail = snap.creditorEmail || creditorEmail;
+        creditorContact = snap.creditorContact || creditorContact;
       }
     }
 
@@ -977,6 +1010,10 @@ export const getCreditCaseById = async (req, res) => {
     console.log("[getCreditCaseById] Valid ObjectId:", id);
     const creditCase = await CreditCase.findById(id)
       .populate("assignedTo")
+      .populate(
+        "client",
+        "firstName lastName companyName email phoneNumber clientType lawFirm"
+      )
       .populate({
         path: "legalCaseId",
         select: "caseNumber title status assignedTo assignedAt updatedAt courtDetails",

@@ -168,8 +168,13 @@ const CreateCase = () => {
           (c) => c._id === selectedCreditorId
         );
         if (selectedClient) {
+          const displayName =
+            selectedClient.clientType === "corporate" &&
+            (selectedClient.companyName || "").trim()
+              ? selectedClient.companyName.trim()
+              : `${selectedClient.firstName || ""} ${selectedClient.lastName || ""}`.trim();
           creditorData = {
-            creditorName: `${selectedClient.firstName} ${selectedClient.lastName}`,
+            creditorName: displayName,
             creditorEmail: selectedClient.email || "",
             creditorContact: selectedClient.phoneNumber || "",
           };
@@ -334,12 +339,12 @@ const CreateCase = () => {
                     />
                     <div>
                       <span className="text-sm font-medium text-slate-200">
-                        Notify debtor (client) on creation
+                        Notify debtor (party who owes the debt)
                       </span>
                       <p className="text-xs text-slate-400">
-                        When enabled, the debtor receives an SMS as soon as the case is
-                        created and assigned. Leave this off if you want to contact
-                        them later manually.
+                        The debtor is not your firm&apos;s client — they owe your client
+                        money. When enabled, that party receives an SMS when the case is
+                        created and assigned.
                       </p>
                     </div>
                   </label>
@@ -517,9 +522,14 @@ const CreateCase = () => {
                           (c) => c._id === e.target.value
                         );
                         if (selectedClient) {
+                          const displayName =
+                            selectedClient.clientType === "corporate" &&
+                            (selectedClient.companyName || "").trim()
+                              ? selectedClient.companyName.trim()
+                              : `${selectedClient.firstName || ""} ${selectedClient.lastName || ""}`.trim();
                           setForm((prev) => ({
                             ...prev,
-                            creditorName: `${selectedClient.firstName} ${selectedClient.lastName}`,
+                            creditorName: displayName,
                             creditorEmail: selectedClient.email || "",
                             creditorContact: selectedClient.phoneNumber || "",
                           }));

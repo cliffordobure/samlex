@@ -689,25 +689,56 @@ const CaseDetails = () => {
     client: caseClient,
   } = caseDetails;
 
-  // If case has a client, use the client's current information instead of case's creditor fields
+  // Creditor = law firm's linked client. Prefer API-populated `client`, then Redux list, then stored fields.
   let creditorName = caseCreditorName || "";
-  // Start with case's creditor fields, but allow them to be empty
-  let creditorEmail = caseCreditorEmail && caseCreditorEmail.trim() ? caseCreditorEmail : "";
-  let creditorContact = caseCreditorContact && caseCreditorContact.trim() ? caseCreditorContact : "";
-  
-  const clientId = caseClient?._id || caseClient;
-  if (clientId && activeClients.length > 0) {
-    const client = activeClients.find(
-      (c) => c._id === clientId || c._id?.toString() === clientId?.toString()
-    );
-    if (client) {
-      // Use current client information instead of case's creditor fields
-      creditorName = client.clientType === "corporate" && client.companyName
-        ? client.companyName
-        : `${client.firstName} ${client.lastName}`;
-      // Only set email/phone if client has them (not null, undefined, or empty string)
-      creditorEmail = (client.email && client.email.trim()) ? client.email : "";
-      creditorContact = (client.phoneNumber && client.phoneNumber.trim()) ? client.phoneNumber : "";
+  let creditorEmail =
+    caseCreditorEmail && caseCreditorEmail.trim() ? caseCreditorEmail : "";
+  let creditorContact =
+    caseCreditorContact && caseCreditorContact.trim() ? caseCreditorContact : "";
+
+  const populatedClient =
+    caseClient &&
+    typeof caseClient === "object" &&
+    caseClient !== null &&
+    (caseClient._id || caseClient.firstName != null || caseClient.companyName)
+      ? caseClient
+      : null;
+
+  if (populatedClient) {
+    creditorName =
+      populatedClient.clientType === "corporate" &&
+      (populatedClient.companyName || "").trim()
+        ? populatedClient.companyName.trim()
+        : `${populatedClient.firstName || ""} ${populatedClient.lastName || ""}`.trim();
+    creditorEmail =
+      populatedClient.email && populatedClient.email.trim()
+        ? populatedClient.email
+        : creditorEmail;
+    creditorContact =
+      populatedClient.phoneNumber && populatedClient.phoneNumber.trim()
+        ? populatedClient.phoneNumber
+        : creditorContact;
+  } else {
+    const clientId = caseClient?._id || caseClient;
+    if (clientId && activeClients.length > 0) {
+      const client = activeClients.find(
+        (c) =>
+          c._id === clientId ||
+          c._id?.toString() === clientId?.toString() ||
+          String(c._id) === String(clientId)
+      );
+      if (client) {
+        creditorName =
+          client.clientType === "corporate" && (client.companyName || "").trim()
+            ? client.companyName.trim()
+            : `${client.firstName || ""} ${client.lastName || ""}`.trim();
+        creditorEmail =
+          client.email && client.email.trim() ? client.email : creditorEmail;
+        creditorContact =
+          client.phoneNumber && client.phoneNumber.trim()
+            ? client.phoneNumber
+            : creditorContact;
+      }
     }
   }
 
