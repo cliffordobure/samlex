@@ -25,6 +25,7 @@ import aiRoutes from "./routes/ai.js";
 import clientRoutes from "./routes/clientRoutes.js";
 import newsletterRoutes from "./routes/newsletterRoutes.js";
 import revenueTargetRoutes from "./routes/revenueTargetRoutes.js";
+import accountingRoutes from "./routes/accountingRoutes.js";
 // import paymentRoutes from "./routes/payments.js";
 
 // Get __dirname equivalent for ES modules
@@ -154,6 +155,7 @@ app.use("/api/ai", aiRoutes);
 app.use("/api/clients", clientRoutes);
 app.use("/api/newsletter", newsletterRoutes);
 app.use("/api/revenue-targets", revenueTargetRoutes);
+app.use("/api/accounting", accountingRoutes);
 // app.use("/api/payments", paymentRoutes);
 
 // 404 handler

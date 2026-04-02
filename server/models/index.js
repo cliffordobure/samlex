@@ -9,3 +9,6 @@ export { default as Payment } from "./Payment.js";
 export { default as Document } from "./Document.js";
 export { default as Notification } from "./Notification.js";
 export { default as RevenueTarget } from "./RevenueTarget.js";
+export { default as LedgerAccount } from "./LedgerAccount.js";
+export { default as FirmExpense } from "./FirmExpense.js";
+export { default as BalanceSheetLine } from "./BalanceSheetLine.js";

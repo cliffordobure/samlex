@@ -16,6 +16,9 @@ import {
   FaMoneyBillWave,
   FaFileInvoiceDollar,
   FaChartBar,
+  FaBook,
+  FaReceipt,
+  FaBalanceScale,
 } from "react-icons/fa";
 
 const AccountantLayout = ({ children }) => {
@@ -37,6 +40,24 @@ const AccountantLayout = ({ children }) => {
       href: "/accountant/financial-tracking",
       icon: <FaMoneyBillWave className="w-5 h-5" />,
       description: "Track money coming into the company",
+    },
+    {
+      name: "General ledger",
+      href: "/accountant/ledger",
+      icon: <FaBook className="w-5 h-5" />,
+      description: "Chart of accounts and expense totals",
+    },
+    {
+      name: "Expenses",
+      href: "/accountant/expenses",
+      icon: <FaReceipt className="w-5 h-5" />,
+      description: "Record and categorize firm expenses",
+    },
+    {
+      name: "Balance sheet",
+      href: "/accountant/balance-sheet",
+      icon: <FaBalanceScale className="w-5 h-5" />,
+      description: "Assets, liabilities, and equity",
     },
     {
       name: "Department Reviews",

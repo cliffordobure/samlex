@@ -2,30 +2,28 @@ import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { Link } from "react-router-dom";
 import reportsApi from "../../store/api/reportsApi";
+import accountingApi from "../../store/api/accountingApi";
 import {
   FaMoneyBillWave,
   FaBuilding,
   FaBullseye,
   FaChartLine,
-  FaArrowUp,
-  FaArrowDown,
   FaArrowRight,
   FaSpinner,
   FaFileInvoiceDollar,
   FaCheckCircle,
   FaExclamationTriangle,
-  FaTimesCircle,
-  FaEye,
-  FaDollarSign,
-  FaPercent,
-  FaCalendarAlt,
   FaGavel,
+  FaBook,
+  FaReceipt,
+  FaBalanceScale,
 } from "react-icons/fa";
 import toast from "react-hot-toast";
 
 const AccountantOverview = () => {
   const { user } = useSelector((state) => state.auth);
   const [dashboardData, setDashboardData] = useState(null);
+  const [accountingSummary, setAccountingSummary] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [period, setPeriod] = useState(30);
 
@@ -38,12 +36,17 @@ const AccountantOverview = () => {
   const loadDashboardData = async () => {
     try {
       setIsLoading(true);
-      const response = await reportsApi.getAccountantDashboard(
-        user.lawFirm._id,
-        { period }
-      );
-      if (response.data.success) {
-        setDashboardData(response.data.data);
+      const [dashRes, accRes] = await Promise.all([
+        reportsApi.getAccountantDashboard(user.lawFirm._id, { period }),
+        accountingApi.getSummary(user.lawFirm._id, { period }).catch(() => null),
+      ]);
+      if (dashRes.data.success) {
+        setDashboardData(dashRes.data.data);
+      }
+      if (accRes?.data?.success) {
+        setAccountingSummary(accRes.data.data);
+      } else {
+        setAccountingSummary(null);
       }
     } catch (error) {
       console.error("Error loading accountant dashboard:", error);
@@ -94,9 +97,9 @@ const AccountantOverview = () => {
               <FaFileInvoiceDollar className="w-4 h-4 text-white" />
             </div>
             <div>
-              <h1 className="text-xs font-bold text-white">Accountant Dashboard</h1>
+              <h1 className="text-xs font-bold text-white">Accounting dashboard</h1>
               <p className="text-xs text-slate-300 mt-2">
-                Financial tracking and department monitoring
+                Revenue, expenses, balance sheet, and department monitoring
               </p>
             </div>
           </div>
@@ -172,6 +175,89 @@ const AccountantOverview = () => {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Accounting book */}
+      <div className="bg-gradient-to-r from-slate-800/80 to-slate-700/80 backdrop-blur-xl rounded-2xl p-6 border border-slate-600/50 shadow-2xl">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+          <div className="flex items-center space-x-3">
+            <FaBook className="w-5 h-5 text-emerald-400" />
+            <div>
+              <h2 className="text-xs font-bold text-white">Accounting book</h2>
+              <p className="text-xs text-slate-400 mt-1">
+                Ledger, expenses, and balance sheet in one place
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Link
+              to="/accountant/ledger"
+              className="text-xs px-3 py-2 rounded-lg bg-slate-700/80 text-white border border-slate-600/50 hover:border-green-500/40 flex items-center gap-2"
+            >
+              <FaBook className="text-green-400" /> Ledger
+            </Link>
+            <Link
+              to="/accountant/expenses"
+              className="text-xs px-3 py-2 rounded-lg bg-slate-700/80 text-white border border-slate-600/50 hover:border-green-500/40 flex items-center gap-2"
+            >
+              <FaReceipt className="text-green-400" /> Expenses
+            </Link>
+            <Link
+              to="/accountant/balance-sheet"
+              className="text-xs px-3 py-2 rounded-lg bg-slate-700/80 text-white border border-slate-600/50 hover:border-green-500/40 flex items-center gap-2"
+            >
+              <FaBalanceScale className="text-green-400" /> Balance sheet
+            </Link>
+          </div>
+        </div>
+        {accountingSummary ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-slate-700/40 rounded-xl p-4 border border-slate-600/40">
+              <p className="text-xs text-slate-400">Expenses ({accountingSummary.expenses.periodDays}d)</p>
+              <p className="text-sm font-bold text-white mt-1">
+                {formatCurrency(accountingSummary.expenses.periodTotal)}
+              </p>
+              <p className="text-xs text-slate-500 mt-1">
+                {accountingSummary.expenses.periodCount} entries
+              </p>
+            </div>
+            <div className="bg-slate-700/40 rounded-xl p-4 border border-slate-600/40">
+              <p className="text-xs text-slate-400">Total assets (BS)</p>
+              <p className="text-sm font-bold text-white mt-1">
+                {formatCurrency(accountingSummary.balanceSheet.totalAssets)}
+              </p>
+            </div>
+            <div className="bg-slate-700/40 rounded-xl p-4 border border-slate-600/40">
+              <p className="text-xs text-slate-400">Liabilities + equity</p>
+              <p className="text-sm font-bold text-white mt-1">
+                {formatCurrency(
+                  accountingSummary.balanceSheet.totalLiabilities +
+                    accountingSummary.balanceSheet.totalEquity
+                )}
+              </p>
+              {accountingSummary.balanceSheet.balanced ? (
+                <p className="text-xs text-green-400 mt-1 flex items-center gap-1">
+                  <FaCheckCircle className="w-3 h-3" /> Balanced
+                </p>
+              ) : (
+                <p className="text-xs text-amber-400 mt-1 flex items-center gap-1">
+                  <FaExclamationTriangle className="w-3 h-3" /> Check variance
+                </p>
+              )}
+            </div>
+            <div className="bg-slate-700/40 rounded-xl p-4 border border-slate-600/40">
+              <p className="text-xs text-slate-400">Ledger accounts</p>
+              <p className="text-sm font-bold text-white mt-1">
+                {accountingSummary.ledgerAccounts}
+              </p>
+              <p className="text-xs text-slate-500 mt-1">Chart of accounts</p>
+            </div>
+          </div>
+        ) : (
+          <p className="text-xs text-slate-500">
+            Summary metrics will load when the accounting API is available. Use the links above to open the ledger, expenses, or balance sheet.
+          </p>
+        )}
       </div>
 
       {/* Department Reviews */}
